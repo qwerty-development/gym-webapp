@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import {
-	Calendar,
-	momentLocalizer,
-	Views,
-	View,
-	NavigateAction,
-	DateLocalizer
-} from 'react-big-calendar'
+import { Calendar, momentLocalizer, Views, View } from 'react-big-calendar'
 import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import {
@@ -50,7 +43,12 @@ interface CalendarViewProps {
 
 const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 	const [events, setEvents] = useState<CalendarEvent[]>([])
-	const [view, setView] = useState<View>(Views.WEEK)
+	const [view, setView] = useState<View>(() => {
+		if (typeof window !== 'undefined' && window.innerWidth < 640) {
+			return Views.DAY
+		}
+		return Views.WEEK
+	})
 	const [date, setDate] = useState(new Date())
 	const [selectedCoach, setSelectedCoach] = useState<string | null>(null)
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -126,8 +124,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 		<div
 			className='h-full flex items-center justify-center flex-col'
 			onClick={() => setSelectedEvent(event)}>
-			<div className='font-bold'>{event.title}</div>
-			<div className='text-xs'>{event.coach}</div>
+			<div className='font-bold text-xs sm:text-sm'>{event.title}</div>
+			<div className='text-xs hidden sm:block'>{event.coach}</div>
 		</div>
 	)
 
@@ -139,15 +137,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 		const label = () => {
 			const date = moment(toolbarProps.date)
 			return (
-				<span className='text-xl font-bold text-green-400'>
+				<span className='text-lg sm:text-xl font-bold text-green-400'>
 					{date.format('MMMM')} {date.format('YYYY')}
 				</span>
 			)
 		}
 
 		return (
-			<div className='flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-xl shadow-lg'>
-				<div className='flex space-x-2'>
+			<div className='flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 bg-gray-800 p-4 rounded-xl shadow-lg'>
+				<div className='flex space-x-2 mb-4 sm:mb-0'>
 					<button
 						onClick={goToBack}
 						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
@@ -164,7 +162,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 						Today
 					</button>
 				</div>
-				<div className='text-white'>{label()}</div>
+				<div className='text-white mb-4 sm:mb-0'>{label()}</div>
 				<div className='flex space-x-2'>
 					<button
 						onClick={() => toolbarProps.onView(Views.MONTH)}
@@ -219,9 +217,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5 }}
-			className='bg-gray-800 rounded-xl p-6 shadow-lg'>
-			<div className='mb-6 flex justify-between items-center flex-wrap'>
-				<h3 className='text-3xl font-bold text-green-400 mb-2 sm:mb-0'>
+			className='bg-gray-800 rounded-xl p-4 sm:p-6 shadow-lg'>
+			<div className='mb-6 flex flex-col sm:flex-row justify-between items-center flex-wrap'>
+				<h3 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-0'>
 					Calendar View
 				</h3>
 				<div className='flex items-center space-x-2'>
@@ -239,7 +237,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 					</select>
 				</div>
 			</div>
-			<div className='h-[700px] overflow-auto rounded-lg shadow-inner bg-gray-700 p-4'>
+			<div className='h-[500px] sm:h-[700px] overflow-auto rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'>
 				<Calendar
 					localizer={localizer}
 					events={filteredEvents}
@@ -254,25 +252,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 						event: CustomEvent,
 						toolbar: CustomToolbar
 					}}
-					formats={
-						{
-							timeGutterFormat: (
-								date: Date,
-								culture: string,
-								localizer: DateLocalizer
-							) => localizer.format(date, 'HH:mm', culture),
-							eventTimeRangeFormat: (
-								{ start, end }: { start: Date; end: Date },
-								culture: string,
-								localizer: DateLocalizer
-							) =>
-								`${localizer.format(
-									start,
-									'HH:mm',
-									culture
-								)} - ${localizer.format(end, 'HH:mm', culture)}`
-						} as any
-					}
+					formats={{
+						timeGutterFormat: ((date: Date, culture: string, localizer: any) =>
+							localizer.format(date, 'HH:mm', culture)) as any,
+						eventTimeRangeFormat: ((
+							{ start, end }: { start: Date; end: Date },
+							culture: string,
+							localizer: any
+						) =>
+							`${localizer.format(
+								start,
+								'HH:mm',
+								culture
+							)} - ${localizer.format(end, 'HH:mm', culture)}`) as any
+					}}
 					className='bg-gray-700 text-white rounded-lg overflow-hidden'
 					selectable
 					onSelectSlot={handleSelectSlot}
@@ -299,10 +292,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 							animate={{ scale: 1 }}
 							exit={{ scale: 0.9 }}
 							transition={{ duration: 0.1 }}
-							className='bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-lg border-2 border-green-500'
+							className='bg-gray-800 rounded-xl p-4 sm:p-6 max-w-md w-full shadow-lg border-2 border-green-500'
 							onClick={e => e.stopPropagation()}>
 							<div className='flex justify-between items-center mb-4'>
-								<h3 className='text-2xl font-bold text-green-400'>
+								<h3 className='text-xl sm:text-2xl font-bold text-green-400'>
 									{selectedEvent.title}
 								</h3>
 								<button
@@ -312,35 +305,37 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 								</button>
 							</div>
 							<div className='space-y-4 text-white'>
-								<p className='flex items-center'>
+								<p className='flex items-center text-sm sm:text-base'>
 									<FaUser className='mr-2 text-green-400' />{' '}
-									<strong>Coach: </strong> {selectedEvent.coach}
+									<strong>Coach:</strong> {selectedEvent.coach}
 								</p>
-								<p className='flex items-center'>
+								<p className='flex items-center text-sm sm:text-base'>
 									<FaCalendarAlt className='mr-2 text-green-400' />{' '}
-									<strong>Date: </strong>{' '}
+									<strong>Date:</strong>{' '}
 									{moment(selectedEvent.start).format('MMMM D, YYYY')}
 								</p>
-								<p className='flex items-center'>
+								<p className='flex items-center text-sm sm:text-base'>
 									<FaClock className='mr-2 text-green-400' />{' '}
-									<strong>Time: </strong>
-									{'  '}
+									<strong>Time:</strong>{' '}
 									{moment(selectedEvent.start).format('HH:mm')} -{' '}
 									{moment(selectedEvent.end).format('HH:mm')}
 								</p>
-								<p className='flex items-center'>
+								<p className='flex items-center text-sm sm:text-base'>
 									{selectedEvent.isGroup ? (
 										<FaUsers className='mr-2 text-green-400' />
 									) : (
 										<FaUser className='mr-2 text-green-400' />
 									)}
-									<strong>Type: </strong>{' '}
+									<strong>Type:</strong>{' '}
 									{selectedEvent.isGroup ? 'Group' : 'Individual'}
 								</p>
-
-								<p className='flex items-center'>
+								<p className='flex items-center text-sm sm:text-base'>
+									<FaDumbbell className='mr-2 text-green-400' />{' '}
+									<strong>Activity:</strong> {selectedEvent.activity}
+								</p>
+								<p className='flex items-center text-sm sm:text-base'>
 									<FaUsers className='mr-2 text-green-400' />{' '}
-									<strong>Clients: </strong> {selectedEvent.clients}
+									<strong>Clients:</strong> {selectedEvent.clients}
 								</p>
 							</div>
 						</motion.div>
