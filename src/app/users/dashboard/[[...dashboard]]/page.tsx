@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import NavbarComponent from '@/app/components/users/navbar'
 import { UserButton, useUser } from '@clerk/nextjs'
+import CalendarView from '@/app/components/admin/CalendarView'
 import {
 	fetchReservations,
 	fetchReservationsGroup,
@@ -37,7 +38,8 @@ import {
 	FaUsers,
 	FaBars,
 	FaClock,
-	FaShoppingCart
+	FaShoppingCart,
+	FaListUl
 } from 'react-icons/fa'
 import Link from 'next/link'
 import useConfirmationModal from '../../../../../utils/useConfirmationModel'
@@ -118,6 +120,10 @@ export default function Dashboard() {
 		workoutDay: 0
 	})
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
+	const [showCalendarView, setShowCalendarView] = useState(false);
+	const toggleCalendarView = () => {
+		setShowCalendarView(!showCalendarView);
+	};
 	const [isCancelling, setIsCancelling] = useState(false)
 	const [totalUsers, setTotalUsers] = useState(0)
 	const [totalActivities, setTotalActivities] = useState(0)
@@ -319,8 +325,8 @@ export default function Dashboard() {
 							count: reservation.count,
 							additions: reservation.additions
 								? reservation.additions.filter(
-										(addition: any) => addition.user_id === user.id
-								  )
+									(addition: any) => addition.user_id === user.id
+								)
 								: []
 						})
 					)
@@ -375,21 +381,21 @@ export default function Dashboard() {
 
 		const response = selectedReservation?.count
 			? await payForGroupItems({
-					userId: user?.id,
-					activityId: selectedReservation?.activity.id,
-					coachId: selectedReservation?.coach.id,
-					date: selectedReservation?.date,
-					startTime: selectedReservation?.start_time,
-					selectedItems
-			  })
+				userId: user?.id,
+				activityId: selectedReservation?.activity.id,
+				coachId: selectedReservation?.coach.id,
+				date: selectedReservation?.date,
+				startTime: selectedReservation?.start_time,
+				selectedItems
+			})
 			: await payForItems({
-					userId: user?.id,
-					activityId: selectedReservation?.activity.id,
-					coachId: selectedReservation?.coach.id,
-					date: selectedReservation?.date,
-					startTime: selectedReservation?.start_time,
-					selectedItems
-			  })
+				userId: user?.id,
+				activityId: selectedReservation?.activity.id,
+				coachId: selectedReservation?.coach.id,
+				date: selectedReservation?.date,
+				startTime: selectedReservation?.start_time,
+				selectedItems
+			})
 
 		setButtonLoading(false)
 		if (response.error) {
@@ -442,8 +448,8 @@ export default function Dashboard() {
 						count: reservation.count,
 						additions: reservation.additions
 							? reservation.additions.filter(
-									(addition: any) => addition.user_id === user?.id
-							  )
+								(addition: any) => addition.user_id === user?.id
+							)
 							: []
 					})
 				)
@@ -613,11 +619,10 @@ export default function Dashboard() {
 														{({ active }) => (
 															<a
 																href='#'
-																className={`${
-																	active
-																		? 'bg-gray-600 text-gray-100'
-																		: 'text-gray-300'
-																} block px-4 py-2 text-sm`}>
+																className={`${active
+																	? 'bg-gray-600 text-gray-100'
+																	: 'text-gray-300'
+																	} block px-4 py-2 text-sm`}>
 																{`${user.first_name} ${user.last_name}`}
 															</a>
 														)}
@@ -667,8 +672,8 @@ export default function Dashboard() {
 												typeof addition === 'string'
 													? addition
 													: addition.items
-															.map((item: any) => item.name)
-															.join(', ')
+														.map((item: any) => item.name)
+														.join(', ')
 											)
 											.join(', ')
 									)
@@ -698,20 +703,18 @@ export default function Dashboard() {
 				<div className='flex justify-center space-x-2'>
 					<button
 						onClick={() => setActiveTab('individual')}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-							activeTab === 'individual'
-								? 'bg-green-500 text-white'
-								: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-						}`}>
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${activeTab === 'individual'
+							? 'bg-green-500 text-white'
+							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+							}`}>
 						Individual
 					</button>
 					<button
 						onClick={() => setActiveTab('group')}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-							activeTab === 'group'
-								? 'bg-green-500 text-white'
-								: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-						}`}>
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${activeTab === 'group'
+							? 'bg-green-500 text-white'
+							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+							}`}>
 						Class
 					</button>
 				</div>
@@ -724,26 +727,22 @@ export default function Dashboard() {
 				</h2>
 				<ul>
 					<li
-						className={`mb-5 p-2 px-6 ${
-							activeTab === 'individual' ? 'bg-green-500' : ''
-						}`}>
+						className={`mb-5 p-2 px-6 ${activeTab === 'individual' ? 'bg-green-500' : ''
+							}`}>
 						<button
 							onClick={() => setActiveTab('individual')}
-							className={`flex items-center ${
-								activeTab === 'group' ? 'hover:text-green-400' : ''
-							} w-full text-left`}>
+							className={`flex items-center ${activeTab === 'group' ? 'hover:text-green-400' : ''
+								} w-full text-left`}>
 							<FaCalendarAlt size={35} className='mr-2' /> PT Reservations
 						</button>
 					</li>
 					<li
-						className={`mb-10 p-2 px-6 ${
-							activeTab === 'group' ? 'bg-green-500' : ''
-						}`}>
+						className={`mb-10 p-2 px-6 ${activeTab === 'group' ? 'bg-green-500' : ''
+							}`}>
 						<button
 							onClick={() => setActiveTab('group')}
-							className={`flex items-center ${
-								activeTab === 'individual' ? 'hover:text-green-400' : ''
-							} w-full text-left`}>
+							className={`flex items-center ${activeTab === 'individual' ? 'hover:text-green-400' : ''
+								} w-full text-left`}>
 							<FaUsers size={35} className='mr-2' /> Class Reservations
 						</button>
 					</li>
@@ -892,18 +891,17 @@ export default function Dashboard() {
 													const isActive = now >= startTime && now <= endTime
 													const isStartingSoon =
 														startTime.getTime() - now.getTime() <=
-															15 * 60 * 1000 && startTime > now
+														15 * 60 * 1000 && startTime > now
 
 													return (
 														<li
 															key={index}
-															className={`text-gray-300 p-2 rounded ${
-																isActive
-																	? 'shadow-lg shadow-green-400'
-																	: isStartingSoon
+															className={`text-gray-300 p-2 rounded ${isActive
+																? 'shadow-lg shadow-green-400'
+																: isStartingSoon
 																	? 'shadow-lg shadow-yellow-700'
 																	: ''
-															}`}>
+																}`}>
 															<div className='font-bold'>
 																{session.activityName}
 															</div>
@@ -963,64 +961,86 @@ export default function Dashboard() {
 							{/* Reservations */}
 
 							<div className='lg:w-3/4 space-y-8'>
-								<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
-									{activeTab === 'individual'
-										? 'Personal Training Reservations'
-										: 'Group Classes Reservations'}
-								</h2>
+								<div className="flex justify-between items-center flex-wrap mb-6">
+									<h2 className='text-3xl md:text-4xl font-bold tracking-tight text-green-400'>
+										{activeTab === 'individual'
+											? 'Personal Training Reservations'
+											: 'Group Classes Reservations'}
+									</h2>
+									{user.publicMetadata.role === 'admin' && (
+										<button
+											onClick={toggleCalendarView}
+											className="flex items-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0"
+										>
+											{showCalendarView ? (
+												<>
+													<FaListUl className="mr-2" /> Show Card View
+												</>
+											) : (
+												<>
+													<FaCalendarAlt className="mr-2" /> Show Calendar View
+												</>
+											)}
+										</button>
+									)}
+								</div>
+
 								{user.publicMetadata.role === 'admin' ? (
 									// Admin view
-									<div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-										{renderAdminSessions(
-											activeTab === 'individual'
-												? adminIndividualSessions
-												: adminGroupSessions
-										)}
-									</div>
+									showCalendarView ? (
+										<CalendarView
+											sessions={[...adminIndividualSessions, ...adminGroupSessions]}
+										/>
+									) : (
+										<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+											{renderAdminSessions(
+												activeTab === 'individual'
+													? adminIndividualSessions
+													: adminGroupSessions
+											)}
+										</div>
+									)
 								) : (
 									// Non-admin view
 									<>
-										{(activeTab === 'individual'
-											? reservations
-											: groupReservations
-										).length === 0 ? (
+										{(activeTab === 'individual' ? reservations : groupReservations).length === 0 ? (
 											<motion.div
 												initial={{ opacity: 0, y: 20 }}
 												animate={{ opacity: 1, y: 0 }}
-												className='bg-gray-800 rounded-xl p-8 text-center'>
+												className='bg-gray-800 rounded-xl p-8 text-center shadow-lg'
+											>
 												<FaCalendarAlt className='text-green-500 text-5xl mb-4 mx-auto' />
 												<p className='text-xl text-gray-300'>
-													No upcoming reservations. Time to book your next
-													session!
+													No upcoming reservations. Time to book your next session!
 												</p>
 											</motion.div>
 										) : (
-											<div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+											<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
 												{paginatedReservations.map((reservation, index) => (
 													<motion.div
 														key={reservation.id}
 														initial={{ opacity: 0, y: 20 }}
 														animate={{ opacity: 1, y: 0 }}
 														transition={{ delay: index * 0.1 }}
-														className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-xl hover:shadow-green-500/30 transition duration-300'>
+														className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-lg hover:shadow-green-500/30 transition duration-300'
+													>
 														<div className='p-6 space-y-4'>
 															<div className='flex justify-between items-center mb-4'>
-																<h3 className='text-2xl font-bold text-green-400'>
+																<h3 className='text-xl font-bold text-green-400 truncate'>
 																	{reservation.activity.name}
 																</h3>
-																<span className='text-sm bg-green-600 text-white px-2 py-1 text-nowrap rounded-full'>
+																<span className='text-sm bg-green-600 text-white px-2 py-1 rounded-full whitespace-nowrap'>
 																	{reservation.activity.credits} Credits
 																</span>
 															</div>
-															<div className='space-y-2 text-gray-300'>
+															<div className='space-y-2 text-gray-300 text-sm'>
 																<p className='flex items-center'>
 																	<FaCalendarAlt className='mr-2 text-green-500' />
 																	{reservation.date}
 																</p>
 																<p className='flex items-center'>
 																	<FaClock className='mr-2 text-green-500' />
-																	{reservation.start_time} -{' '}
-																	{reservation.end_time}
+																	{reservation.start_time} - {reservation.end_time}
 																</p>
 																<p className='flex items-center'>
 																	<FaUser className='mr-2 text-green-500' />
@@ -1033,27 +1053,26 @@ export default function Dashboard() {
 																	</p>
 																)}
 															</div>
-															<div className='bg-gray-700 rounded-lg p-3 mt-4'>
-																<p className='text-sm text-gray-300'>
+															<div className='bg-gray-700 rounded-lg p-3 mt-4 text-xs'>
+																<p className='text-gray-300'>
 																	<span className='font-semibold text-green-400'>
 																		Additions:
 																	</span>{' '}
-																	{reservation.additions &&
-																	reservation.additions.length > 0
+																	{reservation.additions && reservation.additions.length > 0
 																		? reservation.additions
-																				.map(addition =>
-																					typeof addition === 'string'
-																						? addition
-																						: addition.items
-																								.map(item => item.name)
-																								.join(', ')
-																				)
-																				.join(', ')
+																			.map(addition =>
+																				typeof addition === 'string'
+																					? addition
+																					: addition.items
+																						.map(item => item.name)
+																						.join(', ')
+																			)
+																			.join(', ')
 																		: 'No additions'}
 																</p>
 															</div>
 															<div className='flex flex-col space-y-2 mt-4'>
-																<div className='flex flex-row justify-center items-center'>
+																<div className='flex justify-center items-center'>
 																	<AddToCalendarButton
 																		name={`${reservation.activity.name} with ${reservation.coach.name}`}
 																		startDate={reservation.date}
@@ -1068,11 +1087,12 @@ export default function Dashboard() {
 																		inline
 																	/>
 																</div>
-																<div className='flex flex-col md:flex-row justify-between mt-4'>
+																<div className='flex flex-col sm:flex-row justify-between mt-4 space-y-2 sm:space-y-0 sm:space-x-2'>
 																	<button
 																		onClick={() => openMarketModal(reservation)}
-																		className='bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 mb-2 md:mb-0 rounded-lg transition duration-200 flex-grow mr-0 md:mr-2'
-																		disabled={buttonLoading}>
+																		className='bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
+																		disabled={buttonLoading}
+																	>
 																		Add Items
 																	</button>
 																	<button
@@ -1081,8 +1101,9 @@ export default function Dashboard() {
 																				? handleCancel(reservation.id)
 																				: handleCancelGroup(reservation.id)
 																		}
-																		className='bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow ml-0 md:ml-2'
-																		disabled={buttonLoading}>
+																		className='bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
+																		disabled={buttonLoading}
+																	>
 																		Cancel
 																	</button>
 																</div>
@@ -1169,31 +1190,31 @@ export default function Dashboard() {
 														(
 															item: {
 																name:
-																	| string
-																	| number
-																	| boolean
-																	| React.ReactElement<
-																			any,
-																			string | React.JSXElementConstructor<any>
-																	  >
-																	| Iterable<React.ReactNode>
-																	| React.ReactPortal
-																	| Promise<React.AwaitedReactNode>
-																	| null
-																	| undefined
+																| string
+																| number
+																| boolean
+																| React.ReactElement<
+																	any,
+																	string | React.JSXElementConstructor<any>
+																>
+																| Iterable<React.ReactNode>
+																| React.ReactPortal
+																| Promise<React.AwaitedReactNode>
+																| null
+																| undefined
 																quantity:
-																	| string
-																	| number
-																	| boolean
-																	| React.ReactElement<
-																			any,
-																			string | React.JSXElementConstructor<any>
-																	  >
-																	| Iterable<React.ReactNode>
-																	| React.ReactPortal
-																	| Promise<React.AwaitedReactNode>
-																	| null
-																	| undefined
+																| string
+																| number
+																| boolean
+																| React.ReactElement<
+																	any,
+																	string | React.JSXElementConstructor<any>
+																>
+																| Iterable<React.ReactNode>
+																| React.ReactPortal
+																| Promise<React.AwaitedReactNode>
+																| null
+																| undefined
 															},
 															itemIndex: React.Key | null | undefined
 														) => (
@@ -1255,13 +1276,12 @@ export default function Dashboard() {
 								<motion.button
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
-									className={`mt-auto w-full py-2 sm:py-3 rounded-full text-white font-semibold text-sm sm:text-base transition-all duration-300 ${
-										selectedItems.find(
-											selectedItem => selectedItem.id === item.id
-										)
-											? 'bg-red-500 hover:bg-red-600'
-											: 'bg-green-500 hover:bg-green-600'
-									}`}
+									className={`mt-auto w-full py-2 sm:py-3 rounded-full text-white font-semibold text-sm sm:text-base transition-all duration-300 ${selectedItems.find(
+										selectedItem => selectedItem.id === item.id
+									)
+										? 'bg-red-500 hover:bg-red-600'
+										: 'bg-green-500 hover:bg-green-600'
+										}`}
 									onClick={() => handleItemSelect(item)}>
 									{selectedItems.find(
 										selectedItem => selectedItem.id === item.id

@@ -466,3 +466,88 @@ body {
 	background-color: #4c6f46 !important; /* green-500 */
 	color: white !important;
 }
+
+/* CalendarView.css */
+.rbc-calendar {
+	background-color: #232623; /* gray-900 */
+	color: #d1d4d1; /* gray-200 */
+  }
+  
+  .rbc-toolbar button {
+	color: #d1d4d1; /* gray-200 */
+  }
+  
+  .rbc-toolbar button:hover {
+	background-color: #454c45; /* gray-700 */
+  }
+  
+  .rbc-toolbar button.rbc-active {
+	background-color: #4c6f46; /* green-500 */
+	color: #ffffff;
+  }
+  
+  .rbc-header {
+	background-color: #354935; /* Slightly darker than gray-700 */
+	color: #d1d4d1; /* gray-200 */
+  }
+  
+  .rbc-today {
+	background-color: rgba(76, 111, 70, 0.1); /* green-500 with opacity */
+  }
+  
+  .rbc-event {
+	background-color: #36783a; /* green-400 */
+	border: none;
+  }
+  
+  .rbc-event.rbc-selected {
+	background-color: #4c6f46; /* green-500 */
+  }
+  
+  .rbc-off-range-bg {
+	background-color: #353b35; /* gray-800 */
+  }
+  
+  .rbc-day-bg + .rbc-day-bg {
+	border-left: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-month-row + .rbc-month-row {
+	border-top: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-time-content > * + * > * {
+	border-left: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-timeslot-group {
+	border-bottom: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-time-header-content {
+	border-left: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-time-header > .rbc-row > * + * {
+	border-left: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-time-header > .rbc-row:first-child {
+	border-bottom: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-time-view {
+	border: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-time-view .rbc-allday-cell {
+	border-bottom: 1px solid #454c45; /* gray-700 */
+  }
+  
+  .rbc-day-slot .rbc-time-slot {
+	border-top: 1px solid #353b35; /* gray-800 */
+  }
+  
+  .rbc-current-time-indicator {
+	background-color: #a5b89a; /* green-300 */
+  }
