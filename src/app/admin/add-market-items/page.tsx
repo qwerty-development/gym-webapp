@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react'
 import {
 	addMarketItem,
 	modifyMarketItem,
-	deleteMarketItem
+	deleteMarketItem,
+	fetchMarket
 } from '../../../../utils/adminRequests'
-import { fetchMarket } from '../../../../utils/userRequests'
+
 import toast from 'react-hot-toast'
 import AdminNavbarComponent from '@/app/components/admin/adminnavbar'
 import { motion } from 'framer-motion'
@@ -15,15 +16,18 @@ interface MarketItem {
 	id: number
 	name: string
 	price: number
+	quantity: number
 }
 
 export default function MarketManagement() {
 	const [items, setItems] = useState<MarketItem[]>([])
 	const [newItemName, setNewItemName] = useState<string>('')
 	const [newItemPrice, setNewItemPrice] = useState<string>('')
+	const [newItemQuantity, setNewItemQuantity] = useState<string>('')
 	const [editingItem, setEditingItem] = useState<number | null>(null)
 	const [editName, setEditName] = useState<string>('')
 	const [editPrice, setEditPrice] = useState<string>('')
+	const [editQuantity, setEditQuantity] = useState<string>('')
 	const [buttonLoading, setButtonLoading] = useState(false)
 
 	const fetchMarketItems = async () => {
@@ -37,18 +41,20 @@ export default function MarketManagement() {
 
 	const handleAddItem = async () => {
 		const price = parseFloat(newItemPrice)
-		if (!newItemName || isNaN(price)) {
-			toast.error('Please enter valid name and price.')
+		const quantity = parseInt(newItemQuantity)
+		if (!newItemName || isNaN(price) || isNaN(quantity)) {
+			toast.error('Please enter valid name, price, and quantity.')
 			return
 		}
 		setButtonLoading(true)
-		const { error, message } = await addMarketItem(newItemName, price)
+		const { error, message } = await addMarketItem(newItemName, price, quantity)
 		if (error) {
 			toast.error(error)
 		} else {
 			toast.success('Item added successfully!')
 			setNewItemName('')
 			setNewItemPrice('')
+			setNewItemQuantity('')
 			fetchMarketItems()
 		}
 		setButtonLoading(false)
@@ -68,12 +74,18 @@ export default function MarketManagement() {
 
 	const handleModifyItem = async (id: number) => {
 		const price = parseFloat(editPrice)
-		if (!editName || isNaN(price)) {
-			toast.error('Please enter valid name and price.')
+		const quantity = parseInt(editQuantity)
+		if (!editName || isNaN(price) || isNaN(quantity)) {
+			toast.error('Please enter valid name, price, and quantity.')
 			return
 		}
 		setButtonLoading(true)
-		const { error, message } = await modifyMarketItem(id, editName, price)
+		const { error, message } = await modifyMarketItem(
+			id,
+			editName,
+			price,
+			quantity
+		)
 		if (error) {
 			toast.error(error)
 		} else {
@@ -81,6 +93,7 @@ export default function MarketManagement() {
 			setEditingItem(null)
 			setEditName('')
 			setEditPrice('')
+			setEditQuantity('')
 			fetchMarketItems()
 		}
 		setButtonLoading(false)
@@ -104,6 +117,8 @@ export default function MarketManagement() {
 						setNewItemName={setNewItemName}
 						newItemPrice={newItemPrice}
 						setNewItemPrice={setNewItemPrice}
+						newItemQuantity={newItemQuantity}
+						setNewItemQuantity={setNewItemQuantity}
 						handleAddItem={handleAddItem}
 						buttonLoading={buttonLoading}
 					/>
@@ -115,6 +130,8 @@ export default function MarketManagement() {
 						setEditName={setEditName}
 						editPrice={editPrice}
 						setEditPrice={setEditPrice}
+						editQuantity={editQuantity}
+						setEditQuantity={setEditQuantity}
 						handleModifyItem={handleModifyItem}
 						handleDeleteItem={handleDeleteItem}
 						buttonLoading={buttonLoading}
@@ -130,6 +147,8 @@ const AddItemCard = ({
 	setNewItemName,
 	newItemPrice,
 	setNewItemPrice,
+	newItemQuantity,
+	setNewItemQuantity,
 	handleAddItem,
 	buttonLoading
 }: any) => {
@@ -153,6 +172,12 @@ const AddItemCard = ({
 					value={newItemPrice}
 					onChange={(e: any) => setNewItemPrice(e.target.value)}
 				/>
+				<Input
+					type='number'
+					placeholder='Item Quantity'
+					value={newItemQuantity}
+					onChange={(e: any) => setNewItemQuantity(e.target.value)}
+				/>
 				<Button onClick={handleAddItem} disabled={buttonLoading}>
 					<FaPlus className='inline mr-2' /> Add Item
 				</Button>
@@ -169,6 +194,8 @@ const ItemsList = ({
 	setEditName,
 	editPrice,
 	setEditPrice,
+	editQuantity,
+	setEditQuantity,
 	handleModifyItem,
 	handleDeleteItem,
 	buttonLoading
@@ -191,6 +218,8 @@ const ItemsList = ({
 						setEditName={setEditName}
 						editPrice={editPrice}
 						setEditPrice={setEditPrice}
+						editQuantity={editQuantity}
+						setEditQuantity={setEditQuantity}
 						handleModifyItem={handleModifyItem}
 						handleDeleteItem={handleDeleteItem}
 						buttonLoading={buttonLoading}
@@ -209,6 +238,8 @@ const ItemCard = ({
 	setEditName,
 	editPrice,
 	setEditPrice,
+	editQuantity,
+	setEditQuantity,
 	handleModifyItem,
 	handleDeleteItem,
 	buttonLoading
@@ -234,6 +265,12 @@ const ItemCard = ({
 						value={editPrice}
 						onChange={(e: any) => setEditPrice(e.target.value)}
 					/>
+					<Input
+						type='number'
+						placeholder='Modify Quantity'
+						value={editQuantity}
+						onChange={(e: any) => setEditQuantity(e.target.value)}
+					/>
 					<div className='flex space-x-2'>
 						<Button
 							onClick={() => handleModifyItem(item.id)}
@@ -252,8 +289,10 @@ const ItemCard = ({
 			) : (
 				<>
 					<div className='flex-grow'>
-						<span className='font-semibold'>{item.name}</span> -{item.price}{' '}
+						<span className='font-semibold'>{item.name}</span> - {item.price}{' '}
 						Credits
+						<br />
+						<span className='text-sm'>Quantity: {item.quantity}</span>
 					</div>
 					<div className='flex space-x-2'>
 						<button
@@ -261,6 +300,7 @@ const ItemCard = ({
 								setEditingItem(item.id)
 								setEditName(item.name)
 								setEditPrice(item.price.toString())
+								setEditQuantity(item.quantity.toString())
 							}}
 							className='text-2xl'
 							disabled={buttonLoading}>

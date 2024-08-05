@@ -98,6 +98,31 @@ export const cancelGroupBooking = async timeSlotId => {
 				0
 			)
 			totalRefund += additionsTotalPrice
+
+			for (const item of userAddition.items) {
+				const { data, error: quantityError } = await supabase
+					.from('market')
+					.select('quantity')
+					.eq('id', item.id)
+					.single()
+
+				if (quantityError) {
+					console.error('Error fetching item quantity:', quantityError.message)
+					continue
+				}
+
+				const newQuantity = (data.quantity || 0) + 1
+
+				const { error: updateError } = await supabase
+					.from('market')
+					.update({ quantity: newQuantity })
+					.eq('id', item.id)
+
+				if (updateError) {
+					console.error('Error updating item quantity:', updateError.message)
+					// You might want to handle this error more gracefully
+				}
+			}
 		}
 
 		const newWalletBalance = userData.wallet + totalRefund
@@ -274,7 +299,7 @@ export const cancelBookingIndividual = async reservation => {
 		// Fetch additions prices from the market table
 		const { data: additionsData, error: additionsError } = await supabase
 			.from('market')
-			.select('name, price')
+			.select('id, name, price, quantity')
 			.in('name', reservationData.additions || [])
 
 		if (additionsError) {
@@ -287,6 +312,19 @@ export const cancelBookingIndividual = async reservation => {
 			(total, item) => total + item.price,
 			0
 		)
+		for (const item of additionsData) {
+			const newQuantity = (item.quantity || 0) + 1
+
+			const { error: updateError } = await supabase
+				.from('market')
+				.update({ quantity: newQuantity })
+				.eq('id', item.id)
+
+			if (updateError) {
+				console.error('Error updating item quantity:', updateError.message)
+				// You might want to handle this error more gracefully
+			}
+		}
 
 		// Fetch user data
 		const { data: userData, error: userError } = await supabase

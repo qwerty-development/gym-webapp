@@ -151,7 +151,7 @@ export const cancelReservation = async (
 		// Fetch the additions and calculate their total price
 		const { data: additionsData, error: additionsError } = await supabase
 			.from('market')
-			.select('name, price')
+			.select('id, name, price')
 			.in('name', reservationData.additions || [])
 
 		if (additionsError) {
@@ -179,6 +179,34 @@ export const cancelReservation = async (
 
 		if (updateError) {
 			throw new Error(`Error canceling reservation: ${updateError.message}`)
+		}
+
+		// Increment the quantity of refunded items
+		// Increment the quantity of refunded items
+		for (const item of additionsData) {
+			const { data, error: quantityError } = await supabase
+				.from('market')
+				.select('quantity')
+				.eq('id', item.id)
+				.single()
+
+			if (quantityError) {
+				console.error('Error fetching item quantity:', quantityError.message)
+				continue
+			}
+
+			const newQuantity = (data.quantity || 0) + 1
+
+			const { error: updateError } = await supabase
+				.from('market')
+				.update({ quantity: newQuantity })
+				.eq('id', item.id)
+
+			if (updateError) {
+				console.error('Error updating item quantity:', updateError.message)
+				throw new Error(`Error updating item quantity: ${updateError.message}`)
+				// You might want to handle this error more gracefully
+			}
 		}
 
 		// Update the user's wallet and/or tokens
@@ -429,6 +457,36 @@ export const cancelReservationGroup = async (
 			throw new Error(`Error canceling reservation: ${updateError.message}`)
 		}
 
+		// Increment the quantity of refunded items
+		for (const addition of userAdditions) {
+			for (const item of addition.items) {
+				const { data, error: quantityError } = await supabase
+					.from('market')
+					.select('quantity')
+					.eq('id', item.id)
+					.single()
+
+				if (quantityError) {
+					console.error('Error fetching item quantity:', quantityError.message)
+					continue
+				}
+
+				const newQuantity = (data.quantity || 0) + 1
+
+				const { error: updateError } = await supabase
+					.from('market')
+					.update({ quantity: newQuantity })
+					.eq('id', item.id)
+
+				if (updateError) {
+					console.error('Error updating item quantity:', updateError.message)
+					// You might want to handle this error more gracefully
+					throw new Error(
+						`Error updating item quantity: ${updateError.message}`
+					)
+				}
+			}
+		}
 		const newWalletBalance = userData.wallet + totalRefund
 
 		const { error: userUpdateError } = await supabase

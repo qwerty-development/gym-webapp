@@ -2,7 +2,11 @@ import { supabaseClient } from '../supabaseClient'
 
 export const fetchMarket = async () => {
 	const supabase = await supabaseClient()
-	const { data, error } = await supabase.from('market').select('*')
+	const { data, error } = await supabase
+		.from('market')
+		.select('*')
+		.gt('quantity', 0)
+		.order('id')
 	if (error) {
 		console.error('Error fetching market:', error.message)
 		return []
@@ -91,6 +95,31 @@ export const payForItems = async ({
 		return { error: additionsError.message }
 	}
 
+	for (const item of selectedItems) {
+		const { data, error: quantityError } = await supabase
+			.from('market')
+			.select('quantity')
+			.eq('id', item.id)
+			.single()
+
+		if (quantityError) {
+			console.error('Error fetching item quantity:', quantityError.message)
+			continue
+		}
+
+		const newQuantity = Math.max(data.quantity - 1, 0) // Ensure quantity doesn't go below 0
+
+		const { error: updateError } = await supabase
+			.from('market')
+			.update({ quantity: newQuantity })
+			.eq('id', item.id)
+
+		if (updateError) {
+			console.error('Error updating item quantity:', updateError.message)
+			// You might want to handle this error more gracefully
+		}
+	}
+
 	const itemNames = selectedItems.map(item => item.name).join(', ')
 	const { error: transactionError } = await supabase
 		.from('transactions')
@@ -111,6 +140,7 @@ export const payForItems = async ({
 		message: 'Items added to time slot and credits deducted.'
 	}
 }
+
 export const payForGroupItems = async ({
 	userId,
 	activityId,
@@ -205,6 +235,30 @@ export const payForGroupItems = async ({
 		return { error: additionsError.message }
 	}
 
+	for (const item of selectedItems) {
+		const { data, error: quantityError } = await supabase
+			.from('market')
+			.select('quantity')
+			.eq('id', item.id)
+			.single()
+
+		if (quantityError) {
+			console.error('Error fetching item quantity:', quantityError.message)
+			continue
+		}
+
+		const newQuantity = Math.max(data.quantity - 1, 0) // Ensure quantity doesn't go below 0
+
+		const { error: updateError } = await supabase
+			.from('market')
+			.update({ quantity: newQuantity })
+			.eq('id', item.id)
+
+		if (updateError) {
+			console.error('Error updating item quantity:', updateError.message)
+			// You might want to handle this error more gracefully
+		}
+	}
 	const itemNames = selectedItems.map(item => item.name).join(', ')
 	const { error: transactionError } = await supabase
 		.from('transactions')
@@ -230,7 +284,9 @@ export const fetchMarketItems = async () => {
 	const supabase = await supabaseClient()
 	const { data, error } = await supabase
 		.from('market')
-		.select('id, name, price')
+		.select('id, name, price,quantity')
+		.gt('quantity', 0)
+		.order('id')
 
 	if (error) {
 		console.error('Error fetching market items:', error.message)
@@ -239,7 +295,6 @@ export const fetchMarketItems = async () => {
 
 	return data
 }
-
 export const handlePurchase = async (userId, cart, totalPrice) => {
 	const supabase = supabaseClient()
 
@@ -252,12 +307,41 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 
 	if (userError) {
 		console.error('Error fetching user wallet:', userError.message)
-		return false
+		return { success: false, error: 'Error fetching user wallet' }
 	}
 
 	if (userData.wallet < totalPrice) {
-		alert('You do not have enough credits to make this purchase.')
-		return false
+		return {
+			success: false,
+			error: 'You do not have enough credits to make this purchase.'
+		}
+	}
+
+	// Check if all items have sufficient quantity
+	for (const item of cart) {
+		const { data: currentItem, error: fetchError } = await supabase
+			.from('market')
+			.select('quantity')
+			.eq('id', item.id)
+			.single()
+
+		if (fetchError) {
+			console.error(
+				`Error fetching current quantity for item ${item.id}:`,
+				fetchError.message
+			)
+			return {
+				success: false,
+				error: `Error fetching quantity for item ${item.id}`
+			}
+		}
+
+		if (currentItem.quantity < item.quantity) {
+			return {
+				success: false,
+				error: `Not enough quantity available for item ${item.name}`
+			}
+		}
 	}
 
 	// Update user's wallet
@@ -268,11 +352,45 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 
 	if (updateError) {
 		console.error('Error updating user wallet:', updateError.message)
-		return false
+		return { success: false, error: 'Error updating user wallet' }
 	}
 
-	// Transform cart items to an array of UUIDs
-	const items = cart.flatMap(item => Array(item.quantity).fill(item.id))
+	// Transform cart items to an array of UUIDs and decrease quantities
+	const items = []
+	for (const item of cart) {
+		items.push(...Array(item.quantity).fill(item.id))
+
+		// Fetch current quantity
+		const { data: currentItem, error: fetchError } = await supabase
+			.from('market')
+			.select('quantity')
+			.eq('id', item.id)
+			.single()
+
+		if (fetchError) {
+			console.error(
+				`Error fetching current quantity for item ${item.id}:`,
+				fetchError.message
+			)
+			continue
+		}
+
+		// Decrease the quantity of the item in the market table
+		const newQuantity = Math.max(0, currentItem.quantity - item.quantity)
+		const { error: quantityError } = await supabase
+			.from('market')
+			.update({ quantity: newQuantity })
+			.eq('id', item.id)
+
+		if (quantityError) {
+			console.error(
+				`Error updating quantity for item ${item.id}:`,
+				quantityError.message
+			)
+			// You might want to handle this error more gracefully
+		}
+	}
+
 	console.log('Items to insert:', items) // Log the items array to verify
 
 	// Record transaction in market_transactions table
@@ -291,7 +409,7 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 			'Error recording market transaction:',
 			marketTransactionError.message
 		)
-		return false
+		return { success: false, error: 'Error recording market transaction' }
 	}
 
 	// Record transaction in the new transactions table
@@ -311,7 +429,7 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 		// Note: We don't return false here as the purchase was successful
 	}
 
-	return true
+	return { success: true }
 }
 
 export const fetchShopTransactions = async () => {

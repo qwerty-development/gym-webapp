@@ -8,6 +8,8 @@ import {
 } from '../../../../utils/userRequests'
 import { useUser } from '@clerk/clerk-react' // Assuming you are using Clerk for authentication
 import Bundles from '@/app/components/users/bundles'
+import toast from 'react-hot-toast'
+import { useWallet } from '@/app/components/users/WalletContext'
 
 interface MarketItem {
 	id: string
@@ -20,6 +22,7 @@ interface CartItem extends MarketItem {
 }
 
 const Shop: React.FC = () => {
+	const { refreshWalletBalance } = useWallet()
 	const [isBundles, setIsBundles] = useState(false)
 	const [items, setItems] = useState<MarketItem[]>([])
 	const [cart, setCart] = useState<CartItem[]>([])
@@ -80,19 +83,22 @@ const Shop: React.FC = () => {
 
 	const handlePurchaseClick = async () => {
 		if (!user) {
-			alert('Please log in to make a purchase.')
+			toast.error('Please log in to make a purchase.')
 			return
 		}
 
 		const userId = user.id
 		const totalPrice = parseFloat(getTotalPrice())
-		const success = await handlePurchase(userId, cart, totalPrice)
+		const result = await handlePurchase(userId, cart, totalPrice)
 
-		if (success) {
+		if (result.success) {
 			setCart([])
-			alert('Purchase successful!')
+			toast.success('Purchase successful!')
+			refreshWalletBalance()
+			const marketItems = await fetchMarketItems()
+			setItems(marketItems)
 		} else {
-			alert('Purchase failed. Please try again.')
+			toast.error(result.error || 'Purchase failed. Please try again.')
 		}
 	}
 
@@ -222,23 +228,29 @@ const Shop: React.FC = () => {
 						</div>
 					) : (
 						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-							{items.map(item => (
-								<div
-									key={item.id}
-									className='bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col items-center'>
-									<h2 className='text-2xl font-bold text-white mb-4'>
-										{item.name}
-									</h2>
-									<p className='text-lg text-green-400 mb-4'>
-										{item.price.toFixed(2)} credits
-									</p>
-									<button
-										className='mt-auto px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600'
-										onClick={() => addToCart(item)}>
-										Add to cart
-									</button>
-								</div>
-							))}
+							{items.length != 0 &&
+								items.map(item => (
+									<div
+										key={item.id}
+										className='bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col items-center'>
+										<h2 className='text-2xl font-bold text-white mb-4'>
+											{item.name}
+										</h2>
+										<p className='text-lg text-green-400 mb-4'>
+											{item.price.toFixed(2)} credits
+										</p>
+										<button
+											className='mt-auto px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600'
+											onClick={() => addToCart(item)}>
+											Add to cart
+										</button>
+									</div>
+								))}
+						</div>
+					)}
+					{items.length == 0 && (
+						<div className='flex justify-center items-center'>
+							<p className='text-white text-2xl'>No items available</p>
 						</div>
 					)}
 

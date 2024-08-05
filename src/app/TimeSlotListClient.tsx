@@ -234,6 +234,32 @@ export default function TimeSlotListClient({
 				),
 			0
 		)
+		for (const addition of userAdditions) {
+			for (const item of addition.items) {
+				const { data: marketItem, error: marketItemError } = await supabase
+					.from('market')
+					.select('quantity')
+					.eq('id', item.id)
+					.single()
+
+				if (marketItemError) {
+					console.error('Error fetching market item:', marketItemError.message)
+					continue
+				}
+
+				const newQuantity = (marketItem.quantity || 0) + 1
+
+				const { error: updateError } = await supabase
+					.from('market')
+					.update({ quantity: newQuantity })
+					.eq('id', item.id)
+
+				if (updateError) {
+					console.error('Error updating item quantity:', updateError.message)
+					// You might want to handle this error more gracefully
+				}
+			}
+		}
 
 		let totalRefund = 0
 		let newPublicTokenBalance = userData.public_token

@@ -1,10 +1,21 @@
 import { supabaseClient } from '../supabaseClient'
-export const addMarketItem = async (name, price) => {
+
+export const fetchMarket = async () => {
+	const supabase = await supabaseClient()
+	const { data, error } = await supabase.from('market').select('*').order('id')
+	if (error) {
+		console.error('Error fetching market:', error.message)
+		return []
+	}
+	return data
+}
+
+export const addMarketItem = async (name, price, quantity) => {
 	const supabase = await supabaseClient()
 
 	const { data, error } = await supabase
 		.from('market')
-		.insert([{ name, price }])
+		.insert([{ name, price, quantity }])
 
 	if (error) {
 		console.error('Error adding market item:', error.message)
@@ -26,12 +37,12 @@ export const deleteMarketItem = async id => {
 
 	return { data, message: 'Item deleted successfully' }
 }
-export const modifyMarketItem = async (id, name, price) => {
+export const modifyMarketItem = async (id, name, price, quantity) => {
 	const supabase = await supabaseClient()
 
 	const { data, error } = await supabase
 		.from('market')
-		.update({ name, price })
+		.update({ name, price, quantity })
 		.eq('id', id)
 
 	if (error) {
@@ -40,4 +51,20 @@ export const modifyMarketItem = async (id, name, price) => {
 	}
 
 	return { data, message: 'Item modified successfully' }
+}
+
+export const updateMarketItemQuantity = async (id, quantity) => {
+	const supabase = await supabaseClient()
+
+	const { data, error } = await supabase
+		.from('market')
+		.update({ quantity })
+		.eq('id', id)
+
+	if (error) {
+		console.error('Error updating market item quantity:', error.message)
+		return { error: error.message }
+	}
+
+	return { data, message: 'Item quantity updated successfully' }
 }

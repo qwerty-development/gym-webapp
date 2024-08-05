@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react'
 import AdminNavbarComponent from '@/app/components/admin/adminnavbar'
 import { checkRoleAdmin } from '../../../../utils/roles'
 import { redirect } from 'next/navigation'
