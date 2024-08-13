@@ -453,7 +453,8 @@ async function deleteConflictingTimeSlots(
 		.eq('coach_id', coachId)
 		.eq('date', date)
 		.neq('booked', true)
-		.or(`start_time.gte.${startTime},end_time.lte.${endTime}`)
+		.eq('start_time', startTime)
+		.eq('end_time', endTime)
 
 	if (individualError) {
 		console.error(
@@ -468,8 +469,9 @@ async function deleteConflictingTimeSlots(
 		.delete()
 		.eq('coach_id', coachId)
 		.eq('date', date)
-		.eq('booked', false)
-		.or(`start_time.gte.${startTime},end_time.lte.${endTime}`)
+		.eq('count', 0)
+		.eq('start_time', startTime)
+		.eq('end_time', endTime)
 
 	if (groupError) {
 		console.error(
