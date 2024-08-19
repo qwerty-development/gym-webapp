@@ -6,7 +6,7 @@ import {
 	handlePurchase,
 	fetchUserData
 } from '../../../../utils/userRequests'
-import { useUser } from '@clerk/clerk-react' // Assuming you are using Clerk for authentication
+import { useUser } from '@clerk/clerk-react'
 import Bundles from '@/app/components/users/bundles'
 import toast from 'react-hot-toast'
 import { useWallet } from '@/app/components/users/WalletContext'
@@ -15,6 +15,7 @@ interface MarketItem {
 	id: string
 	name: string
 	price: number
+	image: string
 }
 
 interface CartItem extends MarketItem {
@@ -27,7 +28,7 @@ const Shop: React.FC = () => {
 	const [items, setItems] = useState<MarketItem[]>([])
 	const [cart, setCart] = useState<CartItem[]>([])
 	const [isCartOpen, setIsCartOpen] = useState(false)
-	const { user } = useUser() // Clerk hook to get the current user
+	const { user } = useUser()
 
 	useEffect(() => {
 		const getItems = async () => {
@@ -228,11 +229,18 @@ const Shop: React.FC = () => {
 						</div>
 					) : (
 						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-							{items.length != 0 &&
+							{items.length !== 0 &&
 								items.map(item => (
 									<div
 										key={item.id}
 										className='bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col items-center'>
+										{item.image && (
+											<img
+												src={item.image}
+												alt={item.name}
+												className='w-full h-48 object-cover mb-4 rounded-lg'
+											/>
+										)}
 										<h2 className='text-2xl font-bold text-white mb-4'>
 											{item.name}
 										</h2>

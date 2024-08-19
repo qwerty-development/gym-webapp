@@ -284,7 +284,7 @@ export const fetchMarketItems = async () => {
 	const supabase = await supabaseClient()
 	const { data, error } = await supabase
 		.from('market')
-		.select('id, name, price,quantity')
+		.select('id, name, price,quantity,image')
 		.gt('quantity', 0)
 		.order('id')
 
