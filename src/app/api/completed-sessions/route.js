@@ -11,7 +11,8 @@ export async function GET(request) {
 	const filter = searchParams.get('filter') || 'all'
 	const startDate = searchParams.get('startDate')
 	const endDate = searchParams.get('endDate')
-	const activityType = searchParams.get('activityType')
+	const activityId = searchParams.get('activityId')
+	const coachId = searchParams.get('coachId')
 
 	const supabase = await supabaseClient()
 	const offset = (page - 1) * limit
@@ -30,6 +31,8 @@ export async function GET(request) {
             end_time,
             booked,
             user_id,
+            activity_id,
+            coach_id,
             activity:activities (id, name, credits),
             coach:coaches (id, name, email),
             additions
@@ -49,6 +52,8 @@ export async function GET(request) {
             end_time,
             booked,
             user_id,
+            activity_id,
+            coach_id,
             activity:activities (id, name, credits),
             coach:coaches (id, name, email),
             additions
@@ -72,11 +77,16 @@ export async function GET(request) {
 			groupQuery = groupQuery.gte('date', startDate).lte('date', endDate)
 	}
 
-	// Apply activity type filter
-	if (activityType) {
-		if (privateQuery)
-			privateQuery = privateQuery.eq('activity.id', activityType)
-		if (groupQuery) groupQuery = groupQuery.eq('activity.id', activityType)
+	// Apply activity filter
+	if (activityId) {
+		if (privateQuery) privateQuery = privateQuery.eq('activity_id', activityId)
+		if (groupQuery) groupQuery = groupQuery.eq('activity_id', activityId)
+	}
+
+	// Apply coach filter
+	if (coachId) {
+		if (privateQuery) privateQuery = privateQuery.eq('coach_id', coachId)
+		if (groupQuery) groupQuery = groupQuery.eq('coach_id', coachId)
 	}
 
 	// Fetch data

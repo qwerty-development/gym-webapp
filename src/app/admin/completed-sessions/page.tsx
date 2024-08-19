@@ -10,10 +10,11 @@ import {
 	FaFilter,
 	FaSortAmountDown,
 	FaSortAmountUp,
-	FaSearch,
 	FaFileExport
 } from 'react-icons/fa'
-import { fetchActivities, fetchUsers } from '../../../../utils/adminRequests'
+import { fetchUsers } from '../../../../utils/adminRequests'
+import { fetchCoaches } from '../../../../utils/adminRequests'
+import { fetchActivities } from '../../../../utils/userRequests'
 import SessionDetailModal from '@/app/components/admin/SessionDetailModal'
 import SessionsChart from '@/app/components/admin/SessionsChart'
 import { saveAs } from 'file-saver'
@@ -22,7 +23,11 @@ import 'react-datepicker/dist/react-datepicker.css'
 const CompletedSessions = () => {
 	const router = useRouter()
 	const [users, setUsers] = useState<any>([])
+	const [coaches, setCoaches] = useState<any>([])
+	const [activities, setActivities] = useState<any>([])
 	const [selectedUser, setSelectedUser] = useState<any>(null)
+	const [selectedCoach, setSelectedCoach] = useState<any>(null)
+	const [selectedActivity, setSelectedActivity] = useState<any>(null)
 	const [sessions, setSessions] = useState<any>([])
 	const [loading, setLoading] = useState<any>(false)
 	const [currentPage, setCurrentPage] = useState<any>(1)
@@ -30,30 +35,59 @@ const CompletedSessions = () => {
 	const [sortBy, setSortBy] = useState<any>('date')
 	const [sortOrder, setSortOrder] = useState<any>('desc')
 	const [filter, setFilter] = useState<any>('all')
-	const [searchQuery, setSearchQuery] = useState<any>('')
 	const [dateRange, setDateRange] = useState<any>([null, null])
 	const [startDate, endDate] = dateRange
 	const [summary, setSummary] = useState<any>(null)
 	const [selectedSession, setSelectedSession] = useState<any>(null)
-	const [searchTerm, setSearchTerm] = useState<any>('')
-	const [activityType, setActivityType] = useState<any>('')
 
 	useEffect(() => {
 		fetchUsersList()
+		fetchCoachesList()
+		fetchActivitiesList()
 	}, [])
 
 	useEffect(() => {
 		if (selectedUser) {
 			fetchCompletedSessions()
 		}
-	}, [selectedUser, currentPage, sortBy, sortOrder, filter, startDate, endDate])
+	}, [
+		selectedUser,
+		currentPage,
+		sortBy,
+		sortOrder,
+		filter,
+		startDate,
+		endDate,
+		selectedCoach,
+		selectedActivity
+	])
 
 	const fetchUsersList = async () => {
-		const fetchedUsers = await fetchUsers(searchQuery)
+		const fetchedUsers = await fetchUsers()
 		setUsers(
 			fetchedUsers.map(user => ({
 				value: user.user_id,
 				label: `${user.first_name} ${user.last_name}`
+			}))
+		)
+	}
+
+	const fetchCoachesList = async () => {
+		const fetchedCoaches = await fetchCoaches()
+		setCoaches(
+			fetchedCoaches.map(coach => ({
+				value: coach.id,
+				label: coach.name
+			}))
+		)
+	}
+
+	const fetchActivitiesList = async () => {
+		const fetchedActivities = await fetchActivities()
+		setActivities(
+			fetchedActivities.map(activity => ({
+				value: activity.id,
+				label: activity.name
 			}))
 		)
 	}
@@ -65,9 +99,9 @@ const CompletedSessions = () => {
 				selectedUser.value
 			}&page=${currentPage}&sortBy=${sortBy}&sortOrder=${sortOrder}&filter=${filter}&startDate=${
 				startDate?.toISOString().split('T')[0] || ''
-			}&endDate=${
-				endDate?.toISOString().split('T')[0] || ''
-			}&activityType=${activityType}`
+			}&endDate=${endDate?.toISOString().split('T')[0] || ''}&activityId=${
+				selectedActivity?.value || ''
+			}&coachId=${selectedCoach?.value || ''}`
 		)
 		const data = await response.json()
 		setSessions(data.sessions)
@@ -81,12 +115,24 @@ const CompletedSessions = () => {
 		setCurrentPage(1)
 	}
 
+	const handleCoachChange = (selectedOption: any) => {
+		setSelectedCoach(selectedOption)
+		setCurrentPage(1)
+	}
+
+	const handleActivityChange = (selectedOption: any) => {
+		setSelectedActivity(selectedOption)
+		setCurrentPage(1)
+	}
+
 	const handleSort = (field: string) => {
-		if (sortBy === field) {
-			setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-		} else {
-			setSortBy(field)
-			setSortOrder('asc')
+		if (field === 'date') {
+			if (sortBy === field) {
+				setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+			} else {
+				setSortBy(field)
+				setSortOrder('asc')
+			}
 		}
 	}
 
@@ -111,7 +157,7 @@ const CompletedSessions = () => {
 					date: string | number | Date
 					activity: { name: any }
 					coach: { name: any }
-					user_id: any
+					sessionType: any
 					start_time: any
 					end_time: any
 				}) =>
@@ -119,7 +165,7 @@ const CompletedSessions = () => {
 						new Date(session.date).toLocaleDateString(),
 						session.activity.name,
 						session.coach.name,
-						session.user_id ? 'Private' : 'Group',
+						session.sessionType,
 						session.start_time,
 						session.end_time
 					].join(',')
@@ -160,6 +206,26 @@ const CompletedSessions = () => {
 								<option value='private'>Private Sessions</option>
 								<option value='group'>Group Sessions</option>
 							</select>
+
+							<Select
+								options={coaches}
+								value={selectedCoach}
+								onChange={handleCoachChange}
+								placeholder='Select a coach'
+								className='react-select-container'
+								classNamePrefix='react-select'
+								isClearable
+							/>
+
+							<Select
+								options={activities}
+								value={selectedActivity}
+								onChange={handleActivityChange}
+								placeholder='Select an activity'
+								className='react-select-container'
+								classNamePrefix='react-select'
+								isClearable
+							/>
 
 							<DatePicker
 								selectsRange={true}
@@ -222,35 +288,39 @@ const CompletedSessions = () => {
 								<table className='min-w-full bg-gray-800 rounded-lg overflow-hidden'>
 									<thead className='bg-gray-700'>
 										<tr>
-											{[
-												'Date',
-												'Activity',
-												'Coach',
-												'Type',
-												'Start Time',
-												'End Time'
-											].map(header => (
-												<th
-													key={header}
-													className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer'
-													onClick={() => handleSort(header.toLowerCase())}>
-													<div className='flex items-center'>
-														{header}
-														{sortBy === header.toLowerCase() &&
-															(sortOrder === 'asc' ? (
-																<FaSortAmountUp className='ml-1' />
-															) : (
-																<FaSortAmountDown className='ml-1' />
-															))}
-													</div>
-												</th>
-											))}
+											<th
+												className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer'
+												onClick={() => handleSort('date')}>
+												<div className='flex items-center'>
+													Date
+													{sortBy === 'date' &&
+														(sortOrder === 'asc' ? (
+															<FaSortAmountUp className='ml-1' />
+														) : (
+															<FaSortAmountDown className='ml-1' />
+														))}
+												</div>
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Activity
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Coach
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Type
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Start Time
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												End Time
+											</th>
 										</tr>
 									</thead>
 									<tbody className='divide-y divide-gray-700'>
 										{sessions.map(
 											(session: {
-												sessionType: string
 												id: React.Key | null | undefined
 												date: string | number | Date
 												activity: {
@@ -283,7 +353,19 @@ const CompletedSessions = () => {
 														| null
 														| undefined
 												}
-												user_id: any
+												sessionType:
+													| string
+													| number
+													| boolean
+													| React.ReactElement<
+															any,
+															string | React.JSXElementConstructor<any>
+													  >
+													| Iterable<React.ReactNode>
+													| React.ReactPortal
+													| Promise<React.AwaitedReactNode>
+													| null
+													| undefined
 												start_time:
 													| string
 													| number
@@ -320,11 +402,7 @@ const CompletedSessions = () => {
 													</td>
 													<td className='px-6 py-4'>{session.activity.name}</td>
 													<td className='px-6 py-4'>{session.coach.name}</td>
-													<td className='px-6 py-4'>
-														{session.sessionType === 'private'
-															? 'Private'
-															: 'Group'}
-													</td>
+													<td className='px-6 py-4'>{session.sessionType}</td>
 													<td className='px-6 py-4'>{session.start_time}</td>
 													<td className='px-6 py-4'>{session.end_time}</td>
 												</tr>
