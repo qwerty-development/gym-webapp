@@ -10,12 +10,28 @@ export const fetchMarket = async () => {
 	return data
 }
 
-export const addMarketItem = async (name, price, quantity) => {
+export const addMarketItem = async (name, price, quantity, file) => {
 	const supabase = await supabaseClient()
+
+	let imageUrl = null
+	if (file) {
+		const fileExtension = file.name.split('.').pop()
+		const fileName = `${Math.random()}.${fileExtension}`
+		const { error: uploadError } = await supabase.storage
+			.from('item_image')
+			.upload(fileName, file)
+
+		if (uploadError) {
+			console.error('Error uploading file:', uploadError.message)
+			return { error: uploadError.message }
+		}
+
+		imageUrl = `https://ofsmbbjjveacrikuuueh.supabase.co/storage/v1/object/public/item_image/${fileName}`
+	}
 
 	const { data, error } = await supabase
 		.from('market')
-		.insert([{ name, price, quantity }])
+		.insert([{ name, price, quantity, image: imageUrl }])
 
 	if (error) {
 		console.error('Error adding market item:', error.message)
@@ -37,12 +53,33 @@ export const deleteMarketItem = async id => {
 
 	return { data, message: 'Item deleted successfully' }
 }
-export const modifyMarketItem = async (id, name, price, quantity) => {
+export const modifyMarketItem = async (id, name, price, quantity, file) => {
 	const supabase = await supabaseClient()
+
+	let imageUrl = null
+	if (file) {
+		const fileExtension = file.name.split('.').pop()
+		const fileName = `${Math.random()}.${fileExtension}`
+		const { error: uploadError } = await supabase.storage
+			.from('item_image')
+			.upload(fileName, file)
+
+		if (uploadError) {
+			console.error('Error uploading file:', uploadError.message)
+			return { error: uploadError.message }
+		}
+
+		imageUrl = `https://ofsmbbjjveacrikuuueh.supabase.co/storage/v1/object/public/item_image/${fileName}`
+	}
+
+	const updates = { name, price, quantity }
+	if (imageUrl) {
+		updates.image = imageUrl
+	}
 
 	const { data, error } = await supabase
 		.from('market')
-		.update({ name, price, quantity })
+		.update(updates)
 		.eq('id', id)
 
 	if (error) {

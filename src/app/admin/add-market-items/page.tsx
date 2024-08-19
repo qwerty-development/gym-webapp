@@ -17,6 +17,7 @@ interface MarketItem {
 	name: string
 	price: number
 	quantity: number
+	image: string
 }
 
 export default function MarketManagement() {
@@ -24,10 +25,12 @@ export default function MarketManagement() {
 	const [newItemName, setNewItemName] = useState<string>('')
 	const [newItemPrice, setNewItemPrice] = useState<string>('')
 	const [newItemQuantity, setNewItemQuantity] = useState<string>('')
+	const [newItemImage, setNewItemImage] = useState<File | null>(null)
 	const [editingItem, setEditingItem] = useState<number | null>(null)
 	const [editName, setEditName] = useState<string>('')
 	const [editPrice, setEditPrice] = useState<string>('')
 	const [editQuantity, setEditQuantity] = useState<string>('')
+	const [editImage, setEditImage] = useState<File | null>(null)
 	const [buttonLoading, setButtonLoading] = useState(false)
 
 	const fetchMarketItems = async () => {
@@ -47,7 +50,12 @@ export default function MarketManagement() {
 			return
 		}
 		setButtonLoading(true)
-		const { error, message } = await addMarketItem(newItemName, price, quantity)
+		const { error, message } = await addMarketItem(
+			newItemName,
+			price,
+			quantity,
+			newItemImage
+		)
 		if (error) {
 			toast.error(error)
 		} else {
@@ -55,6 +63,7 @@ export default function MarketManagement() {
 			setNewItemName('')
 			setNewItemPrice('')
 			setNewItemQuantity('')
+			setNewItemImage(null)
 			fetchMarketItems()
 		}
 		setButtonLoading(false)
@@ -84,7 +93,8 @@ export default function MarketManagement() {
 			id,
 			editName,
 			price,
-			quantity
+			quantity,
+			editImage
 		)
 		if (error) {
 			toast.error(error)
@@ -94,9 +104,23 @@ export default function MarketManagement() {
 			setEditName('')
 			setEditPrice('')
 			setEditQuantity('')
+			setEditImage(null)
 			fetchMarketItems()
 		}
 		setButtonLoading(false)
+	}
+
+	const handleFileChange = (
+		e: React.ChangeEvent<HTMLInputElement>,
+		isEditing: boolean
+	) => {
+		if (e.target.files && e.target.files[0]) {
+			if (isEditing) {
+				setEditImage(e.target.files[0])
+			} else {
+				setNewItemImage(e.target.files[0])
+			}
+		}
 	}
 
 	return (
@@ -121,6 +145,7 @@ export default function MarketManagement() {
 						setNewItemQuantity={setNewItemQuantity}
 						handleAddItem={handleAddItem}
 						buttonLoading={buttonLoading}
+						handleFileChange={handleFileChange}
 					/>
 					<ItemsList
 						items={items}
@@ -135,6 +160,7 @@ export default function MarketManagement() {
 						handleModifyItem={handleModifyItem}
 						handleDeleteItem={handleDeleteItem}
 						buttonLoading={buttonLoading}
+						handleFileChange={handleFileChange}
 					/>
 				</div>
 			</div>
@@ -150,7 +176,8 @@ const AddItemCard = ({
 	newItemQuantity,
 	setNewItemQuantity,
 	handleAddItem,
-	buttonLoading
+	buttonLoading,
+	handleFileChange
 }: any) => {
 	return (
 		<motion.div
@@ -178,6 +205,7 @@ const AddItemCard = ({
 					value={newItemQuantity}
 					onChange={(e: any) => setNewItemQuantity(e.target.value)}
 				/>
+				<Input type='file' onChange={(e: any) => handleFileChange(e, false)} />
 				<Button onClick={handleAddItem} disabled={buttonLoading}>
 					<FaPlus className='inline mr-2' /> Add Item
 				</Button>
@@ -198,7 +226,8 @@ const ItemsList = ({
 	setEditQuantity,
 	handleModifyItem,
 	handleDeleteItem,
-	buttonLoading
+	buttonLoading,
+	handleFileChange
 }: any) => {
 	return (
 		<motion.div
@@ -223,6 +252,7 @@ const ItemsList = ({
 						handleModifyItem={handleModifyItem}
 						handleDeleteItem={handleDeleteItem}
 						buttonLoading={buttonLoading}
+						handleFileChange={handleFileChange}
 					/>
 				))}
 			</div>
@@ -242,7 +272,8 @@ const ItemCard = ({
 	setEditQuantity,
 	handleModifyItem,
 	handleDeleteItem,
-	buttonLoading
+	buttonLoading,
+	handleFileChange
 }: any) => {
 	return (
 		<motion.div
@@ -271,6 +302,7 @@ const ItemCard = ({
 						value={editQuantity}
 						onChange={(e: any) => setEditQuantity(e.target.value)}
 					/>
+					<Input type='file' onChange={(e: any) => handleFileChange(e, true)} />
 					<div className='flex space-x-2'>
 						<Button
 							onClick={() => handleModifyItem(item.id)}
@@ -293,6 +325,13 @@ const ItemCard = ({
 						Credits
 						<br />
 						<span className='text-sm'>Quantity: {item.quantity}</span>
+						{item.image && (
+							<img
+								src={item.image}
+								alt={item.name}
+								className='w-16 h-16 object-cover mt-2 rounded'
+							/>
+						)}
 					</div>
 					<div className='flex space-x-2'>
 						<button
