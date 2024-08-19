@@ -34,6 +34,13 @@ const MarketModal = ({
 						key={item.id}
 						className='bg-gray-700 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-green-400 hover:shadow-lg transition-all duration-300'>
 						<div className='flex flex-col h-full'>
+							{item.image && (
+								<img
+									src={item.image}
+									alt={item.name}
+									className='w-full h-32 object-cover mb-3 rounded-lg'
+								/>
+							)}
 							<div className='flex justify-between items-center text-gray-300 mb-3 sm:mb-4'>
 								<span className='font-semibold text-sm sm:text-lg'>
 									{item.name}
