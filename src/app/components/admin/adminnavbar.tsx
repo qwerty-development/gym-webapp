@@ -28,7 +28,8 @@ import {
 	FaWizardsOfTheCoast,
 	FaExpandArrowsAlt,
 	FaRegCaretSquareDown,
-	FaTv
+	FaTv,
+	FaHistory
 } from 'react-icons/fa'
 import Link from 'next/link'
 
@@ -199,6 +200,16 @@ export default function AdminNavbarComponent() {
 								)}
 							</div>
 						))}
+						<Link
+							href='/admin/completed-sessions'
+							className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+								currentPage === '/admin/completed-sessions'
+									? 'bg-green-500 text-white'
+									: 'text-gray-300 hover:bg-green-300 hover:text-white'
+							}`}>
+							<FaHistory className='mr-2 text-lg' />
+							<span>Completed Sessions</span>
+						</Link>
 					</div>
 					<div className='flex items-center justify-end w-1/3'>
 						<Link
@@ -263,6 +274,16 @@ export default function AdminNavbarComponent() {
 													))}
 												</div>
 											)}
+											<Link
+												href='/admin/completed-sessions'
+												className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+													currentPage === '/admin/completed-sessions'
+														? 'bg-green-500 text-white'
+														: 'text-gray-300 hover:bg-green-300 hover:text-white'
+												}`}>
+												<FaHistory className='mr-2 text-lg' />
+												<span>Completed Sessions</span>
+											</Link>
 										</div>
 									) : (
 										<Link
