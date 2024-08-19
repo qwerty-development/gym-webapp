@@ -96,38 +96,49 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 		: events
 
 	const eventStyleGetter = useCallback(
-		(event: CalendarEvent) => {
-			return {
-				style: {
-					backgroundColor: coachColors[event.coach],
-					color: 'white',
-					borderRadius: '8px',
-					border: 'none',
-					padding: '4px 8px',
-					fontSize: '0.9rem',
-					fontWeight: 'bold',
-					boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-					display: 'flex',
-					alignItems: 'center',
-					justifyContent: 'center',
-					textAlign: 'center' as const,
-					height: '100%',
-					transition: 'all 0.3s ease',
-					cursor: 'pointer'
-				}
+		(event: CalendarEvent, start: Date, end: Date, isSelected: boolean) => {
+			const style: React.CSSProperties = {
+				backgroundColor: coachColors[event.coach],
+				color: 'white',
+				borderRadius: '4px',
+				border: 'none',
+				padding: '2px',
+				fontSize: view === Views.MONTH ? '0.6rem' : '0.8rem',
+				fontWeight: 'bold',
+				boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+				display: 'flex',
+				flexDirection: 'column',
+				alignItems: 'stretch',
+				justifyContent: 'flex-start',
+				height: '100%',
+				minHeight: view === Views.MONTH ? '40px' : '60px',
+				transition: 'all 0.3s ease',
+				cursor: 'pointer',
+				overflow: 'hidden'
 			}
+
+			return { style }
 		},
-		[coachColors]
+		[coachColors, view]
 	)
 
-	const CustomEvent: React.FC<{ event: CalendarEvent }> = ({ event }) => (
-		<div
-			className='h-full flex items-center justify-center flex-col'
-			onClick={() => setSelectedEvent(event)}>
-			<div className='font-bold text-xs sm:text-sm'>{event.title}</div>
-			<div className='text-xs hidden sm:block'>{event.coach}</div>
-		</div>
-	)
+	const CustomEvent: React.FC<{ event: CalendarEvent; view: View }> = ({
+		event,
+		view
+	}) => {
+		return (
+			<div
+				className={`h-full flex flex-col justify-between p-1 ${
+					view === Views.MONTH ? 'text-xs' : 'text-sm'
+				}`}
+				onClick={() => setSelectedEvent(event)}
+				title={`Activity: ${event.title}\nCoach: ${event.coach}\nClients: ${event.clients}`}>
+				<div className='font-bold truncate'>{event.title}</div>
+				<div className='truncate'>{event.coach}</div>
+				<div className='truncate'>{event.clients}</div>
+			</div>
+		)
+	}
 
 	const CustomToolbar: React.FC<any> = toolbarProps => {
 		const goToBack = () => toolbarProps.onNavigate('PREV')
@@ -189,6 +200,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 			</div>
 		)
 	}
+	const calendarStyle = useMemo(
+		() => ({
+			height: view === Views.MONTH ? '800px' : '1200px'
+		}),
+		[view]
+	)
 
 	const handleSelectSlot = (slotInfo: {
 		start: Date
@@ -237,7 +254,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 					</select>
 				</div>
 			</div>
-			<div className='h-[500px] sm:h-[700px] overflow-auto rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'>
+			<div
+				className='... overflow-auto rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'
+				style={calendarStyle}>
 				<Calendar
 					localizer={localizer}
 					events={filteredEvents}
@@ -249,7 +268,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 					onNavigate={newDate => setDate(newDate)}
 					eventPropGetter={eventStyleGetter}
 					components={{
-						event: CustomEvent,
+						event: props => <CustomEvent {...props} view={view} />,
 						toolbar: CustomToolbar
 					}}
 					formats={{
@@ -269,8 +288,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 					className='bg-gray-700 text-white rounded-lg overflow-hidden'
 					selectable
 					onSelectSlot={handleSelectSlot}
-					step={30}
-					timeslots={2}
+					step={60}
+					timeslots={1}
+					defaultView={Views.WEEK}
+					views={[Views.MONTH, Views.WEEK, Views.DAY]}
 					dayPropGetter={(date: Date) => ({
 						className: moment(date).isSame(moment(), 'day')
 							? 'bg-green-800 bg-opacity-30 border-l-4 border-green-500'
