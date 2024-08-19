@@ -124,14 +124,14 @@ export async function POST(request) {
 		const adminMailOptions = {
 			from: 'noreply@notqwerty.com',
 			to: 'info@fitnessvista.co',
-			subject: 'New Booking Notification',
+			subject: `New Booking:${bookingDetails.user_name}${bookingDetails.activity_name} on ${bookingDetails.activity_date} at ${bookingDetails.start_time} - ${bookingDetails.end_time} with ${bookingDetails.coach_name}`,
 			html: generateBookingEmailHTML('admin', bookingDetails)
 		}
 
 		const coachMailOptions = {
 			from: 'noreply@notqwerty.com',
 			to: bookingDetails.coach_email,
-			subject: 'New Booking: Schedule Update',
+			subject: `New Booking:${bookingDetails.user_name}${bookingDetails.activity_name} on ${bookingDetails.activity_date} at ${bookingDetails.start_time} - ${bookingDetails.end_time} `,
 			html: generateBookingEmailHTML('coach', bookingDetails)
 		}
 

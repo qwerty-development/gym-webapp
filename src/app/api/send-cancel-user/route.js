@@ -24,7 +24,7 @@ export async function POST(request) {
 	const mailOptions = {
 		from: 'noreply@notqwerty.com',
 		to: user_email, // Replace with your admin email
-		subject: 'Cancelled Booking Receipt',
+		subject: `Cancelled Booking: ${activity_name} on ${activity_date} at ${start_time} - ${end_time}`,
 		html: `
     <!DOCTYPE html>
     <html lang="en">

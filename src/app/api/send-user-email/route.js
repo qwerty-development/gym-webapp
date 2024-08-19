@@ -31,8 +31,11 @@ export async function POST(request) {
 	const fontSize = 12
 
 	// Load the logo image
-	const logoImageUrl = 'https://fitnessvista.app/_next/image?url=%2Fimages%2Flogo.png&w=256&q=75' // Replace with your actual image URL
-	const logoImageBuffer = await fetch(logoImageUrl).then(res => res.arrayBuffer())
+	const logoImageUrl =
+		'https://fitnessvista.app/_next/image?url=%2Fimages%2Flogo.png&w=256&q=75' // Replace with your actual image URL
+	const logoImageBuffer = await fetch(logoImageUrl).then(res =>
+		res.arrayBuffer()
+	)
 	const logo = await pdfDoc.embedPng(logoImageBuffer)
 
 	// Get the dimensions of the image
@@ -42,7 +45,7 @@ export async function POST(request) {
 		x: 50,
 		y: height - 50 - logoDims.height,
 		width: logoDims.width,
-		height: logoDims.height,
+		height: logoDims.height
 	})
 
 	page.drawText('Booking Receipt', {
@@ -70,13 +73,34 @@ export async function POST(request) {
 	}
 
 	// Draw the text fields
-	page.drawText(`Activity: ${activity_name}`, { ...textOptions, y: height - 100 - logoDims.height })
-	page.drawText(`Coach: ${coach_name}`, { ...textOptions, y: height - 120 - logoDims.height })
-	page.drawText(`Date: ${activity_date}`, { ...textOptions, y: height - 140 - logoDims.height })
-	page.drawText(`Time: ${start_time} - ${end_time}`, { ...textOptions, y: height - 160 - logoDims.height })
-	page.drawText(`Name: ${user_name}`, { ...textOptions, y: height - 180 - logoDims.height })
-	page.drawText(`Wallet: ${user_wallet} credits`, { ...textOptions, y: height - 200 - logoDims.height })
-	page.drawText(`Activity Price: ${activity_price} credits`, { ...textOptions, y: height - 220 - logoDims.height })
+	page.drawText(`Activity: ${activity_name}`, {
+		...textOptions,
+		y: height - 100 - logoDims.height
+	})
+	page.drawText(`Coach: ${coach_name}`, {
+		...textOptions,
+		y: height - 120 - logoDims.height
+	})
+	page.drawText(`Date: ${activity_date}`, {
+		...textOptions,
+		y: height - 140 - logoDims.height
+	})
+	page.drawText(`Time: ${start_time} - ${end_time}`, {
+		...textOptions,
+		y: height - 160 - logoDims.height
+	})
+	page.drawText(`Name: ${user_name}`, {
+		...textOptions,
+		y: height - 180 - logoDims.height
+	})
+	page.drawText(`Wallet: ${user_wallet} credits`, {
+		...textOptions,
+		y: height - 200 - logoDims.height
+	})
+	page.drawText(`Activity Price: ${activity_price} credits`, {
+		...textOptions,
+		y: height - 220 - logoDims.height
+	})
 
 	// Draw a line above the footer
 	page.drawLine({
@@ -100,7 +124,7 @@ export async function POST(request) {
 	const mailOptions = {
 		from: 'noreply@notqwerty.com',
 		to: user_email,
-		subject: 'Booked Session Receipt',
+		subject: `Booking Receipt: ${activity_name} on ${activity_date} at ${start_time} - ${end_time}`,
 		html: `
       <!DOCTYPE html>
       <html lang="en">

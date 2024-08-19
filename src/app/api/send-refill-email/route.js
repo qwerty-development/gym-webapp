@@ -3,117 +3,183 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import fetch from 'node-fetch'
 
 export async function POST(request) {
-    const {
-        user_name,
-        user_email,
-        creditsAdded,
-        user_wallet,
-        newCredits,
+	const {
+		user_name,
+		user_email,
+		creditsAdded,
+		user_wallet,
+		newCredits,
 
-        sale
-    } = await request.json()
+		sale
+	} = await request.json()
 
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        }
-    })
+	const transporter = nodemailer.createTransport({
+		service: 'gmail',
+		auth: {
+			user: process.env.EMAIL_USER,
+			pass: process.env.EMAIL_PASS
+		}
+	})
 
-    // Create PDF
-    const pdfDoc = await PDFDocument.create()
-    const page = pdfDoc.addPage([600, 400])
-    const { width, height } = page.getSize()
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-    const fontSize = 12
+	// Create PDF
+	const pdfDoc = await PDFDocument.create()
+	const page = pdfDoc.addPage([600, 400])
+	const { width, height } = page.getSize()
+	const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+	const fontSize = 12
 
-    // Load the logo image
-    const logoImageUrl = 'https://fitnessvista.app/_next/image?url=%2Fimages%2Flogo.png&w=256&q=75' // Replace with your actual image URL
-    const logoImageBuffer = await fetch(logoImageUrl).then(res => res.arrayBuffer())
-    const logo = await pdfDoc.embedPng(logoImageBuffer)
+	// Load the logo image
+	const logoImageUrl =
+		'https://fitnessvista.app/_next/image?url=%2Fimages%2Flogo.png&w=256&q=75' // Replace with your actual image URL
+	const logoImageBuffer = await fetch(logoImageUrl).then(res =>
+		res.arrayBuffer()
+	)
+	const logo = await pdfDoc.embedPng(logoImageBuffer)
 
-    // Get the dimensions of the image
-    const logoDims = logo.scale(0.5) // Scale the image as needed
+	// Get the dimensions of the image
+	const logoDims = logo.scale(0.5) // Scale the image as needed
 
-    page.drawImage(logo, {
-        x: width / 2 - logoDims.width / 2,
-        y: height - 50 - logoDims.height,
-        width: logoDims.width,
-        height: logoDims.height,
-    })
+	page.drawImage(logo, {
+		x: width / 2 - logoDims.width / 2,
+		y: height - 50 - logoDims.height,
+		width: logoDims.width,
+		height: logoDims.height
+	})
 
-    page.drawText('Booking Invoice', {
-        x: 50,
-        y: height - 50 - logoDims.height - 20,
-        size: 24,
-        font,
-        color: rgb(0.21, 0.47, 0.23)
-    })
+	page.drawText('Booking Invoice', {
+		x: 50,
+		y: height - 50 - logoDims.height - 20,
+		size: 24,
+		font,
+		color: rgb(0.21, 0.47, 0.23)
+	})
 
-    // Draw a line under the title
-    page.drawLine({
-        start: { x: 50, y: height - 50 - logoDims.height - 30 },
-        end: { x: 550, y: height - 50 - logoDims.height - 30 },
-        thickness: 1,
-        color: rgb(0.21, 0.47, 0.23)
-    })
+	// Draw a line under the title
+	page.drawLine({
+		start: { x: 50, y: height - 50 - logoDims.height - 30 },
+		end: { x: 550, y: height - 50 - logoDims.height - 30 },
+		thickness: 1,
+		color: rgb(0.21, 0.47, 0.23)
+	})
 
-    // Define common settings for the text
-    const textOptions = {
-        size: fontSize,
-        font,
-        color: rgb(0, 0, 0)
-    }
+	// Define common settings for the text
+	const textOptions = {
+		size: fontSize,
+		font,
+		color: rgb(0, 0, 0)
+	}
 
-    // Define the x position for the columns
-    const leftColumnX = 50
-    const rightColumnX = 350
+	// Define the x position for the columns
+	const leftColumnX = 50
+	const rightColumnX = 350
 
-    // Draw user information on the left side
-    page.drawText('Billed To:', { ...textOptions, x: leftColumnX, y: height - 100 - logoDims.height, size: fontSize + 2, color: rgb(0.21, 0.47, 0.23) })
-    page.drawText(`Name: ${user_name}`, { ...textOptions, x: leftColumnX, y: height - 120 - logoDims.height })
-    page.drawText(`Email: ${user_email}`, { ...textOptions, x: leftColumnX, y: height - 140 - logoDims.height })
-    page.drawText(`Wallet: ${user_wallet} credits`, { ...textOptions, x: leftColumnX, y: height - 160 - logoDims.height })
-    page.drawText(`Paid: ${newCredits}$`, { ...textOptions, x: leftColumnX, y: height - 180 - logoDims.height })
-    page.drawText(`Credits Added: ${creditsAdded} credits`, { ...textOptions, x: leftColumnX, y: height - 200 - logoDims.height })
-    page.drawText(`Discount: ${sale}%`, { ...textOptions, x: leftColumnX, y: height - 220 - logoDims.height })
-    page.drawText(`New Balance: ${user_wallet + creditsAdded}`, { ...textOptions, x: leftColumnX, y: height - 240 - logoDims.height })
+	// Draw user information on the left side
+	page.drawText('Billed To:', {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 100 - logoDims.height,
+		size: fontSize + 2,
+		color: rgb(0.21, 0.47, 0.23)
+	})
+	page.drawText(`Name: ${user_name}`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 120 - logoDims.height
+	})
+	page.drawText(`Email: ${user_email}`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 140 - logoDims.height
+	})
+	page.drawText(`Wallet: ${user_wallet} credits`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 160 - logoDims.height
+	})
+	page.drawText(`Paid: ${newCredits}$`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 180 - logoDims.height
+	})
+	page.drawText(`Credits Added: ${creditsAdded} credits`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 200 - logoDims.height
+	})
+	page.drawText(`Discount: ${sale}%`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 220 - logoDims.height
+	})
+	page.drawText(`New Balance: ${user_wallet + creditsAdded}`, {
+		...textOptions,
+		x: leftColumnX,
+		y: height - 240 - logoDims.height
+	})
 
+	// Draw company information on the right side
+	page.drawText('Contact Information:', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 100 - logoDims.height,
+		size: fontSize + 2,
+		color: rgb(0.21, 0.47, 0.23)
+	})
+	page.drawText('Email: info@fitnessvista.co', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 120 - logoDims.height
+	})
+	page.drawText('Address:', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 140 - logoDims.height
+	})
+	page.drawText('Block D, 7th Floor', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 160 - logoDims.height
+	})
+	page.drawText('Urban Dreams, Pierre Gemayel St.,', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 180 - logoDims.height
+	})
+	page.drawText('Beirut, Lebanon', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 200 - logoDims.height
+	})
+	page.drawText('Phone: +96181377353', {
+		...textOptions,
+		x: rightColumnX,
+		y: height - 220 - logoDims.height
+	})
 
-    // Draw company information on the right side
-    page.drawText('Contact Information:', { ...textOptions, x: rightColumnX, y: height - 100 - logoDims.height, size: fontSize + 2, color: rgb(0.21, 0.47, 0.23) })
-    page.drawText('Email: info@fitnessvista.co', { ...textOptions, x: rightColumnX, y: height - 120 - logoDims.height })
-    page.drawText('Address:', { ...textOptions, x: rightColumnX, y: height - 140 - logoDims.height })
-    page.drawText('Block D, 7th Floor', { ...textOptions, x: rightColumnX, y: height - 160 - logoDims.height })
-    page.drawText('Urban Dreams, Pierre Gemayel St.,', { ...textOptions, x: rightColumnX, y: height - 180 - logoDims.height })
-    page.drawText('Beirut, Lebanon', { ...textOptions, x: rightColumnX, y: height - 200 - logoDims.height })
-    page.drawText('Phone: +96181377353', { ...textOptions, x: rightColumnX, y: height - 220 - logoDims.height })
+	// Draw a line above the footer
+	page.drawLine({
+		start: { x: 50, y: height - 280 - logoDims.height },
+		end: { x: 550, y: height - 280 - logoDims.height },
+		thickness: 1,
+		color: rgb(0.21, 0.47, 0.23)
+	})
 
-    // Draw a line above the footer
-    page.drawLine({
-        start: { x: 50, y: height - 280 - logoDims.height },
-        end: { x: 550, y: height - 280 - logoDims.height },
-        thickness: 1,
-        color: rgb(0.21, 0.47, 0.23)
-    })
+	// Draw the footer text
+	page.drawText('© 2024 Qwerty. All rights reserved.', {
+		x: 50,
+		y: height - 300 - logoDims.height,
+		size: fontSize - 2,
+		font,
+		color: rgb(0.5, 0.5, 0.5)
+	})
 
-    // Draw the footer text
-    page.drawText('© 2024 Qwerty. All rights reserved.', {
-        x: 50,
-        y: height - 300 - logoDims.height,
-        size: fontSize - 2,
-        font,
-        color: rgb(0.5, 0.5, 0.5)
-    })
+	const pdfBytes = await pdfDoc.save()
 
-    const pdfBytes = await pdfDoc.save()
-
-    const mailOptions = {
-        from: 'noreply@notqwerty.com',
-        to: user_email,
-        subject: 'Refill Invoice',
-        html: `
+	const mailOptions = {
+		from: 'noreply@notqwerty.com',
+		to: user_email,
+		subject: `Credits Refill: ${newCredits} credits added to your account`,
+		html: `
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -215,25 +281,25 @@ export async function POST(request) {
 
       </html>
     `,
-        attachments: [
-            {
-                filename: 'BookingInvoice.pdf',
-                content: pdfBytes,
-                contentType: 'application/pdf'
-            }
-        ]
-    }
+		attachments: [
+			{
+				filename: 'BookingInvoice.pdf',
+				content: pdfBytes,
+				contentType: 'application/pdf'
+			}
+		]
+	}
 
-    try {
-        await transporter.sendMail(mailOptions)
-        return new Response(
-            JSON.stringify({ message: 'Email sent successfully' }),
-            { status: 200 }
-        )
-    } catch (error) {
-        console.error(error)
-        return new Response(JSON.stringify({ error: 'Failed to send email' }), {
-            status: 500
-        })
-    }
+	try {
+		await transporter.sendMail(mailOptions)
+		return new Response(
+			JSON.stringify({ message: 'Email sent successfully' }),
+			{ status: 200 }
+		)
+	} catch (error) {
+		console.error(error)
+		return new Response(JSON.stringify({ error: 'Failed to send email' }), {
+			status: 500
+		})
+	}
 }
