@@ -14,6 +14,7 @@ const UserInfoForm: React.FC<UserInfoFormProps> = ({ userData, onUpdate }) => {
 	const { user } = useUser()
 	const [formData, setFormData] = useState({
 		DOB: userData.DOB ? new Date(userData.DOB) : null,
+		phone: userData.phone || '',
 		height: userData.height || '',
 		weight: '',
 		gender: userData.gender || '',
@@ -42,6 +43,7 @@ const UserInfoForm: React.FC<UserInfoFormProps> = ({ userData, onUpdate }) => {
 
 		const updates = {
 			DOB: formData.DOB,
+			phone: formData.phone,
 			height: formData.height ? parseInt(formData.height) : null,
 			weight: formData.weight
 				? [
@@ -97,6 +99,21 @@ const UserInfoForm: React.FC<UserInfoFormProps> = ({ userData, onUpdate }) => {
 		<form
 			onSubmit={handleSubmit}
 			className='bg-green-800 shadow-md rounded px-8 pt-6 pb-8 mb-4'>
+			<div className='mb-4'>
+				<label
+					className='block text-gray-300 text-sm font-bold mb-2'
+					htmlFor='phone'>
+					phone
+				</label>
+				<input
+					className='shadow appearance-none border rounded w-full py-2 px-3 text-gray-300 bg-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+					id='phone'
+					type='text'
+					name='phone'
+					value={formData.phone}
+					onChange={handleInputChange}
+				/>
+			</div>
 			<div className='mb-4'>
 				<label
 					className='block text-gray-300 text-sm font-bold mb-2'
