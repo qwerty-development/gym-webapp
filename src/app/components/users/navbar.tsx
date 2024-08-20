@@ -15,6 +15,7 @@ import {
 	FaShoppingCart,
 	FaInfo
 } from 'react-icons/fa'
+import { FaHospitalUser } from 'react-icons/fa6'
 import Link from 'next/link'
 import TokenInfo from './TokenInfo'
 import { supabaseClient } from '../../../../utils/supabaseClient'
@@ -53,6 +54,7 @@ export default function NavbarComponent() {
 		{ href: '/users/dashboard', label: 'Dashboard', icon: FaUser },
 		{ href: '/users/bookasession', label: 'Book', icon: FaCalendarAlt },
 		{ href: '/users/shop', label: 'Shop', icon: FaShoppingCart },
+		{ href: '/users/health', label: 'Health', icon: FaHospitalUser },
 		...(user?.publicMetadata?.role === 'admin'
 			? [{ href: '/admin/manage-users', label: 'Admin', icon: FaCog }]
 			: [])
@@ -106,7 +108,7 @@ export default function NavbarComponent() {
 							className='bg-gray-800 text-white px-3 py-1 flex  rounded-full mr-3 text-sm border text-nowrap border-green-500 relative'
 							onMouseEnter={() => setShowTokenInfo(true)}
 							onMouseLeave={() => setShowTokenInfo(false)}>
-							{walletBalance} credits 
+							{walletBalance} credits
 							{showTokenInfo && userTokens && <TokenInfo tokens={userTokens} />}
 						</div>
 
