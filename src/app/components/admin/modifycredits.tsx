@@ -25,6 +25,10 @@ interface User {
 	last_name: string
 	email: string
 	created_at: string
+	gender: string
+	height: number
+	DOB: string
+	weight: any[]
 	phone: string
 	wallet?: number
 	isFree?: boolean
@@ -86,6 +90,7 @@ const ModifyCreditsComponent = () => {
 			})
 			.finally(() => {
 				setIsLoading(false)
+				console.log(users)
 			})
 	}, [searchTrigger, sortOption])
 
@@ -255,6 +260,17 @@ const ModifyCreditsComponent = () => {
 		}
 	}
 
+	const calcualateAge = (dob: string) => {
+		const today = new Date()
+		const birthDate = new Date(dob)
+		let age = today.getFullYear() - birthDate.getFullYear()
+		const m = today.getMonth() - birthDate.getMonth()
+		if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+			age--
+		}
+		return age
+	}
+
 	return (
 		<motion.div
 			initial={{ opacity: 0 }}
@@ -311,10 +327,25 @@ const ModifyCreditsComponent = () => {
 								Last Name
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
+								Gender
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
 								Email
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
 								Phone
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
+								DOB
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
+								age
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
+								Height
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
+								Weight
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
 								Wallet
@@ -353,8 +384,17 @@ const ModifyCreditsComponent = () => {
 								<td className='py-4 px-6'>{user.username}</td>
 								<td className='py-4 px-6'>{user.first_name}</td>
 								<td className='py-4 px-6'>{user.last_name}</td>
+								<td className='py-4 px-6'>{user.gender}</td>
 								<td className='py-4 px-6'>{user.email}</td>
 								<td className='py-4 px-6'>{user.phone}</td>
+								<td className='py-4 px-6'>{user.DOB}</td>
+								<td className='py-4 px-6'>{calcualateAge(user.DOB)}</td>
+								<td className='py-4 px-6'>{user.height}</td>
+								<td className='py-4 px-6'>
+									{user.weight.length > 0
+										? user.weight[user.weight.length - 1].value
+										: ''}
+								</td>
 								<td className='py-4 px-6'>{user.wallet}</td>
 								<td className='py-4 px-6 text-center'>
 									<motion.button
