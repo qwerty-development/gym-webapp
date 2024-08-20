@@ -8,13 +8,13 @@ export async function POST(request) {
 	const payload = await request.json()
 
 	const user = payload.data
-
 	// Extract necessary fields from the user object
 	const userId = user.id
 	const email = user.email_addresses[0].email_address
 	const firstName = user.first_name
 	const lastName = user.last_name
 	const userName = user.username
+	const phone = user.phone_numbers[0]
 
 	const { data: existingUser, error: fetchError } = await supabase
 		.from('users')
@@ -39,7 +39,8 @@ export async function POST(request) {
 				email,
 				first_name: firstName,
 				last_name: lastName,
-				username: userName
+				username: userName,
+				phone: phone
 			})
 			.eq('user_id', userId)
 	} else {
@@ -49,7 +50,8 @@ export async function POST(request) {
 				email,
 				first_name: firstName,
 				last_name: lastName,
-				username: userName
+				username: userName,
+				phone: phone
 			}
 		])
 	}

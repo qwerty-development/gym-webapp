@@ -23,6 +23,7 @@ interface User {
 	username: string
 	first_name: string
 	last_name: string
+	email: string
 	created_at: string
 	wallet?: number
 	isFree?: boolean
@@ -309,6 +310,9 @@ const ModifyCreditsComponent = () => {
 								Last Name
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
+								Email
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
 								Wallet
 							</th>
 							<th scope='col' className='py-4 px-6 text-center'>
@@ -345,6 +349,7 @@ const ModifyCreditsComponent = () => {
 								<td className='py-4 px-6'>{user.username}</td>
 								<td className='py-4 px-6'>{user.first_name}</td>
 								<td className='py-4 px-6'>{user.last_name}</td>
+								<td className='py-4 px-6'>{user.email}</td>
 								<td className='py-4 px-6'>{user.wallet}</td>
 								<td className='py-4 px-6 text-center'>
 									<motion.button
