@@ -44,7 +44,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
   const debouncedSubmit = debounce(async (currentQuestion: string) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/ask-health', { question: currentQuestion, userData });
+      const response = await axios.post('https://www.fitnessvista.app/api/ask-health', { question: currentQuestion, userData });
       const answer = response.data.answer;
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
