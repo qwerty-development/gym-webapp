@@ -89,9 +89,11 @@ const HealthGoals: React.FC<HealthGoalsProps> = ({ userData, onUpdate }) => {
 						placeholder='Enter a new health goal'
 						className='flex-grow mr-2 px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400'
 					/>
+				</div>
+				<div className='justify-center flex'>
 					<button
 						type='submit'
-						className='px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-300'>
+						className='px-4 py-2 bg-green-500 text-white mt-5 items-center rounded-lg hover:bg-green-600 transition-colors duration-300'>
 						Add Goal
 					</button>
 				</div>
@@ -112,9 +114,8 @@ const HealthGoals: React.FC<HealthGoalsProps> = ({ userData, onUpdate }) => {
 								className='mr-3 form-checkbox h-5 w-5 text-green-400 rounded focus:ring-green-400'
 							/>
 							<span
-								className={`text-lg ${
-									goal.completed ? 'line-through text-gray-400' : 'text-white'
-								}`}>
+								className={`text-lg ${goal.completed ? 'line-through text-gray-400' : 'text-white'
+									}`}>
 								{goal.description}
 							</span>
 						</div>

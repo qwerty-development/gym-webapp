@@ -120,8 +120,8 @@ export default function HealthProfilePage() {
 				</div>
 			</div>
 
-			<div className='max-w-7xl mx-auto lg:ml-32 2xl:mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-				<h1 className='text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-800 mb-8 sm:mb-12 text-center'>
+			<div className='max-w-7xl lg:ml-32 mx-auto 2xl:mx-auto px-4 sm:px-6 lg:px-8 py-12'>
+				<h1 className='text-4xl mx-auto  sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-800 mb-8 sm:mb-12 text-center'>
 					Health Profile
 				</h1>
 
@@ -204,7 +204,7 @@ export default function HealthProfilePage() {
 				</div>
 
 				{/* Main Content */}
-				<div className='lg:ml-64'>
+				<div className=''>
 					<motion.div
 						key={activeTab}
 						initial={{ opacity: 0, y: 20 }}

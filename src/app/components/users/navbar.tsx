@@ -64,7 +64,7 @@ export default function NavbarComponent() {
 		<nav className='bg-gray-900 text-white border-b-2 border-green-500'>
 			<div className='mx-auto max-w-7xl px-4 lg:px-8'>
 				<div className='flex items-center justify-between h-16'>
-					<div className='md:hidden flex justify-start w-1/3'>
+					<div className='xl:hidden flex justify-start w-1/3'>
 						<button
 							onClick={() => setIsMenuOpen(!isMenuOpen)}
 							className='inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500'
@@ -76,7 +76,7 @@ export default function NavbarComponent() {
 							)}
 						</button>
 					</div>
-					<div className='flex justify-center lg:justify-start lg:ml-64 xl:ml-56 2xl:ml-32 w-1/3'>
+					<div className='flex justify-center xl:justify-start   w-1/3'>
 						<Link href='/users/dashboard' className='flex-shrink-0'>
 							<Image
 								src='/images/logoinverted.png'
@@ -88,7 +88,7 @@ export default function NavbarComponent() {
 							/>
 						</Link>
 					</div>
-					<div className='hidden md:flex  justify-end items-center space-x-2 flex-grow'>
+					<div className='hidden md:hidden  xl:flex  justify-end items-center space-x-2 flex-grow'>
 						{navItems.map(item => (
 							<Link
 								key={item.href}
@@ -130,7 +130,7 @@ export default function NavbarComponent() {
 						initial={{ opacity: 0, height: 0 }}
 						animate={{ opacity: 1, height: 'auto' }}
 						exit={{ opacity: 0, height: 0 }}
-						className='md:hidden'>
+						className='xl:hidden '>
 						<div className='px-2 pt-2 pb-3 space-y-1 sm:px-3'>
 							{navItems.map(item => (
 								<Link
