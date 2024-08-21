@@ -1,38 +1,58 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-// Simple in-memory store for rate limiting
-let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 1000; // 1 second
+// Rate limiting
+const RATE_LIMIT = {
+  windowMs: 60000, // 1 minute
+  max: 5 // limit each IP to 5 requests per windowMs
+};
+const requestCounts = new Map();
+
+// CORS headers
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': 'https://www.fitnessvista.app',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 export async function POST(req: NextRequest) {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   try {
-    const currentTime = Date.now();
-    if (currentTime - lastRequestTime < MIN_REQUEST_INTERVAL) {
+    // Apply rate limiting
+    const clientIp = req.headers.get('x-forwarded-for') || 'unknown';
+    const now = Date.now();
+    const clientRequests = requestCounts.get(clientIp) || [];
+    const recentRequests = clientRequests.filter((time: number) => now - time < RATE_LIMIT.windowMs);
+
+    if (recentRequests.length >= RATE_LIMIT.max) {
       return NextResponse.json(
-        { error: 'Please wait a moment before sending another message.' },
-        { status: 429 }
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: CORS_HEADERS }
       );
     }
-    lastRequestTime = currentTime;
+    requestCounts.set(clientIp, [...recentRequests, now]);
 
+    // Parse request body
     const { question, userData } = await req.json();
-
     console.log('Received question:', question);
     console.log('User data:', userData);
 
-    // Safely access nested properties
+    // Process user data
     const getLatestValue = (arr: any[] | undefined) =>
       arr && arr.length > 0 ? arr[arr.length - 1].value : 'Unknown';
 
     const weight = getLatestValue(userData.weight);
     const waistCircumference = getLatestValue(userData.waist_circumference);
-
-    // Calculate BMI only if both height and weight are available
     const bmi = (userData.height && weight !== 'Unknown')
-      ? (weight / Math.pow(userData.height / 100, 2)).toFixed(2)
+      ? (Number(weight) / Math.pow(Number(userData.height) / 100, 2)).toFixed(2)
       : 'Unknown';
 
+    // Construct health context
     const healthContext = `
     You are an AI health advisor named Vista.
     Be concise, very friendly, and informative in your answers.
@@ -210,6 +230,7 @@ Remember, individual needs may vary. It's always best to consult with a healthca
       return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
     }
 
+    // Make request to OpenAI API
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -226,23 +247,31 @@ Remember, individual needs may vary. It's always best to consult with a healthca
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
         },
+        timeout: 10000, // 10 second timeout
       }
     );
 
     const answer = response.data.choices[0].message.content.trim();
-    return NextResponse.json({ answer });
+    return NextResponse.json({ answer }, { headers: CORS_HEADERS });
 
   } catch (error) {
     console.error('Error in API route:', error);
-    if (axios.isAxiosError(error) && error.response?.status === 429) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 429) {
+        return NextResponse.json(
+          { error: 'Too many requests to AI service. Please try again later.' },
+          { status: 429, headers: CORS_HEADERS }
+        );
+      } else if (error.code === 'ECONNABORTED') {
+        return NextResponse.json(
+          { error: 'Request timed out. Please try again.' },
+          { status: 504, headers: CORS_HEADERS }
+        );
+      }
     }
     return NextResponse.json(
-      { error: 'Error fetching the answer. Please try again later.' },
-      { status: 500 }
+      { error: 'An unexpected error occurred. Please try again later.' },
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
