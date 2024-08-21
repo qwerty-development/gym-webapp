@@ -1,6 +1,6 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
 
 // Rate limiting
 const RATE_LIMIT = {
@@ -15,6 +15,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+// Initial greeting message
+const INITIAL_GREETING = 'Hello! I am Vista, your AI health assistant. How can I help you today?';
 
 export async function POST(req: NextRequest) {
   // Handle CORS preflight request
@@ -38,15 +41,14 @@ export async function POST(req: NextRequest) {
     requestCounts.set(clientIp, [...recentRequests, now]);
 
     // Parse request body
-    const { question, userData } = await req.json();
+    const { question, userData, clearChat } = await req.json();
     console.log('Received question:', question);
     console.log('User data:', userData);
 
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not set');
       return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
-  }
-  
+    }
 
     // Process user data
     const getLatestValue = (arr: any[] | undefined) =>
@@ -58,10 +60,10 @@ export async function POST(req: NextRequest) {
       ? (Number(weight) / Math.pow(Number(userData.height) / 100, 2)).toFixed(2)
       : 'Unknown';
 
+
     // Construct health context
     const healthContext = `
     You are an AI health advisor named Vista.
-    Be concise, very friendly, and informative in your answers.
     The advice should be based on general health and fitness guidelines.
 
     # Comprehensive Nutrition and Diet Information
@@ -219,14 +221,15 @@ For those in high or very high risk categories:
 Remember, individual needs may vary. It's always best to consult with a healthcare professional or registered dietitian for personalized advice.
     
     Here is some information about the user:
-    Age: ${userData.age || 'Unknown'}
+    Name: ${userData.first_name || 'Unknown'}
+    Born on: ${userData.DOB || 'Unknown'}
     Gender: ${userData.gender || 'Unknown'}
     Height: ${userData.height ? `${userData.height} cm` : 'Unknown'}
     Weight: ${weight !== 'Unknown' ? `${weight} kg` : 'Unknown'}
     BMI: ${bmi}
+    Activity Level: ${userData.activity_level}
     Waist Circumference: ${waistCircumference !== 'Unknown' ? `${waistCircumference} cm` : 'Unknown'}
     
-    Directly, when the user says hi, answer with everyting you know abnout him
     Please consider this information when providing advice, but do not repeat it unless directly relevant to the answer.
     If any information is listed as 'Unknown', do not mention it in your response unless the user asks about it specifically.
     `;
@@ -234,6 +237,10 @@ Remember, individual needs may vary. It's always best to consult with a healthca
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not set');
       return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
+    }
+
+    if (!question) {
+      return NextResponse.json({ answer: INITIAL_GREETING }, { headers: CORS_HEADERS });
     }
 
     // Make request to OpenAI API
@@ -258,8 +265,7 @@ Remember, individual needs may vary. It's always best to consult with a healthca
     );
 
     const answer = response.data.choices[0].message.content.trim();
-    return NextResponse.json({ answer }, { headers: CORS_HEADERS });
-
+    return NextResponse.json({ answer, clearChat }, { headers: CORS_HEADERS });
   } catch (error) {
     console.error('Error in API route:', error);
     if (axios.isAxiosError(error)) {

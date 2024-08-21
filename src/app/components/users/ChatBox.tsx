@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 import { FaPaperPlane, FaTimes } from 'react-icons/fa';
@@ -32,10 +32,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
   });
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem('healthChatMessages', JSON.stringify(messages));
+    scrollToBottom();
   }, [messages]);
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  };
 
   const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuestion(e.target.value);
@@ -46,11 +54,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
     try {
       const response = await axios.post('/api/ask-health', { question: currentQuestion, userData });
       const answer = response.data.answer;
+      const clearChat = response.data.clearChat;
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.question === currentQuestion ? { ...msg, answer, loading: false, error: undefined } : msg
         )
       );
+      if (clearChat) {
+        setMessages([]);
+      }
     } catch (error) {
       console.error('Error fetching the answer:', error);
       let errorMessage = 'Error fetching the answer. Please try again later.';
@@ -79,12 +91,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
     debouncedSubmit(currentQuestion);
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+    localStorage.removeItem('healthChatMessages');
+  };
 
   return (
     isVisible ? (
       <div className="chat-box bg-gray-700 p-4 rounded-lg shadow-lg text-white">
-
-        <div className="conversation mb-4 h-64 overflow-y-auto">
+        <div className="header flex justify-between mb-2">
+          <h3 className="text-xl font-bold">Vista</h3>
+          <button className="text-red-500 hover:text-red-600" onClick={handleClearChat}>
+            Clear Chat
+          </button>
+        </div>
+        <div className="conversation mb-4 h-64 overflow-y-auto" ref={chatContainerRef}>
           {messages.map((msg, index) => (
             <div key={index} className="message-container mb-2">
               <div className="message user-message bg-gray-600 p-2 rounded-md">
