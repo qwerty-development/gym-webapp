@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const healthContext = `
     You are an AI health advisor named Vista.
-    Be concise, friendly, and informative in your answers.
+    Be concise, very friendly, and informative in your answers.
     The advice should be based on general health and fitness guidelines.
 
     # Comprehensive Nutrition and Diet Information
