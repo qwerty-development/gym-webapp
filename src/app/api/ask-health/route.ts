@@ -42,6 +42,12 @@ export async function POST(req: NextRequest) {
     console.log('Received question:', question);
     console.log('User data:', userData);
 
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
+      return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
+  }
+  
+
     // Process user data
     const getLatestValue = (arr: any[] | undefined) =>
       arr && arr.length > 0 ? arr[arr.length - 1].value : 'Unknown';
