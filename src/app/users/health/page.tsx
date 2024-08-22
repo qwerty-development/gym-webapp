@@ -32,6 +32,7 @@ export default function HealthProfilePage() {
 			.eq('user_id', user?.id)
 			.single()
 
+
 		if (error) {
 			console.error('Error fetching user data:', error)
 		} else {
