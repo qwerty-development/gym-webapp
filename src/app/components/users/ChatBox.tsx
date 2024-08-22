@@ -1,4 +1,3 @@
-'use client'
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
@@ -39,6 +38,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    // Load a "fact of the day" when the component mounts
+    loadFactOfTheDay();
+  }, []);
+
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -47,6 +51,26 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
 
   const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuestion(e.target.value);
+  };
+
+  const loadFactOfTheDay = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post('/api/ask-health', { question: "Give me a fact of the day", userData });
+      const answer = response.data.answer;
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { question: "Fact of the day", answer, loading: false, error: undefined },
+      ]);
+    } catch (error) {
+      console.error('Error fetching the fact of the day:', error);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { question: "Fact of the day", error: 'Failed to load fact of the day. Please try again later.', loading: false },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const debouncedSubmit = debounce(async (currentQuestion: string) => {
@@ -98,14 +122,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
 
   return (
     isVisible ? (
-      <div className="chat-box bg-gray-700 p-4 rounded-lg shadow-lg text-white">
+      <div className="chat-box mt-8 mb-8 border border-white p-4 rounded-lg shadow-lg text-white">
         <div className="header flex justify-between mb-2">
-          <h3 className="text-xl font-bold">Vista</h3>
+          <h3 className="text-2xl text-green-400 font-bold">Talk to Vista, your personal assistant!</h3>
+  
           <button className="text-red-500 hover:text-red-600" onClick={handleClearChat}>
             Clear Chat
           </button>
         </div>
-        <div className="conversation mb-4 h-64 overflow-y-auto" ref={chatContainerRef}>
+        <hr className='text-white'></hr>
+        <div className="conversation mb-4 mt-4 h-64 overflow-y-auto" ref={chatContainerRef}>
           {messages.map((msg, index) => (
             <div key={index} className="message-container mb-2">
               <div className="message user-message bg-gray-600 p-2 rounded-md">

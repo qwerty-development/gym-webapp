@@ -222,6 +222,7 @@ Remember, individual needs may vary. It's always best to consult with a healthca
     
     Here is some information about the user:
     Name: ${userData.first_name || 'Unknown'}
+    Wallet: ${userData.Wallet || 'Unknown'}
     Born on: ${userData.DOB || 'Unknown'}
     Gender: ${userData.gender || 'Unknown'}
     Height: ${userData.height ? `${userData.height} cm` : 'Unknown'}
