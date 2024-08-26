@@ -4,6 +4,7 @@ import NavbarComponent from '@/app/components/users/navbar'
 import { UserButton, useUser } from '@clerk/nextjs'
 import CalendarView from '@/app/components/admin/CalendarView'
 import ChatBox from '@/app/components/users/ChatBox' // Adjust the path as necessary
+import { RiRobotLine } from 'react-icons/ri'
 
 import {
 	fetchReservations,
@@ -124,6 +125,8 @@ export default function Dashboard() {
 		workoutDay: 0
 	})
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
+
+	const [isChatOpen, setIsChatOpen] = useState(false)
 	const [showCalendarView, setShowCalendarView] = useState(false)
 	const toggleCalendarView = () => {
 		setShowCalendarView(!showCalendarView)
@@ -354,8 +357,8 @@ export default function Dashboard() {
 							count: reservation.count,
 							additions: reservation.additions
 								? reservation.additions.filter(
-										(addition: any) => addition.user_id === user.id
-								  )
+									(addition: any) => addition.user_id === user.id
+								)
 								: []
 						})
 					)
@@ -410,21 +413,21 @@ export default function Dashboard() {
 
 		const response = selectedReservation?.count
 			? await payForGroupItems({
-					userId: user?.id,
-					activityId: selectedReservation?.activity.id,
-					coachId: selectedReservation?.coach.id,
-					date: selectedReservation?.date,
-					startTime: selectedReservation?.start_time,
-					selectedItems
-			  })
+				userId: user?.id,
+				activityId: selectedReservation?.activity.id,
+				coachId: selectedReservation?.coach.id,
+				date: selectedReservation?.date,
+				startTime: selectedReservation?.start_time,
+				selectedItems
+			})
 			: await payForItems({
-					userId: user?.id,
-					activityId: selectedReservation?.activity.id,
-					coachId: selectedReservation?.coach.id,
-					date: selectedReservation?.date,
-					startTime: selectedReservation?.start_time,
-					selectedItems
-			  })
+				userId: user?.id,
+				activityId: selectedReservation?.activity.id,
+				coachId: selectedReservation?.coach.id,
+				date: selectedReservation?.date,
+				startTime: selectedReservation?.start_time,
+				selectedItems
+			})
 
 		setButtonLoading(false)
 		if (response.error) {
@@ -477,8 +480,8 @@ export default function Dashboard() {
 						count: reservation.count,
 						additions: reservation.additions
 							? reservation.additions.filter(
-									(addition: any) => addition.user_id === user?.id
-							  )
+								(addition: any) => addition.user_id === user?.id
+							)
 							: []
 					})
 				)
@@ -648,11 +651,10 @@ export default function Dashboard() {
 														{({ active }) => (
 															<a
 																href='#'
-																className={`${
-																	active
-																		? 'bg-gray-600 text-gray-100'
-																		: 'text-gray-300'
-																} block px-4 py-2 text-sm`}>
+																className={`${active
+																	? 'bg-gray-600 text-gray-100'
+																	: 'text-gray-300'
+																	} block px-4 py-2 text-sm`}>
 																{`${user.first_name} ${user.last_name}`}
 															</a>
 														)}
@@ -702,8 +704,8 @@ export default function Dashboard() {
 												typeof addition === 'string'
 													? addition
 													: addition.items
-															.map((item: any) => item.name)
-															.join(', ')
+														.map((item: any) => item.name)
+														.join(', ')
 											)
 											.join(', ')
 									)
@@ -733,20 +735,18 @@ export default function Dashboard() {
 				<div className='flex justify-center space-x-2'>
 					<button
 						onClick={() => setActiveTab('individual')}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-							activeTab === 'individual'
-								? 'bg-green-500 text-white'
-								: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-						}`}>
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${activeTab === 'individual'
+							? 'bg-green-500 text-white'
+							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+							}`}>
 						Individual
 					</button>
 					<button
 						onClick={() => setActiveTab('group')}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-							activeTab === 'group'
-								? 'bg-green-500 text-white'
-								: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-						}`}>
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${activeTab === 'group'
+							? 'bg-green-500 text-white'
+							: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+							}`}>
 						Class
 					</button>
 				</div>
@@ -759,26 +759,22 @@ export default function Dashboard() {
 				</h2>
 				<ul>
 					<li
-						className={`mb-5 p-2 px-6 ${
-							activeTab === 'individual' ? 'bg-green-500' : ''
-						}`}>
+						className={`mb-5 p-2 px-6 ${activeTab === 'individual' ? 'bg-green-500' : ''
+							}`}>
 						<button
 							onClick={() => setActiveTab('individual')}
-							className={`flex items-center ${
-								activeTab === 'group' ? 'hover:text-green-400' : ''
-							} w-full text-left`}>
+							className={`flex items-center ${activeTab === 'group' ? 'hover:text-green-400' : ''
+								} w-full text-left`}>
 							<FaCalendarAlt size={35} className='mr-2' /> PT Reservations
 						</button>
 					</li>
 					<li
-						className={`mb-10 p-2 px-6 ${
-							activeTab === 'group' ? 'bg-green-500' : ''
-						}`}>
+						className={`mb-10 p-2 px-6 ${activeTab === 'group' ? 'bg-green-500' : ''
+							}`}>
 						<button
 							onClick={() => setActiveTab('group')}
-							className={`flex items-center ${
-								activeTab === 'individual' ? 'hover:text-green-400' : ''
-							} w-full text-left`}>
+							className={`flex items-center ${activeTab === 'individual' ? 'hover:text-green-400' : ''
+								} w-full text-left`}>
 							<FaUsers size={35} className='mr-2' /> Class Reservations
 						</button>
 					</li>
@@ -816,9 +812,28 @@ export default function Dashboard() {
 						</div>
 					</div>
 				</motion.div>
-				<div className=''>
-					<ChatBox userData={userData} />
+				<div className="fixed bottom-4 right-4 z-50">
+					{isChatOpen ? (
+						<div className="bg-gray-900 rounded-lg shadow-lg p-4 mb-16 w-80">
+							<button
+								onClick={() => setIsChatOpen(false)}
+								className="absolute top-2 right-2 text-gray-400 hover:text-white"
+							>
+								&times;
+							</button>
+							<ChatBox userData={userData} />
+						</div>
+					) : (
+						<button
+							onClick={() => setIsChatOpen(true)}
+							className="bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg transition-all duration-300"
+						>
+							<img src="/dancerobot.gif" alt="Dancing Robot" className="w-10 h-10" />
+						</button>
+					)}
 				</div>
+
+
 				<AnimatePresence mode='wait'>
 					{isLoading ? (
 						<motion.div
@@ -929,18 +944,17 @@ export default function Dashboard() {
 													const isActive = now >= startTime && now <= endTime
 													const isStartingSoon =
 														startTime.getTime() - now.getTime() <=
-															15 * 60 * 1000 && startTime > now
+														15 * 60 * 1000 && startTime > now
 
 													return (
 														<li
 															key={index}
-															className={`text-gray-300 p-2 rounded ${
-																isActive
-																	? 'shadow-lg shadow-green-400'
-																	: isStartingSoon
+															className={`text-gray-300 p-2 rounded ${isActive
+																? 'shadow-lg shadow-green-400'
+																: isStartingSoon
 																	? 'shadow-lg shadow-yellow-700'
 																	: ''
-															}`}>
+																}`}>
 															<div className='font-bold'>
 																{session.activityName}
 															</div>
@@ -1103,16 +1117,16 @@ export default function Dashboard() {
 																		Additions:
 																	</span>{' '}
 																	{reservation.additions &&
-																	reservation.additions.length > 0
+																		reservation.additions.length > 0
 																		? reservation.additions
-																				.map(addition =>
-																					typeof addition === 'string'
-																						? addition
-																						: addition.items
-																								.map(item => item.name)
-																								.join(', ')
-																				)
-																				.join(', ')
+																			.map(addition =>
+																				typeof addition === 'string'
+																					? addition
+																					: addition.items
+																						.map(item => item.name)
+																						.join(', ')
+																			)
+																			.join(', ')
 																		: 'No additions'}
 																</p>
 															</div>
@@ -1233,31 +1247,31 @@ export default function Dashboard() {
 														(
 															item: {
 																name:
-																	| string
-																	| number
-																	| boolean
-																	| React.ReactElement<
-																			any,
-																			string | React.JSXElementConstructor<any>
-																	  >
-																	| Iterable<React.ReactNode>
-																	| React.ReactPortal
-																	| Promise<React.AwaitedReactNode>
-																	| null
-																	| undefined
+																| string
+																| number
+																| boolean
+																| React.ReactElement<
+																	any,
+																	string | React.JSXElementConstructor<any>
+																>
+																| Iterable<React.ReactNode>
+																| React.ReactPortal
+																| Promise<React.AwaitedReactNode>
+																| null
+																| undefined
 																quantity:
-																	| string
-																	| number
-																	| boolean
-																	| React.ReactElement<
-																			any,
-																			string | React.JSXElementConstructor<any>
-																	  >
-																	| Iterable<React.ReactNode>
-																	| React.ReactPortal
-																	| Promise<React.AwaitedReactNode>
-																	| null
-																	| undefined
+																| string
+																| number
+																| boolean
+																| React.ReactElement<
+																	any,
+																	string | React.JSXElementConstructor<any>
+																>
+																| Iterable<React.ReactNode>
+																| React.ReactPortal
+																| Promise<React.AwaitedReactNode>
+																| null
+																| undefined
 															},
 															itemIndex: React.Key | null | undefined
 														) => (
@@ -1326,13 +1340,12 @@ export default function Dashboard() {
 								<motion.button
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
-									className={`mt-auto w-full py-2 sm:py-3 rounded-full text-white font-semibold text-sm sm:text-base transition-all duration-300 ${
-										selectedItems.find(
-											selectedItem => selectedItem.id === item.id
-										)
-											? 'bg-red-500 hover:bg-red-600'
-											: 'bg-green-500 hover:bg-green-600'
-									}`}
+									className={`mt-auto w-full py-2 sm:py-3 rounded-full text-white font-semibold text-sm sm:text-base transition-all duration-300 ${selectedItems.find(
+										selectedItem => selectedItem.id === item.id
+									)
+										? 'bg-red-500 hover:bg-red-600'
+										: 'bg-green-500 hover:bg-green-600'
+										}`}
 									onClick={() => handleItemSelect(item)}>
 									{selectedItems.find(
 										selectedItem => selectedItem.id === item.id
