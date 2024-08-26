@@ -261,6 +261,9 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const calcualateAge = (dob: string) => {
+		if (!dob) {
+			return 'N/A'
+		}
 		const today = new Date()
 		const birthDate = new Date(dob)
 		let age = today.getFullYear() - birthDate.getFullYear()
