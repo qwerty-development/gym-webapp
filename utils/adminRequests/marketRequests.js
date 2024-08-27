@@ -10,10 +10,11 @@ export const fetchMarket = async () => {
 	return data
 }
 
-export const addMarketItem = async (name, price, quantity, file) => {
+export const addMarketItem = async (name, price, quantity, file, newItemClothe) => {
 	const supabase = await supabaseClient()
 
 	let imageUrl = null
+	console.log(newItemClothe)
 	if (file) {
 		const fileExtension = file.name.split('.').pop()
 		const fileName = `${Math.random()}.${fileExtension}`
@@ -31,7 +32,7 @@ export const addMarketItem = async (name, price, quantity, file) => {
 
 	const { data, error } = await supabase
 		.from('market')
-		.insert([{ name, price, quantity, image: imageUrl }])
+		.insert([{ name, price, quantity, image: imageUrl, clothe:newItemClothe  }])
 
 	if (error) {
 		console.error('Error adding market item:', error.message)
@@ -53,7 +54,7 @@ export const deleteMarketItem = async id => {
 
 	return { data, message: 'Item deleted successfully' }
 }
-export const modifyMarketItem = async (id, name, price, quantity, file) => {
+export const modifyMarketItem = async (id, name, price, quantity, file, editClothe) => {
 	const supabase = await supabaseClient()
 
 	let imageUrl = null
@@ -72,7 +73,7 @@ export const modifyMarketItem = async (id, name, price, quantity, file) => {
 		imageUrl = `https://ofsmbbjjveacrikuuueh.supabase.co/storage/v1/object/public/item_image/${fileName}`
 	}
 
-	const updates = { name, price, quantity }
+	const updates = { name, price, quantity, clothe:editClothe }
 	if (imageUrl) {
 		updates.image = imageUrl
 	}

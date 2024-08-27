@@ -286,6 +286,24 @@ export const fetchMarketItems = async () => {
 		.from('market')
 		.select('id, name, price,quantity,image')
 		.gt('quantity', 0)
+		.eq('clothe', false)
+		.order('id')
+
+	if (error) {
+		console.error('Error fetching market items:', error.message)
+		return []
+	}
+
+	return data
+}
+
+export const fetchClothe = async () => {
+	const supabase = await supabaseClient()
+	const { data, error } = await supabase
+		.from('market')
+		.select('id, name, price,quantity,image')
+		.gt('quantity', 0)
+		.eq('clothe', true)
 		.order('id')
 
 	if (error) {
