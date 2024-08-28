@@ -8,7 +8,7 @@ import {
 } from '../../../../utils/userRequests'
 import { useUser } from '@clerk/clerk-react'
 import Bundles from '@/app/components/users/bundles'
-import ClotheShop from '@/app/components/users/ClotheShop'
+import ClotheShop from '@/app/components/users/ClothesShop'
 import toast from 'react-hot-toast'
 import { useWallet } from '@/app/components/users/WalletContext'
 
@@ -25,7 +25,7 @@ interface CartItem extends MarketItem {
 
 const Shop: React.FC = () => {
   const { refreshWalletBalance } = useWallet()
-  const [activeShop, setActiveShop] = useState<'general' | 'clothe' | 'bundles'>('general')
+  const [activeShop, setActiveShop] = useState<'general' | 'clothes' | 'bundles'>('general')
   const [items, setItems] = useState<MarketItem[]>([])
   const [clothes, setClothes] = useState<MarketItem[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
@@ -150,8 +150,8 @@ const Shop: React.FC = () => {
             )}
           </div>
         )
-      case 'clothe':
-        return <ClotheShop/>
+      case 'clothes':
+        return <ClotheShop />
       case 'bundles':
         return <Bundles />
       default:
@@ -174,9 +174,8 @@ const Shop: React.FC = () => {
           </h2>
           <ul>
             <li
-              className={`mb-5 text-white p-2 px-6 ${
-                activeShop === 'general' ? 'bg-green-500' : ''
-              }`}
+              className={`mb-5 text-white p-2 px-6 ${activeShop === 'general' ? 'bg-green-500' : ''
+                }`}
             >
               <button
                 className='flex items-center w-full text-left'
@@ -191,26 +190,24 @@ const Shop: React.FC = () => {
               </button>
             </li>
             <li
-              className={`mb-5 text-white p-2 px-6 ${
-                activeShop === 'clothe' ? 'bg-green-500' : ''
-              }`}
+              className={`mb-5 text-white p-2 px-6 ${activeShop === 'clothes' ? 'bg-green-500' : ''
+                }`}
             >
               <button
                 className='flex items-center w-full text-left'
-                onClick={() => setActiveShop('clothe')}
+                onClick={() => setActiveShop('clothes')}
               >
                 <img
                   src='https://www.svgrepo.com/show/506321/shirt.svg'
-                className='mr-2 h-8 w-8 filter invert'
+                  className='mr-2 h-8 w-8 filter invert'
                   alt='Clothe Icon'
                 />
-                Clothe
+                Clothes
               </button>
             </li>
             <li
-              className={`mb-10 text-white p-2 px-6 ${
-                activeShop === 'bundles' ? 'bg-green-500' : ''
-              }`}
+              className={`mb-10 text-white p-2 px-6 ${activeShop === 'bundles' ? 'bg-green-500' : ''
+                }`}
             >
               <button
                 className='flex items-center hover:text-green-400 w-full text-left'
@@ -233,12 +230,11 @@ const Shop: React.FC = () => {
             {['general', 'clothe', 'bundles'].map((shop) => (
               <button
                 key={shop}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                  activeShop === shop
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => setActiveShop(shop as 'general' | 'clothe' | 'bundles')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${activeShop === shop
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                onClick={() => setActiveShop(shop as 'general' | 'clothes' | 'bundles')}
               >
                 {shop.charAt(0).toUpperCase() + shop.slice(1)}
               </button>
@@ -252,12 +248,11 @@ const Shop: React.FC = () => {
             {['general', 'clothe', 'bundles'].map((shop) => (
               <button
                 key={shop}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                  activeShop === shop
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => setActiveShop(shop as 'general' | 'clothe' | 'bundles')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${activeShop === shop
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                onClick={() => setActiveShop(shop as 'general' | 'clothes' | 'bundles')}
               >
                 {shop.charAt(0).toUpperCase() + shop.slice(1)}
               </button>
@@ -295,7 +290,16 @@ const Shop: React.FC = () => {
 
           {isCartOpen && (
             <div className='fixed top-0 right-0 w-full md:w-1/3 h-full bg-gray-900 p-6 overflow-auto z-40'>
-              <h2 className='text-2xl font-bold text-white mb-6'>Your Cart</h2>
+              <div className='flex justify-between items-center'>
+                <h2 className='text-2xl font-bold text-white'>Your Cart</h2>
+                <button
+                  onClick={toggleCart}
+                  className='px-4 py-2  text-red-500 text-3xl hover:bg-red-200'
+                >
+                  X
+                </button>
+              </div>
+              <hr className='mt-3 mb-3'></hr>
               {cart.map(cartItem => (
                 <div
                   key={cartItem.id}
@@ -322,18 +326,14 @@ const Shop: React.FC = () => {
                   Total: {getTotalPrice()} credits
                 </h3>
               </div>
-              <button
-                onClick={handlePurchaseClick}
-                className='mt-6 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600'
-              >
-                Buy
-              </button>
-              <button
-                onClick={toggleCart}
-                className='mt-6 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600'
-              >
-                Close
-              </button>
+              <div className="flex justify-center">
+                <button
+                  onClick={handlePurchaseClick}
+                  className='mt-6 px-16 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600'
+                >
+                  Buy
+                </button>
+              </div>
             </div>
           )}
         </div>
