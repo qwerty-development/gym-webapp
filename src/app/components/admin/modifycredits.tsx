@@ -330,6 +330,9 @@ const ModifyCreditsComponent = () => {
 								Last Name
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
+								Wallet
+							</th>
+							<th scope='col' className='py-4 px-6 text-left'>
 								Gender
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
@@ -350,9 +353,7 @@ const ModifyCreditsComponent = () => {
 							<th scope='col' className='py-4 px-6 text-left'>
 								Weight
 							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Wallet
-							</th>
+
 							<th scope='col' className='py-4 px-6 text-center'>
 								is Free
 							</th>
@@ -387,6 +388,7 @@ const ModifyCreditsComponent = () => {
 								<td className='py-4 px-6'>{user.username}</td>
 								<td className='py-4 px-6'>{user.first_name}</td>
 								<td className='py-4 px-6'>{user.last_name}</td>
+								<td className='py-4 px-6'>{user.wallet}</td>
 								<td className='py-4 px-6'>{user.gender}</td>
 								<td className='py-4 px-6'>{user.email}</td>
 								<td className='py-4 px-6'>{user.phone}</td>
@@ -398,7 +400,7 @@ const ModifyCreditsComponent = () => {
 										? user.weight[user.weight.length - 1].value
 										: ''}
 								</td>
-								<td className='py-4 px-6'>{user.wallet}</td>
+
 								<td className='py-4 px-6 text-center'>
 									<motion.button
 										whileHover={{ scale: 1.1 }}
