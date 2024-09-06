@@ -1242,45 +1242,17 @@ export default function Dashboard() {
 											<p>User: {transaction.user_name}</p>
 											<p>
 												Items:{' '}
-												{transaction.item_details
-													.map(
-														(
-															item: {
-																name:
-																| string
-																| number
-																| boolean
-																| React.ReactElement<
-																	any,
-																	string | React.JSXElementConstructor<any>
-																>
-																| Iterable<React.ReactNode>
-																| React.ReactPortal
-																| Promise<React.AwaitedReactNode>
-																| null
-																| undefined
-																quantity:
-																| string
-																| number
-																| boolean
-																| React.ReactElement<
-																	any,
-																	string | React.JSXElementConstructor<any>
-																>
-																| Iterable<React.ReactNode>
-																| React.ReactPortal
-																| Promise<React.AwaitedReactNode>
-																| null
-																| undefined
-															},
-															itemIndex: React.Key | null | undefined
-														) => (
-															<span key={itemIndex}>
-																{item.name} (x{item.quantity})
-															</span>
+												{transaction.item_details.length > 0
+													? transaction.item_details
+														.map(
+															(item: { name: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<React.AwaitedReactNode> | null | undefined; quantity: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<React.AwaitedReactNode> | null | undefined }, itemIndex: React.Key | null | undefined) => (
+																<span key={itemIndex}>
+																	{item.name} (x{item.quantity})
+																</span>
+															)
 														)
-													)
-													.reduce((prev: any, curr: any) => [prev, ', ', curr])}
+														.reduce((prev: any, curr: any, index: number) => (index === 0 ? [curr] : [prev, ', ', curr]), [])
+													: 'No items'}
 											</p>
 										</div>
 										<div className='flex justify-end'>
