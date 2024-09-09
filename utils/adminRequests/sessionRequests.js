@@ -1,5 +1,5 @@
 import { supabaseClient } from '../supabaseClient'
-export const fetchUpcomingSessions = async (type, limit = 6) => {
+export const fetchUpcomingSessions = async type => {
 	const supabase = await supabaseClient()
 	const now = new Date().toISOString()
 
@@ -23,7 +23,6 @@ export const fetchUpcomingSessions = async (type, limit = 6) => {
 			.eq('booked', true)
 			.order('date', { ascending: true })
 			.order('start_time', { ascending: true })
-			.limit(limit)
 
 		if (error) {
 			console.error('Error fetching individual sessions:', error.message)
@@ -52,7 +51,6 @@ export const fetchUpcomingSessions = async (type, limit = 6) => {
 			.gt('count', 0)
 			.order('date', { ascending: true })
 			.order('start_time', { ascending: true })
-			.limit(limit)
 
 		if (error) {
 			console.error('Error fetching group sessions:', error.message)
