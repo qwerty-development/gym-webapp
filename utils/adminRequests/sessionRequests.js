@@ -1,89 +1,5 @@
 import { supabaseClient } from '../supabaseClient'
-export const fetchUpcomingSessions = async type => {
-	const supabase = await supabaseClient()
-	const now = new Date().toISOString()
 
-	if (type === 'individual') {
-		const { data: individualSessions, error } = await supabase
-			.from('time_slots')
-			.select(
-				`
-        id,
-        activities ( name, credits ),
-        coaches ( name ),
-        date,
-        start_time,
-        end_time,
-        users ( user_id, first_name, last_name ),
-        booked,
-        additions
-      `
-			)
-			.gte('date', now.split('T')[0])
-			.eq('booked', true)
-			.order('date', { ascending: true })
-			.order('start_time', { ascending: true })
-
-		if (error) {
-			console.error('Error fetching individual sessions:', error.message)
-			return []
-		}
-
-		return individualSessions || []
-	} else {
-		const { data: groupSessions, error } = await supabase
-			.from('group_time_slots')
-			.select(
-				`
-        id,
-        activities ( name, credits, capacity ),
-        coaches ( name ),
-        date,
-        start_time,
-        end_time,
-        user_id,
-        booked,
-        additions,
-        count
-      `
-			)
-			.gte('date', now.split('T')[0])
-			.gt('count', 0)
-			.order('date', { ascending: true })
-			.order('start_time', { ascending: true })
-
-		if (error) {
-			console.error('Error fetching group sessions:', error.message)
-			return []
-		}
-
-		const userIds = groupSessions.flatMap(slot => slot.user_id)
-		const { data: usersData, error: usersError } = await supabase
-			.from('users')
-			.select('user_id, first_name, last_name')
-			.in('user_id', userIds)
-
-		if (usersError) {
-			console.error('Error fetching users:', usersError.message)
-			return []
-		}
-
-		const usersMap = usersData.reduce((acc, user) => {
-			acc[user.user_id] = user
-			return acc
-		}, {})
-
-		const transformedSessions = groupSessions.map(session => ({
-			...session,
-			users: session.user_id
-				.map(userId => usersMap[userId] || null)
-				.filter(Boolean),
-			additions: session.additions || []
-		}))
-
-		return transformedSessions
-	}
-}
 export const fetchAllBookedSlotsToday = async () => {
 	const supabase = await supabaseClient()
 	const today = new Date().toISOString().split('T')[0] // Get today's date in YYYY-MM-DD format
@@ -216,4 +132,91 @@ export const fetchTodaysSessions = async () => {
 	}
 
 	return (individualCount || 0) + (groupCount || 0)
+}
+export const fetchUpcomingSessions = async type => {
+	const supabase = await supabaseClient()
+	const now = new Date().toISOString()
+	const OneMonthAgo = new Date(
+		new Date().setMonth(new Date().getMonth() - 1)
+	).toISOString()
+	if (type === 'individual') {
+		const { data: individualSessions, error } = await supabase
+			.from('time_slots')
+			.select(
+				`
+        id,
+        activities ( name, credits ),
+        coaches ( name ),
+        date,
+        start_time,
+        end_time,
+        users ( user_id, first_name, last_name ),
+        booked,
+        additions
+      `
+			)
+			.gte('date', OneMonthAgo.split('T')[0])
+			.eq('booked', true)
+			.order('date', { ascending: true })
+			.order('start_time', { ascending: true })
+
+		if (error) {
+			console.error('Error fetching individual sessions:', error.message)
+			return []
+		}
+
+		return individualSessions || []
+	} else {
+		const { data: groupSessions, error } = await supabase
+			.from('group_time_slots')
+			.select(
+				`
+        id,
+        activities ( name, credits, capacity ),
+        coaches ( name ),
+        date,
+        start_time,
+        end_time,
+        user_id,
+        booked,
+        additions,
+        count
+      `
+			)
+			.gte('date', now.split('T')[0])
+			.gt('count', 0)
+			.order('date', { ascending: true })
+			.order('start_time', { ascending: true })
+
+		if (error) {
+			console.error('Error fetching group sessions:', error.message)
+			return []
+		}
+
+		const userIds = groupSessions.flatMap(slot => slot.user_id)
+		const { data: usersData, error: usersError } = await supabase
+			.from('users')
+			.select('user_id, first_name, last_name')
+			.in('user_id', userIds)
+
+		if (usersError) {
+			console.error('Error fetching users:', usersError.message)
+			return []
+		}
+
+		const usersMap = usersData.reduce((acc, user) => {
+			acc[user.user_id] = user
+			return acc
+		}, {})
+
+		const transformedSessions = groupSessions.map(session => ({
+			...session,
+			users: session.user_id
+				.map(userId => usersMap[userId] || null)
+				.filter(Boolean),
+			additions: session.additions || []
+		}))
+
+		return transformedSessions
+	}
 }
