@@ -21,7 +21,8 @@ import {
 	FaRegEdit,
 	FaRegCaretSquareDown,
 	FaTv,
-	FaHistory
+	FaHistory,
+	FaCalendar
 } from 'react-icons/fa'
 import Link from 'next/link'
 
@@ -114,6 +115,11 @@ export default function AdminNavbarComponent() {
 			href: '/admin/completed-sessions',
 			label: 'History',
 			icon: FaHistory
+		},
+		{
+			href: '/admin/calendar-view',
+			label: 'Calendar',
+			icon: FaCalendar
 		}
 	]
 
