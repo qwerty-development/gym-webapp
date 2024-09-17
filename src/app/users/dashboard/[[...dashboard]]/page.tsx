@@ -26,13 +26,15 @@ import {
 	fetchTotalActivities,
 	fetchTodaysSessions,
 	fetchAllBookedSlotsToday,
-	fetchUpcomingSessions
+	fetchUpcomingSessions2 as fetchUpcomingSessions,
+	cancelBookingIndividual,
+	cancelGroupBooking
 } from '../../../../../utils/adminRequests'
 import { Menu, Transition } from '@headlessui/react'
 import { AddToCalendarButton } from 'add-to-calendar-button-react'
 import { RingLoader } from 'react-spinners'
 import { useWallet } from '@/app/components/users/WalletContext'
-import toast from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 import Modal from 'react-modal'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -526,6 +528,56 @@ export default function Dashboard() {
 		setIsCancelling(false)
 	}
 
+	const handleCancelAdminIndividual = async (session: any) => {
+		setIsCancelling(true)
+		const confirmed = await showConfirmationModal(
+			'Are you sure you want to cancel this session?'
+		)
+
+		if (!confirmed) {
+			setIsCancelling(false)
+			return
+		}
+
+		const cancelled = await cancelBookingIndividual(session)
+
+		if (cancelled) {
+			toast.success('Session Cancelled Succesfully')
+			setAdminIndividualSessions(prevSessions =>
+				prevSessions.filter(s => s.id !== session.id)
+			)
+		} else {
+			toast.error('Failed to Cancel Session')
+		}
+
+		setIsCancelling(false)
+	}
+
+	const handleCancelAdminGroup = async (id: any) => {
+		setIsCancelling(true)
+		const confirmed = await showConfirmationModal(
+			'Are you sure you want to cancel this session?'
+		)
+
+		if (!confirmed) {
+			setIsCancelling(false)
+			return
+		}
+
+		const cancelled = await cancelGroupBooking(id)
+
+		if (cancelled) {
+			toast.success('Session Cancelled Succesfully')
+			setAdminGroupSessions(prevSessions =>
+				prevSessions.filter(s => s.id !== id)
+			)
+		} else {
+			toast.error('Failed to Cancel Session')
+		}
+
+		setIsCancelling(false)
+	}
+
 	const handleCancelGroup = async (reservationId: number) => {
 		setButtonLoading(true)
 		setIsCancelling(true)
@@ -715,6 +767,20 @@ export default function Dashboard() {
 								)}
 							</p>
 						</div>
+						{activeTab === 'group' && (
+							<button
+								onClick={() => handleCancelAdminGroup(session.id)}
+								className='bg-red-500 p-1 rounded-lg hover:bg-red-600 hover:scale-105 '>
+								Cancel Session
+							</button>
+						)}
+						{activeTab !== 'group' && (
+							<button
+								onClick={() => handleCancelAdminIndividual(session)}
+								className='bg-red-500 p-1 rounded-lg hover:bg-red-600 hover:scale-105 '>
+								Cancel Session
+							</button>
+						)}
 					</div>
 				</motion.div>
 			))
