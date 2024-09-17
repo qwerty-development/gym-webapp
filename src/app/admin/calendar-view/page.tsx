@@ -26,9 +26,11 @@ const CalendarViewPage = () => {
 			<AdminNavbarComponent />
 			<div className='container mx-auto px-4 py-8'>
 				<h1 className='text-4xl font-bold mb-8 text-center'>Calendar View</h1>
-				<CalendarView
-					sessions={[...adminIndividualSessions, ...adminGroupSessions]}
-				/>
+				<div className='w-full overflow-x-auto'>
+					<CalendarView
+						sessions={[...adminIndividualSessions, ...adminGroupSessions]}
+					/>
+				</div>
 			</div>
 		</div>
 	)

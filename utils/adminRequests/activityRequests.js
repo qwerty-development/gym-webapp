@@ -97,3 +97,15 @@ export const fetchTotalActivities = async () => {
 
 	return count || 0
 }
+
+export const fetchAllActivities = async () => {
+	const supabase = await supabaseClient()
+	const { data, error } = await supabase.from('activities').select('*')
+
+	if (error) {
+		console.error('Error fetching all activities:', error.message)
+		return []
+	}
+
+	return data
+}
