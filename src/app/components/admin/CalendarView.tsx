@@ -101,7 +101,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 				backgroundColor: coachColors[event.coach],
 				color: 'white',
 				borderRadius: '8px',
-				border: 'none',
+				border: 'solid',
 				padding: '4px',
 				fontSize: view === Views.MONTH ? '0.8rem' : '1rem',
 				fontWeight: 'bold',
