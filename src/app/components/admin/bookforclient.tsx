@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 import {
 	fetchUsers,
@@ -19,6 +19,7 @@ import {
 } from '../../../../utils/userRequests'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import SearchableSelect from './SearchableSelect'
 
 import Select, { components } from 'react-select'
 import toast from 'react-hot-toast'
@@ -51,6 +52,14 @@ export default function BookForClient() {
 	useEffect(() => {
 		Modal.setAppElement('#__next')
 	}, [])
+
+	// Refs for scrolling
+	const userRef = useRef<HTMLDivElement>(null)
+	const activityRef = useRef<HTMLDivElement>(null)
+	const coachRef = useRef<HTMLDivElement>(null)
+	const dateRef = useRef<HTMLDivElement>(null)
+	const confirmRef = useRef<HTMLDivElement>(null)
+
 	const [activitiesLoading, setActivitiesLoading] = useState<boolean>(true)
 	const [groupActivitiesLoading, setGroupActivitiesLoading] =
 		useState<boolean>(true)
@@ -99,6 +108,16 @@ export default function BookForClient() {
 		3: <FaRunning />,
 		10: <FaDumbbell />,
 		11: <FaFirstAid />
+	}
+
+	// Improved scrolling function
+	const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
+		if (ref && ref.current) {
+			ref.current.scrollIntoView({
+				behavior: 'smooth',
+				block: 'start'
+			})
+		}
 	}
 
 	useEffect(() => {
@@ -179,6 +198,7 @@ export default function BookForClient() {
 	useEffect(() => {
 		const fetchCoachesData = async () => {
 			if (selectedActivity) {
+				setCoachesLoading(true)
 				const coachesData = isPrivateTraining
 					? await fetchCoachesActivities(selectedActivity)
 					: await fetchCoachesActivitiesGroup(selectedActivity)
@@ -189,6 +209,8 @@ export default function BookForClient() {
 				setAvailableTimes([])
 				setGroupAvailableTimes([])
 				setHighlightDates([])
+				setCoachesLoading(false)
+				setTimeout(() => scrollToRef(coachRef), 100)
 			}
 		}
 		fetchCoachesData()
@@ -202,6 +224,7 @@ export default function BookForClient() {
 
 		if (selectedActivity && selectedCoach) {
 			resetDateAndTime()
+			setTimeout(() => scrollToRef(dateRef), 100)
 		}
 	}, [selectedCoach])
 
@@ -301,7 +324,7 @@ export default function BookForClient() {
 	const handleCloseModal = () => {
 		setModalIsOpen(false)
 		setSelectedItems([])
-		setTotalPrice(0) // Reset total price after payment
+		setTotalPrice(0)
 		setSelectedActivity(null)
 		setSelectedCoach(null)
 		setSelectedDate(null)
@@ -359,6 +382,7 @@ export default function BookForClient() {
 					('0' + date.getDate()).slice(-2)
 			  ].join('-')
 			: ''
+
 	return (
 		<div
 			className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800'
@@ -373,79 +397,24 @@ export default function BookForClient() {
 				</h1>
 
 				<FadeInSection>
-					<div className='mb-16 bg-gray-700 text-white bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8'>
+					<div
+						ref={userRef}
+						className='mb-16 bg-gray-700 text-white bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8'>
 						<h2 className='text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-700 mb-6 text-center'>
 							Select Your User
 						</h2>
 						<div className='relative'>
-							<div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10'>
-								<RiUserSearchLine className='h-5 w-5 text-green-400' />
-							</div>
-							<Select
+							<SearchableSelect
 								options={userOptions}
 								value={selectedOptiontest}
-								onChange={selectedOption => {
+								onChange={(selectedOption: any) => {
 									setSelectedOptiontest(selectedOption)
 									setSelectedUser(selectedOption ? selectedOption.value : null)
+									if (selectedOption) {
+										setTimeout(() => scrollToRef(activityRef), 100)
+									}
 								}}
 								placeholder='Search for a user...'
-								isClearable
-								isSearchable
-								blurInputOnSelect
-								autoFocus
-								noOptionsMessage={() => 'No Users found'}
-								className='react-select-container'
-								classNamePrefix='react-select'
-								components={{ Input: CustomInput }}
-								theme={theme => ({
-									...theme,
-									colors: {
-										...theme.colors,
-										primary25: '#4c6f46', // green-500
-										primary: '#36783a', // green-400 (primary)
-										neutral0: 'rgba(53, 59, 53, 0.5)', // gray-800 with opacity
-										neutral80: '#d1d4d1', // gray-200
-										neutral20: '#36783a' // green-400 (primary)
-									}
-								})}
-								styles={{
-									control: base => ({
-										...base,
-										backgroundColor: 'rgba(53, 59, 53, 0.5)', // gray-800 with opacity
-										borderRadius: '1.5rem',
-										padding: '0.5rem',
-										paddingLeft: '2.5rem',
-										borderColor: '#36783a', // green-400 (primary)
-										boxShadow: '0 0 15px rgba(54, 120, 58, 0.3)', // green-400 with opacity
-										'&:hover': {
-											borderColor: '#4c6f46', // green-500
-											boxShadow: '0 0 20px rgba(76, 111, 70, 0.5)' // green-500 with opacity
-										}
-									}),
-									input: base => ({
-										...base,
-										color: '#d1d4d1', // gray-200
-										'& input': {
-											color: '#d1d4d1 !important' // gray-200
-										}
-									}),
-									menu: base => ({
-										...base,
-										backgroundColor: 'rgba(53, 59, 53, 0.9)', // gray-800 with opacity
-										backdropFilter: 'blur(8px)',
-										borderRadius: '1rem',
-										overflow: 'hidden'
-									}),
-									option: (base, state) => ({
-										...base,
-										backgroundColor: state.isSelected
-											? '#36783a' // green-400 (primary)
-											: 'transparent',
-										'&:hover': {
-											backgroundColor: '#4c6f46' // green-500
-										}
-									})
-								}}
 							/>
 						</div>
 						<motion.div
@@ -476,7 +445,9 @@ export default function BookForClient() {
 				</FadeInSection>
 
 				<FadeInSection>
-					<div className='flex justify-center items-center space-x-4 mb-12'>
+					<div
+						ref={activityRef}
+						className='flex justify-center items-center space-x-4 mb-12'>
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
@@ -485,7 +456,13 @@ export default function BookForClient() {
 									? 'bg-green-500 text-white shadow-lg'
 									: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
 							}`}
-							onClick={() => setIsPrivateTraining(true)}>
+							onClick={() => {
+								setIsPrivateTraining(true)
+								setSelectedActivity(null)
+								setSelectedCoach(null)
+								setSelectedDate(null)
+								setSelectedTime('')
+							}}>
 							<RiUserLine className='inline-block mr-2' />
 							Private Training
 						</motion.button>
@@ -497,7 +474,13 @@ export default function BookForClient() {
 									? 'bg-green-500 text-white shadow-lg'
 									: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
 							}`}
-							onClick={() => setIsPrivateTraining(false)}>
+							onClick={() => {
+								setIsPrivateTraining(false)
+								setSelectedActivity(null)
+								setSelectedCoach(null)
+								setSelectedDate(null)
+								setSelectedTime('')
+							}}>
 							<RiGroupLine className='inline-block mr-2' />
 							Classes
 						</motion.button>
@@ -527,7 +510,12 @@ export default function BookForClient() {
 												? 'bg-green-500 text-white'
 												: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
 										}`}
-										onClick={() => setSelectedActivity(activity.id)}>
+										onClick={() => {
+											setSelectedActivity(activity.id)
+											setSelectedCoach(null)
+											setSelectedDate(null)
+											setSelectedTime('')
+										}}>
 										<span className='text-4xl'>
 											{activityIcons[activity.id]}
 										</span>
@@ -544,6 +532,7 @@ export default function BookForClient() {
 				{selectedActivity && (
 					<FadeInSection delay={0.1}>
 						<motion.div
+							ref={coachRef}
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							className='section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16'>
@@ -568,7 +557,11 @@ export default function BookForClient() {
 													? 'bg-green-500 text-white'
 													: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
 											}`}
-											onClick={() => setSelectedCoach(coach.id)}>
+											onClick={() => {
+												setSelectedCoach(coach.id)
+												setSelectedDate(null)
+												setSelectedTime('')
+											}}>
 											<img
 												src={coach.profile_picture}
 												alt={`${coach.name}`}
@@ -588,6 +581,7 @@ export default function BookForClient() {
 				{selectedCoach && (
 					<FadeInSection delay={0.2}>
 						<motion.div
+							ref={dateRef}
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							className='section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16'>
@@ -598,7 +592,10 @@ export default function BookForClient() {
 									</h2>
 									<DatePicker
 										selected={selectedDate}
-										onChange={setSelectedDate}
+										onChange={(date: Date) => {
+											setSelectedDate(date)
+											setSelectedTime('')
+										}}
 										inline
 										calendarClassName='custom-datepicker rounded-xl shadow-lg bg-gray-800 border-none text-white'
 										dayClassName={() =>
@@ -636,7 +633,10 @@ export default function BookForClient() {
 																? 'bg-green-500 text-white'
 																: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
 														}`}
-														onClick={() => setSelectedTime(time)}>
+														onClick={() => {
+															setSelectedTime(time)
+															setTimeout(() => scrollToRef(confirmRef), 100)
+														}}>
 														{time}
 														{!isPrivateTraining && (
 															<p className='text-sm mt-2'>
@@ -657,6 +657,7 @@ export default function BookForClient() {
 				{selectedTime && (
 					<FadeInSection delay={0.3}>
 						<motion.div
+							ref={confirmRef}
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
 							className='section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16'>
@@ -708,8 +709,8 @@ export default function BookForClient() {
 				className='modal rounded-3xl p-4 sm:p-6 md:p-8 mx-auto mt-10 sm:mt-20 w-11/12 md:max-w-4xl'
 				style={{
 					content: {
-						backgroundColor: 'rgba(53, 59, 53, 0.9)', // This is gray-800 with 90% opacity
-						backdropFilter: 'blur(16px)' // This adds the blur effect
+						backgroundColor: 'rgba(53, 59, 53, 0.9)',
+						backdropFilter: 'blur(16px)'
 					}
 				}}
 				overlayClassName='overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center'>
@@ -766,7 +767,7 @@ export default function BookForClient() {
 						<motion.button
 							whileHover={{
 								scale: 1.05,
-								boxShadow: '0 0 30px rgba(54, 120, 58, 0.7)' // Using green-400 with 70% opacity
+								boxShadow: '0 0 30px rgba(54, 120, 58, 0.7)'
 							}}
 							whileTap={{ scale: 0.95 }}
 							className='bg-green-500 text-white py-2 sm:py-3 px-5 sm:px-6 md:px-8 rounded-full text-base sm:text-lg md:text-xl font-bold transition-all duration-300 hover:bg-green-600 disabled:opacity-50'
