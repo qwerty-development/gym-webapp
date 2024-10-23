@@ -42,19 +42,37 @@ export const bookTimeSlotForClient = async ({
 	let newTokenBalance = userData.private_token
 	let transactionAmount = ''
 
-	if (userData.private_token > 0) {
-		bookingMethod = 'token'
-		newTokenBalance -= 1
-		transactionAmount = '-1 private token'
-	} else if (userData.isFree || userData.wallet >= activityData.credits) {
-		if (!userData.isFree) {
-			newWalletBalance -= activityData.credits
-			transactionAmount = `-${activityData.credits} credits`
+	// Special handling for Ice Bath - only accept credits
+	if (activityData.name === 'Ice Bath') {
+		if (userData.isFree || userData.wallet >= activityData.credits) {
+			if (!userData.isFree) {
+				newWalletBalance -= activityData.credits
+				transactionAmount = `-${activityData.credits} credits`
+			} else {
+				transactionAmount = '0 credits (free user)'
+			}
 		} else {
-			transactionAmount = '0 credits (free user)'
+			return {
+				error:
+					'Ice Bath sessions can only be booked using credits. Not enough credits available.'
+			}
 		}
 	} else {
-		return { error: 'Not enough credits or tokens' }
+		// Normal booking logic for other activities
+		if (userData.private_token > 0) {
+			bookingMethod = 'token'
+			newTokenBalance -= 1
+			transactionAmount = '-1 private token'
+		} else if (userData.isFree || userData.wallet >= activityData.credits) {
+			if (!userData.isFree) {
+				newWalletBalance -= activityData.credits
+				transactionAmount = `-${activityData.credits} credits`
+			} else {
+				transactionAmount = '0 credits (free user)'
+			}
+		} else {
+			return { error: 'Not enough credits or tokens' }
+		}
 	}
 
 	// Update user's account (wallet or tokens)
