@@ -117,7 +117,21 @@ const essentialsTier = {
 	mostPopular: false
 }
 
-// Add this to your existing tiers array
+const proteinShakeTier = {
+	name: 'PROTEIN SHAKE PACK',
+	id: 'tier-protein',
+	href: '#',
+	priceMonthly: '40 Credits',
+	description: '12 Premium Shakes',
+	features: [
+		'High-quality protein shakes',
+		'Choice of flavors',
+		'Pre or post workout',
+		'Rich in nutrients and vitamins'
+	],
+	mostPopular: false
+}
+
 const allTiers = [...classestiers, essentialsTier]
 function classNames(...classes: string[]) {
 	return classes.filter(Boolean).join(' ')
@@ -128,7 +142,7 @@ export default function Bundles() {
 	const [purchaseStatus, setPurchaseStatus] = useState<any>(null)
 	const { refreshWalletBalance } = useWallet()
 	const { isLoaded, isSignedIn, user } = useUser()
-	console.log(user)
+
 	useEffect(() => {
 		const fetchEssentialsTillDate = async () => {
 			if (user?.id) {
@@ -147,6 +161,7 @@ export default function Bundles() {
 
 		fetchEssentialsTillDate()
 	}, [user])
+
 	const handlePurchase = async (bundleType: any, bundleName: any) => {
 		const userId = user?.id
 		if (!userId) {
@@ -176,6 +191,7 @@ export default function Bundles() {
 			toast.error('Bundle purchase failed')
 		}
 	}
+
 	return (
 		<div className='mx-auto max-w-7xl px-6 lg:px-8'>
 			{purchaseStatus && (
@@ -275,46 +291,88 @@ export default function Bundles() {
 					</div>
 				</div>
 			</div>
-			<h1 className='text-3xl text-green-500 font-bold mt-64'>
-				Essentials Bundle
-			</h1>
-			{essentialsTillDate && (
-				<p className='mt-2 text-sm text-gray-600'>
-					Current Essentials access until:{' '}
-					{new Date(essentialsTillDate).toLocaleDateString()}
-				</p>
-			)}
-			<div className='isolate mx-auto mt-16 grid max-w-md grid-cols-1 gap-y-8 sm:mt-20 lg:mx-0 lg:max-w-none'>
-				<div className='flex flex-col justify-between rounded-3xl bg-gray-200 p-8 ring-1 ring-gray-200 xl:p-10'>
-					<div className='flex flex-col items-center text-center'>
-						<h3
-							id={essentialsTier.id}
-							className='text-4xl font-semibold leading-8 text-green-500'>
-							{essentialsTier.name}
-						</h3>
-						<p className='mt-6 text-2xl tracking-tight text-gray-900'>
-							{essentialsTier.priceMonthly}
+
+			<div className='mt-64 grid grid-cols-1 lg:grid-cols-2 gap-8'>
+				<div>
+					<h1 className='text-3xl text-green-500 font-bold mb-8'>
+						Essentials Bundle
+					</h1>
+					{essentialsTillDate && (
+						<p className='mt-2 text-sm text-gray-600'>
+							Current Essentials access until:{' '}
+							{new Date(essentialsTillDate).toLocaleDateString()}
 						</p>
-						<p className='mt-4 text-lg font-semibold leading-6 text-black'>
-							{essentialsTier.description}
-						</p>
-						<ul className='mt-8 space-y-3'>
-							{essentialsTier.features.map((feature, index) => (
-								<li key={index} className='text-sm text-gray-700'>
-									{feature}
-								</li>
-							))}
-						</ul>
+					)}
+					<div className='flex flex-col justify-between rounded-3xl bg-gray-200 p-8 ring-1 ring-gray-200 xl:p-10 h-full'>
+						<div className='flex flex-col items-center text-center'>
+							<h3
+								id={essentialsTier.id}
+								className='text-4xl font-semibold leading-8 text-green-500'>
+								{essentialsTier.name}
+							</h3>
+							<p className='mt-6 text-2xl tracking-tight text-gray-900'>
+								{essentialsTier.priceMonthly}
+							</p>
+							<p className='mt-4 text-lg font-semibold leading-6 text-black'>
+								{essentialsTier.description}
+							</p>
+							<ul className='mt-8 space-y-3'>
+								{essentialsTier.features.map((feature, index) => (
+									<li key={index} className='text-sm text-gray-700'>
+										{feature}
+									</li>
+								))}
+							</ul>
+						</div>
+						<div className='flex justify-center mt-8'>
+							<button
+								onClick={() =>
+									handlePurchase('essentials', essentialsTier.name)
+								}
+								className='block rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 bg-green-500 text-white hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500'>
+								Buy Essentials Bundle
+							</button>
+						</div>
 					</div>
-					<div className='flex justify-center'>
-						<button
-							onClick={() => handlePurchase('essentials', essentialsTier.name)}
-							className='mt-8 block rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 bg-green-500 text-white hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500'>
-							Buy Essentials Bundle
-						</button>
+				</div>
+
+				<div>
+					<h1 className='text-3xl text-green-500 font-bold mb-8'>
+						Protein Shake Bundle
+					</h1>
+					<div className='flex flex-col justify-between rounded-3xl bg-gray-200 p-8 ring-1 ring-gray-200 xl:p-10 h-full'>
+						<div className='flex flex-col items-center text-center'>
+							<h3
+								id={proteinShakeTier.id}
+								className='text-4xl font-semibold leading-8 text-green-500'>
+								{proteinShakeTier.name}
+							</h3>
+							<p className='mt-6 text-2xl tracking-tight text-gray-900'>
+								{proteinShakeTier.priceMonthly}
+							</p>
+							<p className='mt-4 text-lg font-semibold leading-6 text-black'>
+								{proteinShakeTier.description}
+							</p>
+							<ul className='mt-8 space-y-3'>
+								{proteinShakeTier.features.map((feature, index) => (
+									<li key={index} className='text-sm text-gray-700'>
+										{feature}
+									</li>
+								))}
+							</ul>
+						</div>
+						<div className='flex justify-center mt-8'>
+							<button
+								onClick={() => handlePurchase('protein', proteinShakeTier.name)}
+								className='block rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 bg-green-500 text-white hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500'>
+								Buy Protein Bundle
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
+
+			<div className='mb-16'></div>
 		</div>
 	)
 }

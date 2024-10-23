@@ -89,6 +89,14 @@ const individualtiers = [
 		]
 	}
 ]
+
+const proteinShakeTier = {
+	name: 'PROTEIN SHAKE PACK',
+	id: 'tier-protein',
+	price: 40,
+	description: '12 Shakes'
+}
+
 export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 	const supabase = await supabaseClient()
 
@@ -134,6 +142,10 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 			default:
 				return { error: 'Invalid individual bundle type.' }
 		}
+	} else if (bundleType === 'protein') {
+		bundlePrice = proteinShakeTier.price
+		tokenType = 'shake'
+		tokenAmount = parseInt(proteinShakeTier.description.split(' ')[0])
 	} else {
 		return { error: 'Invalid bundle type.' }
 	}
@@ -147,13 +159,15 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 	const newWalletBalance = userData.wallet - bundlePrice
 	const newTokenBalance = userData[`${tokenType}_token`] + tokenAmount
 
-	// Update user data
+	// Update user data with the new token balance
+	const updateFields = {
+		wallet: newWalletBalance,
+		[`${tokenType}_token`]: newTokenBalance
+	}
+
 	const { error: updateError } = await supabase
 		.from('users')
-		.update({
-			wallet: newWalletBalance,
-			[`${tokenType}_token`]: newTokenBalance
-		})
+		.update(updateFields)
 		.eq('user_id', userId)
 
 	if (updateError) {
