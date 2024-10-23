@@ -45,6 +45,7 @@ export const updateUserCredits = async (
 ) => {
 	const supabase = await supabaseClient()
 
+	// Fetch user details
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select(
@@ -61,7 +62,7 @@ export const updateUserCredits = async (
 	// Calculate the amount of credits added
 	const creditsAdded = wallet - userData.wallet
 
-	// Calculate updated token values (added shake_token)
+	// Calculate updated token values
 	const updatedTokens = {
 		private_token: Math.max(
 			0,
@@ -101,43 +102,44 @@ export const updateUserCredits = async (
 		}
 	}
 
-	// Insert refill record
-	const { error: refillError } = await insertRefillRecord(
-		supabase,
-		userData.user_id,
-		newCredits
-	)
+	// Initialize transactions array
+	const transactions = []
 
-	if (refillError) {
-		console.error('Error inserting refill record:', refillError.message)
-		// Note: We're not returning here, as we want to continue with the process
-	}
+	// Only add credit refill transaction if credits were actually added/removed
+	if (creditsAdded !== 0) {
+		// Insert refill record
+		const { error: refillError } = await insertRefillRecord(
+			supabase,
+			userData.user_id,
+			newCredits
+		)
 
-	// Add transaction records
-	const transactions = [
-		{
+		if (refillError) {
+			console.error('Error inserting refill record:', refillError.message)
+		}
+
+		transactions.push({
 			user_id: userData.user_id,
 			name: 'Credit refill',
 			type: 'credit refill',
 			amount: `${creditsAdded >= 0 ? '+' : ''}${creditsAdded} credits`
-		}
-	]
-
-	// If there was a sale, add a transaction for the free tokens
-	if (sale && sale > 0) {
-		const freeTokens = Math.floor(newCredits * (sale / 100))
-		transactions.push({
-			user_id: userData.user_id,
-			name: 'Free tokens from credit refill sale',
-			type: 'credit refill',
-			amount: `+${freeTokens} tokens`
 		})
+
+		// If there was a sale and credits were added, add a transaction for the free tokens
+		if (sale && sale > 0 && creditsAdded > 0) {
+			const freeTokens = Math.floor(newCredits * (sale / 100))
+			transactions.push({
+				user_id: userData.user_id,
+				name: 'Free tokens from credit refill sale',
+				type: 'credit refill',
+				amount: `+${freeTokens} tokens`
+			})
+		}
 	}
 
-	// Add transactions for token updates
+	// Add separate transactions for each token update
 	Object.entries(tokenUpdates).forEach(([tokenType, amount]) => {
 		if (amount !== 0) {
-			// Format the token type name for display
 			const formattedTokenType = tokenType
 				.replace('_token', '')
 				.split('_')
@@ -167,16 +169,18 @@ export const updateUserCredits = async (
 		})
 	}
 
-	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert(transactions)
+	// Only insert transactions if there are any
+	if (transactions.length > 0) {
+		const { error: transactionError } = await supabase
+			.from('transactions')
+			.insert(transactions)
 
-	if (transactionError) {
-		console.error('Error recording transactions:', transactionError.message)
-		// Note: We don't return here as the credit update was successful
+		if (transactionError) {
+			console.error('Error recording transactions:', transactionError.message)
+		}
 	}
 
-	// Prepare email data (updated to include shake_token)
+	// Prepare email data
 	const emailData = {
 		user_name: userData.first_name + ' ' + userData.last_name,
 		user_email: userData.email,
