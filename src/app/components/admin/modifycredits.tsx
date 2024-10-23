@@ -54,6 +54,7 @@ const ModifyCreditsComponent = () => {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [searchTrigger, setSearchTrigger] = useState(0)
 	const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+	const [selectedUser, setSelectedUser] = useState<User | null>(null)
 	const [newCredits, setNewCredits] = useState('')
 	const [isUpdating, setIsUpdating] = useState(false)
 	const [sortOption, setSortOption] = useState('alphabetical')
@@ -68,36 +69,60 @@ const ModifyCreditsComponent = () => {
 		shake_token: 0
 	})
 
+	// Function to sort users
+	const sortUsers = (users: User[], sortType: string) => {
+		const sortedUsers = [...users]
+		if (sortType === 'alphabetical') {
+			return sortedUsers.sort((a, b) =>
+				a.first_name.localeCompare(b.first_name)
+			)
+		} else if (sortType === 'newest') {
+			return sortedUsers.sort(
+				(a, b) =>
+					new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+			)
+		}
+		return sortedUsers
+	}
+
+	const updateUsersState = (updatedUser: User) => {
+		setUsers(prevUsers => {
+			const newUsers = prevUsers.map(user =>
+				user.id === updatedUser.id ? updatedUser : user
+			)
+			return sortUsers(newUsers, sortOption)
+		})
+	}
+
 	useEffect(() => {
-		setIsLoading(true)
-		fetchUsers(searchQuery)
-			.then((data: any) => {
+		const loadUsers = async () => {
+			setIsLoading(true)
+			try {
+				const data = await fetchUsers(searchQuery)
 				if (data) {
-					let sortedUsers = data as User[]
-					if (sortOption === 'alphabetical') {
-						sortedUsers = sortedUsers.sort((a, b) =>
-							a.first_name.localeCompare(b.first_name)
-						)
-					} else if (sortOption === 'newest') {
-						sortedUsers = sortedUsers.sort(
-							(a, b) =>
-								new Date(b.created_at).getTime() -
-								new Date(a.created_at).getTime()
-						)
-					}
+					const sortedUsers = sortUsers(data, sortOption)
 					setUsers(sortedUsers)
 				}
-			})
-			.catch((error: any) => {
+			} catch (error) {
 				console.error('Error fetching users:', error)
-			})
-			.finally(() => {
+				toast.error('Failed to load users')
+			} finally {
 				setIsLoading(false)
-			})
+			}
+		}
+		loadUsers()
 	}, [searchTrigger, sortOption])
+
+	useEffect(() => {
+		if (selectedUserId) {
+			const user = users.find(u => u.id === selectedUserId)
+			setSelectedUser(user || null)
+		}
+	}, [selectedUserId, users])
 
 	const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		setSortOption(e.target.value)
+		setUsers(prevUsers => sortUsers(prevUsers, e.target.value))
 	}
 
 	const renderEssentialsTill = (essentialTill: string | null) => {
@@ -120,15 +145,12 @@ const ModifyCreditsComponent = () => {
 		try {
 			const { error } = await updateUserisFree(userId, !currentIsFree)
 			if (!error) {
-				setUsers(prevUsers =>
-					prevUsers.map(user => {
-						if (user.id === userId) {
-							return { ...user, isFree: !currentIsFree }
-						}
-						return user
-					})
-				)
-				toast.success('User free status updated successfully')
+				const updatedUser = users.find(u => u.id === userId)
+				if (updatedUser) {
+					const newUser = { ...updatedUser, isFree: !currentIsFree }
+					updateUsersState(newUser)
+					toast.success('User free status updated successfully')
+				}
 			} else {
 				toast.error('Failed to update user free status.')
 			}
@@ -156,81 +178,78 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const handleUpdateCredits = async () => {
-		if (selectedUserId !== null) {
+		if (selectedUserId !== null && selectedUser) {
 			setIsUpdating(true)
 			try {
 				let creditChange = parseInt(newCredits, 10) || 0
 				creditChange = creditChange * (1 + sale / 100)
-				const currentUser = users.find(user => user.id === selectedUserId)
-				if (currentUser) {
-					const updatedCredits = (currentUser.wallet || 0) + creditChange
-					const { error } = await updateUserCredits(
-						selectedUserId,
-						updatedCredits,
-						sale,
-						newCredits,
-						tokenUpdates,
-						essentialsTill
-					)
-					if (!error) {
-						setUsers(prevUsers =>
-							prevUsers.map(user => {
-								if (user.id === selectedUserId) {
-									return {
-										...user,
-										wallet: updatedCredits,
-										private_token: Math.max(
-											0,
-											user.private_token + tokenUpdates.private_token
-										),
-										semiPrivate_token: Math.max(
-											0,
-											user.semiPrivate_token + tokenUpdates.semiPrivate_token
-										),
-										public_token: Math.max(
-											0,
-											user.public_token + tokenUpdates.public_token
-										),
-										workoutDay_token: Math.max(
-											0,
-											user.workoutDay_token + tokenUpdates.workoutDay_token
-										),
-										shake_token: Math.max(
-											0,
-											user.shake_token + tokenUpdates.shake_token
-										),
-										essential_till: essentialsTill
-									}
-								}
-								return user
-							})
-						)
-						toast.success('User credits and tokens updated successfully')
-					} else {
-						toast.error('Failed to update user credits and tokens.')
+				const updatedCredits = (selectedUser.wallet || 0) + creditChange
+
+				const { error } = await updateUserCredits(
+					selectedUserId,
+					updatedCredits,
+					sale,
+					newCredits,
+					tokenUpdates,
+					essentialsTill
+				)
+
+				if (!error) {
+					const updatedUser = {
+						...selectedUser,
+						wallet: updatedCredits,
+						private_token: Math.max(
+							0,
+							selectedUser.private_token + tokenUpdates.private_token
+						),
+						semiPrivate_token: Math.max(
+							0,
+							selectedUser.semiPrivate_token + tokenUpdates.semiPrivate_token
+						),
+						public_token: Math.max(
+							0,
+							selectedUser.public_token + tokenUpdates.public_token
+						),
+						workoutDay_token: Math.max(
+							0,
+							selectedUser.workoutDay_token + tokenUpdates.workoutDay_token
+						),
+						shake_token: Math.max(
+							0,
+							selectedUser.shake_token + tokenUpdates.shake_token
+						),
+						essential_till: essentialsTill || selectedUser.essential_till
 					}
+
+					updateUsersState(updatedUser)
+					toast.success('User credits and tokens updated successfully')
+					handleCloseModal()
 				} else {
-					console.error('User not found:', selectedUserId)
-					toast.error('User not found. Please try again.')
+					toast.error('Failed to update user credits and tokens.')
 				}
 			} catch (error) {
 				console.error('Update failed:', error)
 				toast.error('Failed to update user credits and tokens.')
 			} finally {
 				setIsUpdating(false)
-				setSelectedUserId(null)
-				setNewCredits('')
-				setTokenUpdates({
-					private_token: 0,
-					semiPrivate_token: 0,
-					public_token: 0,
-					workoutDay_token: 0,
-					shake_token: 0
-				})
-				setEssentialsTill('')
-				setModalIsOpen(false)
 			}
 		}
+	}
+
+	const handleCloseModal = () => {
+		setSelectedUserId(null)
+		setSelectedUser(null)
+		setNewCredits('')
+		setTokenUpdates({
+			private_token: 0,
+			semiPrivate_token: 0,
+			public_token: 0,
+			workoutDay_token: 0,
+			shake_token: 0
+		})
+		setEssentialsTill('')
+		setSale(0)
+		setModalIsOpen(false)
 	}
 
 	const openModal = (userId: number) => {
@@ -269,10 +288,8 @@ const ModifyCreditsComponent = () => {
 		}
 	}
 
-	const calcualateAge = (dob: string) => {
-		if (!dob) {
-			return 'N/A'
-		}
+	const calculateAge = (dob: string) => {
+		if (!dob) return 'N/A'
 		const today = new Date()
 		const birthDate = new Date(dob)
 		let age = today.getFullYear() - birthDate.getFullYear()
@@ -354,7 +371,7 @@ const ModifyCreditsComponent = () => {
 								DOB
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
-								age
+								Age
 							</th>
 							<th scope='col' className='py-4 px-6 text-left'>
 								Height
@@ -404,7 +421,7 @@ const ModifyCreditsComponent = () => {
 								<td className='py-4 px-6'>{user.email}</td>
 								<td className='py-4 px-6'>{user.phone}</td>
 								<td className='py-4 px-6'>{user.DOB}</td>
-								<td className='py-4 px-6'>{calcualateAge(user.DOB)}</td>
+								<td className='py-4 px-6'>{calculateAge(user.DOB)}</td>
 								<td className='py-4 px-6'>{user.height}</td>
 								<td className='py-4 px-6'>
 									{user.weight.length > 0
@@ -455,7 +472,7 @@ const ModifyCreditsComponent = () => {
 
 			<Modal
 				isOpen={modalIsOpen}
-				onRequestClose={() => setModalIsOpen(false)}
+				onRequestClose={handleCloseModal}
 				contentLabel='Update Credits and Tokens'
 				className='modal bg-gray-800 p-8 rounded-3xl shadow-lg'
 				overlayClassName='overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center'>
@@ -544,7 +561,7 @@ const ModifyCreditsComponent = () => {
 							Update
 						</motion.button>
 						<motion.button
-							onClick={() => setModalIsOpen(false)}
+							onClick={handleCloseModal}
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
 							className='px-6 py-3 bg-red-700 text-white rounded-full hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-300'>
