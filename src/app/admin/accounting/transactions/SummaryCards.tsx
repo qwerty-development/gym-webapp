@@ -7,13 +7,19 @@ interface SummaryCardsProps {
 	totalCredits: number
 	totalTokens: number
 	totalTransactions: number
+	loading?: boolean
 }
 
 const SummaryCards: React.FC<SummaryCardsProps> = ({
 	totalCredits,
 	totalTokens,
-	totalTransactions
+	totalTransactions,
+	loading = false
 }) => {
+	const formatNumber = (num: number) => {
+		return loading ? '-' : num.toLocaleString()
+	}
+
 	return (
 		<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8'>
 			<motion.div
@@ -23,7 +29,7 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
 				data-tooltip-content='Total credits across all transactions'>
 				<h2 className='text-2xl font-semibold mb-4'>Total Credits</h2>
 				<p className='text-4xl font-bold text-green-400'>
-					{totalCredits.toFixed(2)}
+					{formatNumber(totalCredits)}
 				</p>
 				<Tooltip id='credits-tooltip' place='top' />
 			</motion.div>
@@ -35,7 +41,7 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
 				data-tooltip-content='Total tokens across all transactions'>
 				<h2 className='text-2xl font-semibold mb-4'>Total Tokens</h2>
 				<p className='text-4xl font-bold text-blue-400'>
-					{totalTokens.toFixed(2)}
+					{formatNumber(totalTokens)}
 				</p>
 				<Tooltip id='tokens-tooltip' place='top' />
 			</motion.div>
@@ -47,7 +53,7 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
 				data-tooltip-content='Total number of transactions'>
 				<h2 className='text-2xl font-semibold mb-4'>Total Transactions</h2>
 				<p className='text-4xl font-bold text-purple-400'>
-					{totalTransactions}
+					{formatNumber(totalTransactions)}
 				</p>
 				<Tooltip id='transactions-tooltip' place='top' />
 			</motion.div>

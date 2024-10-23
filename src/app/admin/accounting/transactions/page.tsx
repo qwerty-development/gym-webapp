@@ -22,11 +22,13 @@ const TransactionPage: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState<string>('')
 	const [startDate, setStartDate] = useState<Date | null>(null)
 	const [endDate, setEndDate] = useState<Date | null>(null)
-	const [summary, setSummary] = useState<any>({
+	const [summaryLoading, setSummaryLoading] = useState(true)
+	const [summary, setSummary] = useState({
 		totalCredits: 0,
 		totalTokens: 0,
 		totalTransactions: 0
 	})
+
 	const [sortField, setSortField] = useState<string>('created_at')
 	const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 	const [selectedUser, setSelectedUser] = useState<string | null>(null)
@@ -65,61 +67,79 @@ const TransactionPage: React.FC = () => {
 	}
 
 	const fetchSummaryData = async () => {
-		const supabase = await supabaseClient()
-		let query = supabase.from('transactions').select('amount, user_id')
+		setSummaryLoading(true)
+		try {
+			const supabase = await supabaseClient()
+			let query = supabase.from('transactions').select('amount, user_id')
 
-		query = applyFilters(query)
+			query = applyFilters(query)
 
-		const { data, error } = await query
+			const { data, error } = await query
 
-		if (error) {
-			console.error('Error fetching summary data:', error)
+			if (error) {
+				console.error('Error fetching summary data:', error)
+				return { totalCredits: 0, totalTokens: 0 }
+			}
+
+			return calculateSummary(data || [])
+		} catch (error) {
+			console.error('Error in fetchSummaryData:', error)
 			return { totalCredits: 0, totalTokens: 0 }
+		} finally {
+			setSummaryLoading(false)
 		}
-
-		return calculateSummary(data)
 	}
 
 	const fetchTransactions = async () => {
 		setLoading(true)
-		const supabase = await supabaseClient()
+		try {
+			const supabase = await supabaseClient()
 
-		// Fetch total count
-		let countQuery = supabase
-			.from('transactions')
-			.select('*', { count: 'exact', head: true })
-		countQuery = applyFilters(countQuery)
-		const { count: totalCount, error: countError } = await countQuery
+			// Fetch total count
+			let countQuery = supabase
+				.from('transactions')
+				.select('*', { count: 'exact', head: true })
+			countQuery = applyFilters(countQuery)
 
-		if (countError) {
-			console.error('Error fetching total count:', countError)
-		}
+			const { count: totalCount, error: countError } = await countQuery
 
-		// Fetch paginated data
-		let query = supabase
-			.from('transactions')
-			.select('*, users!inner(first_name, last_name)')
+			if (countError) {
+				console.error('Error fetching total count:', countError)
+				return
+			}
 
-		query = applyFilters(query)
-		query = query.order(sortField, { ascending: sortOrder === 'asc' })
-		query = query.range(
-			(currentPage - 1) * itemsPerPage,
-			currentPage * itemsPerPage - 1
-		)
+			// Fetch paginated data
+			let query = supabase
+				.from('transactions')
+				.select('*, users!inner(first_name, last_name)')
 
-		const { data, error } = await query
+			query = applyFilters(query)
+			query = query.order(sortField, { ascending: sortOrder === 'asc' })
+			query = query.range(
+				(currentPage - 1) * itemsPerPage,
+				currentPage * itemsPerPage - 1
+			)
 
-		if (error) {
-			console.error('Error fetching transactions:', error)
-		} else {
+			const { data, error } = await query
+
+			if (error) {
+				console.error('Error fetching transactions:', error)
+				return
+			}
+
 			setTransactions(data || [])
 			setTotalPages(Math.ceil((totalCount || 0) / itemsPerPage))
+
+			const summaryData = await fetchSummaryData()
+			setSummary({
+				...summaryData,
+				totalTransactions: totalCount || 0
+			})
+		} catch (error) {
+			console.error('Error in fetchTransactions:', error)
+		} finally {
+			setLoading(false)
 		}
-
-		const summaryData = await fetchSummaryData()
-		setSummary({ ...summaryData, totalTransactions: totalCount || 0 })
-
-		setLoading(false)
 	}
 
 	const resetFilters = () => {
@@ -162,12 +182,25 @@ const TransactionPage: React.FC = () => {
 	const calculateSummary = (data: any) => {
 		return data.reduce(
 			(acc: any, transaction: any) => {
-				const amount = parseFloat(transaction.amount)
-				if (transaction.amount.includes('credits')) {
-					acc.totalCredits += amount
-				} else if (transaction.amount.includes('token')) {
-					acc.totalTokens += amount
+				// Extract the number and unit from the amount string
+				const amountStr = transaction.amount.toString()
+				const match = amountStr.match(
+					/([+-]?\d+(?:\.\d+)?)\s*(credits?|tokens?|private token|public token|semi-private token|workoutDay token)/
+				)
+
+				if (match) {
+					const [_, numberStr, unit] = match
+					const number = parseFloat(numberStr)
+
+					if (!isNaN(number)) {
+						if (unit.includes('credit')) {
+							acc.totalCredits += number
+						} else if (unit.includes('token')) {
+							acc.totalTokens += number
+						}
+					}
 				}
+
 				return acc
 			},
 			{ totalCredits: 0, totalTokens: 0 }
