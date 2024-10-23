@@ -45,11 +45,10 @@ export const updateUserCredits = async (
 ) => {
 	const supabase = await supabaseClient()
 
-	// Fetch user details
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select(
-			'wallet, first_name, last_name, email, user_id, private_token, semiPrivate_token, public_token, workoutDay_token, essential_till'
+			'wallet, first_name, last_name, email, user_id, private_token, semiPrivate_token, public_token, workoutDay_token, shake_token, essential_till'
 		)
 		.eq('id', userId)
 		.single()
@@ -62,7 +61,7 @@ export const updateUserCredits = async (
 	// Calculate the amount of credits added
 	const creditsAdded = wallet - userData.wallet
 
-	// Calculate updated token values
+	// Calculate updated token values (added shake_token)
 	const updatedTokens = {
 		private_token: Math.max(
 			0,
@@ -79,7 +78,8 @@ export const updateUserCredits = async (
 		workoutDay_token: Math.max(
 			0,
 			userData.workoutDay_token + tokenUpdates.workoutDay_token
-		)
+		),
+		shake_token: Math.max(0, userData.shake_token + tokenUpdates.shake_token)
 	}
 
 	// Handle essential_till update
@@ -87,25 +87,6 @@ export const updateUserCredits = async (
 	if (essentialsTill) {
 		newEssentialsTill = new Date(essentialsTill).toISOString()
 	}
-
-	// let newEssentialsTill = userData.essential_till
-	// if (essentialsTill) {
-	// 	const currentDate = new Date()
-	// 	const newDate = new Date(essentialsTill)
-	// 	if (newDate > currentDate) {
-	// 		if (userData.essential_till) {
-	// 			const currentEssentialsTill = new Date(userData.essential_till)
-	// 			newEssentialsTill =
-	// 				currentEssentialsTill > currentDate
-	// 					? new Date(
-	// 							Math.max(currentEssentialsTill.getTime(), newDate.getTime())
-	// 					  ).toISOString()
-	// 					: newDate.toISOString()
-	// 		} else {
-	// 			newEssentialsTill = newDate.toISOString()
-	// 		}
-	// 	}
-	// }
 
 	// Update user's wallet, tokens, and essential_till
 	const { data, error } = await supabase
@@ -156,11 +137,20 @@ export const updateUserCredits = async (
 	// Add transactions for token updates
 	Object.entries(tokenUpdates).forEach(([tokenType, amount]) => {
 		if (amount !== 0) {
+			// Format the token type name for display
+			const formattedTokenType = tokenType
+				.replace('_token', '')
+				.split('_')
+				.map(word => word.charAt(0).toUpperCase() + word.slice(1))
+				.join(' ')
+
 			transactions.push({
 				user_id: userData.user_id,
-				name: `${tokenType} update`,
+				name: `${formattedTokenType} token update`,
 				type: 'token update',
-				amount: `${amount > 0 ? '+' : ''}${amount} ${tokenType}`
+				amount: `${amount > 0 ? '+' : ''}${amount} ${formattedTokenType} token${
+					Math.abs(amount) !== 1 ? 's' : ''
+				}`
 			})
 		}
 	})
@@ -186,7 +176,7 @@ export const updateUserCredits = async (
 		// Note: We don't return here as the credit update was successful
 	}
 
-	// Prepare email data
+	// Prepare email data (updated to include shake_token)
 	const emailData = {
 		user_name: userData.first_name + ' ' + userData.last_name,
 		user_email: userData.email,

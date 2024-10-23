@@ -36,6 +36,7 @@ interface User {
 	semiPrivate_token: number
 	public_token: number
 	workoutDay_token: number
+	shake_token: number
 	essential_till: string | null
 }
 
@@ -44,6 +45,7 @@ interface TokenUpdates {
 	semiPrivate_token: number
 	public_token: number
 	workoutDay_token: number
+	shake_token: number
 }
 
 const ModifyCreditsComponent = () => {
@@ -62,7 +64,8 @@ const ModifyCreditsComponent = () => {
 		private_token: 0,
 		semiPrivate_token: 0,
 		public_token: 0,
-		workoutDay_token: 0
+		workoutDay_token: 0,
+		shake_token: 0
 	})
 
 	useEffect(() => {
@@ -90,7 +93,6 @@ const ModifyCreditsComponent = () => {
 			})
 			.finally(() => {
 				setIsLoading(false)
-				console.log(users)
 			})
 	}, [searchTrigger, sortOption])
 
@@ -193,6 +195,10 @@ const ModifyCreditsComponent = () => {
 											0,
 											user.workoutDay_token + tokenUpdates.workoutDay_token
 										),
+										shake_token: Math.max(
+											0,
+											user.shake_token + tokenUpdates.shake_token
+										),
 										essential_till: essentialsTill
 									}
 								}
@@ -218,22 +224,24 @@ const ModifyCreditsComponent = () => {
 					private_token: 0,
 					semiPrivate_token: 0,
 					public_token: 0,
-					workoutDay_token: 0
+					workoutDay_token: 0,
+					shake_token: 0
 				})
 				setEssentialsTill('')
 				setModalIsOpen(false)
 			}
 		}
 	}
+
 	const openModal = (userId: number) => {
 		setSelectedUserId(userId)
 		setModalIsOpen(true)
-		// Reset token updates when opening modal
 		setTokenUpdates({
 			private_token: 0,
 			semiPrivate_token: 0,
 			public_token: 0,
-			workoutDay_token: 0
+			workoutDay_token: 0,
+			shake_token: 0
 		})
 		const user = users.find(u => u.id === userId)
 		setEssentialsTill(user?.essential_till || '')
@@ -243,7 +251,8 @@ const ModifyCreditsComponent = () => {
 		private_token: 'PT',
 		semiPrivate_token: 'SPT',
 		public_token: 'Class Tokens',
-		workoutDay_token: 'WOD Pass'
+		workoutDay_token: 'WOD Pass',
+		shake_token: 'Shake Tokens'
 	}
 
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,7 +260,7 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const handleSearch = () => {
-		setSearchTrigger(prev => prev + 1) // Increment to trigger useEffect
+		setSearchTrigger(prev => prev + 1)
 	}
 
 	const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -353,7 +362,6 @@ const ModifyCreditsComponent = () => {
 							<th scope='col' className='py-4 px-6 text-left'>
 								Weight
 							</th>
-
 							<th scope='col' className='py-4 px-6 text-center'>
 								is Free
 							</th>
@@ -368,6 +376,9 @@ const ModifyCreditsComponent = () => {
 							</th>
 							<th scope='col' className='py-4 px-6 text-center'>
 								Workout of the Day
+							</th>
+							<th scope='col' className='py-4 px-6 text-center'>
+								Shake Tokens
 							</th>
 							<th scope='col' className='py-4 px-6 text-center'>
 								Essentials
@@ -400,7 +411,6 @@ const ModifyCreditsComponent = () => {
 										? user.weight[user.weight.length - 1].value
 										: ''}
 								</td>
-
 								<td className='py-4 px-6 text-center'>
 									<motion.button
 										whileHover={{ scale: 1.1 }}
@@ -423,6 +433,7 @@ const ModifyCreditsComponent = () => {
 								<td className='py-4 px-6 text-center'>
 									{user.workoutDay_token}
 								</td>
+								<td className='py-4 px-6 text-center'>{user.shake_token}</td>
 								<td className='py-4 px-6 text-center'>
 									{renderEssentialsTill(user.essential_till)}
 								</td>
