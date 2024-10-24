@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+// WalletContext.tsx
 'use client'
 import {
 	createContext,
@@ -8,17 +8,21 @@ import {
 	ReactNode
 } from 'react'
 import { getWalletBalance } from '../../../../utils/userRequests'
+import { supabaseClient } from '../../../../utils/supabaseClient'
 import { useAuth } from '@clerk/nextjs'
 
 interface WalletContextType {
 	walletBalance: number | null
+	userTokens: any
 	refreshWalletBalance: () => void
+	refreshTokens: () => void
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
 	const [walletBalance, setWalletBalance] = useState<number | null>(null)
+	const [userTokens, setUserTokens] = useState<any>(null)
 	const { userId, isSignedIn } = useAuth()
 
 	const refreshWalletBalance = async () => {
@@ -35,12 +39,42 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 		}
 	}
 
+	const refreshTokens = async () => {
+		if (isSignedIn && userId) {
+			try {
+				const supabase = await supabaseClient()
+				const { data, error } = await supabase
+					.from('users')
+					.select(
+						'private_token, semiPrivate_token, public_token, workoutDay_token, shake_token'
+					)
+					.eq('user_id', userId)
+					.single()
+
+				if (error) throw error
+				setUserTokens(data)
+			} catch (error) {
+				console.error('Error fetching user tokens:', error)
+				setUserTokens(null)
+			}
+		} else {
+			setUserTokens(null)
+		}
+	}
+
 	useEffect(() => {
 		refreshWalletBalance()
+		refreshTokens()
 	}, [isSignedIn, userId])
 
 	return (
-		<WalletContext.Provider value={{ walletBalance, refreshWalletBalance }}>
+		<WalletContext.Provider
+			value={{
+				walletBalance,
+				userTokens,
+				refreshWalletBalance,
+				refreshTokens
+			}}>
 			{children}
 		</WalletContext.Provider>
 	)

@@ -92,7 +92,7 @@ export default function Example() {
 	const [coachesLoading, setCoachesLoading] = useState<boolean>(false)
 	const [isPrivateTraining, setIsPrivateTraining] = useState<boolean>(true) // State for toggle
 	const { user } = useUser()
-	const { refreshWalletBalance } = useWallet()
+	const { refreshWalletBalance, refreshTokens } = useWallet()
 	useEffect(() => {
 		Modal.setAppElement('#__next')
 	}, [])
@@ -118,6 +118,7 @@ export default function Example() {
 			toast.error(error) // Display error toast
 		} else {
 			refreshWalletBalance()
+			refreshTokens()
 			toast.success('Booking successful!') // Display success toast
 			setModalIsOpen(true) // Open the modal after successful booking
 		}
@@ -310,6 +311,7 @@ export default function Example() {
 			toast.error(error) // Display error toast
 		} else {
 			refreshWalletBalance()
+			refreshTokens()
 			toast.success('Booking successful!') // Display success toast
 			setModalIsOpen(true) // Open the modal after successful booking
 		}
@@ -394,7 +396,9 @@ export default function Example() {
 			toast.error(response.error) // Display error toast
 		} else {
 			setSelectedItems([])
-			refreshWalletBalance() // Clear selected items after payment
+			refreshWalletBalance()
+			refreshTokens()
+			// Clear selected items after payment
 			setTotalPrice(0) // Reset total price after payment
 			setModalIsOpen(false)
 			setSelectedActivity(null)

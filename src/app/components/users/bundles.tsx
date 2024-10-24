@@ -140,7 +140,7 @@ function classNames(...classes: string[]) {
 export default function Bundles() {
 	const [essentialsTillDate, setEssentialsTillDate] = useState<any>(null)
 	const [purchaseStatus, setPurchaseStatus] = useState<any>(null)
-	const { refreshWalletBalance } = useWallet()
+	const { refreshWalletBalance, refreshTokens } = useWallet()
 	const { isLoaded, isSignedIn, user } = useUser()
 
 	useEffect(() => {
@@ -185,6 +185,7 @@ export default function Bundles() {
 			} else {
 				toast.success(result.message || 'Bundle purchase successful!')
 				refreshWalletBalance()
+				refreshTokens()
 			}
 		} catch (error) {
 			console.error('Purchase failed:', error)

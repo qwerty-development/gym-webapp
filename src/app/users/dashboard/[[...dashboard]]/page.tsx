@@ -18,7 +18,6 @@ import {
 	payForGroupItems,
 	claimTransaction,
 	fetchShopTransactions,
-	fetchUserTokens,
 	fetchUserEssentialTill
 } from '../../../../../utils/userRequests'
 import BulkCalendarAdd from '@/app/components/admin/BulkCalendarAdd'
@@ -122,21 +121,13 @@ export default function Dashboard() {
 	const [adminIndividualSessions, setAdminIndividualSessions] = useState<any[]>(
 		[]
 	)
-	const [userTokens, setUserTokens] = useState({
-		private: 0,
-		semiPrivate: 0,
-		public: 0,
-		workoutDay: 0,
-		shake: 0
-	})
+
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
 	const [showBulkCalendarAdd, setShowBulkCalendarAdd] = useState<any>(false)
 
 	const [isChatOpen, setIsChatOpen] = useState(false)
 	const [showCalendarView, setShowCalendarView] = useState(false)
-	const toggleCalendarView = () => {
-		setShowCalendarView(!showCalendarView)
-	}
+
 	const [isCancelling, setIsCancelling] = useState(false)
 	const [totalUsers, setTotalUsers] = useState(0)
 	const [totalActivities, setTotalActivities] = useState(0)
@@ -158,7 +149,6 @@ export default function Dashboard() {
 	const [selectedItems, setSelectedItems] = useState<any[]>([])
 	const [totalPrice, setTotalPrice] = useState<number>(0)
 	const [activeTab, setActiveTab] = useState('individual')
-	const [sidebarOpen, setSidebarOpen] = useState(false)
 	const [userData, setUserData] = useState<any>(null)
 
 	const { isLoaded, isSignedIn, user } = useUser()
@@ -168,15 +158,14 @@ export default function Dashboard() {
 		GroupReservation[]
 	>([])
 	const [allSessions, setAllSessions] = useState<Session[]>([])
-	const [activities, setActivities] = useState<Activity[]>([])
+
 	const [isLoading, setIsLoading] = useState<boolean>(true) // State to track loading status
-	const { refreshWalletBalance } = useWallet()
+	const { refreshWalletBalance, refreshTokens } = useWallet()
 	const [market, setMarket] = useState<any[]>([])
 	const totalReservations = (
 		activeTab === 'individual' ? reservations : groupReservations
 	).length
 	const [shopTransactions, setShopTransactions] = useState<any[]>([])
-	const [Userinfo, setUserinfo] = useState<any>()
 
 	const loadShopTransactions = async () => {
 		const transactions = await fetchShopTransactions()
@@ -372,22 +361,7 @@ export default function Dashboard() {
 					setGroupReservations(transformedGroupReservations)
 				}
 
-				const fetchedActivities = await fetchAllActivities()
-				if (fetchedActivities) {
-					setActivities(fetchedActivities)
-				}
-
-				const userToken = await fetchUserTokens(user.id)
-				if (userToken) {
-					setIsLoading(false)
-					setUserTokens({
-						private: userToken.private_token,
-						semiPrivate: userToken.semiPrivate_token,
-						public: userToken.public_token,
-						workoutDay: userToken.workoutDay_token,
-						shake: userToken.shake_token
-					})
-				}
+				setIsLoading(false)
 			}
 		}
 		fetchData()
@@ -445,6 +419,7 @@ export default function Dashboard() {
 			setTotalPrice(0)
 			setModalIsOpen(false)
 			refreshWalletBalance()
+			refreshTokens()
 			const fetchedReservations = await fetchReservations(user?.id)
 			if (fetchedReservations) {
 				const transformedReservations = fetchedReservations.map(
@@ -524,6 +499,7 @@ export default function Dashboard() {
 
 			if (cancelled) {
 				refreshWalletBalance()
+				refreshTokens()
 				toast.success('Reservation cancelled successfully!')
 			} else {
 				toast.error('Failed to cancel reservation!')
@@ -604,6 +580,7 @@ export default function Dashboard() {
 
 			if (cancelled) {
 				refreshWalletBalance()
+				refreshTokens()
 				toast.success('Group reservation cancelled successfully!')
 			} else {
 				toast.error('Failed to cancel group reservation!')
@@ -988,7 +965,7 @@ export default function Dashboard() {
 										animate={{ opacity: 1, x: 0 }}
 										transition={{ delay: 0.2 }}
 										className='hidden md:block'>
-										<TokenBalance userTokens={userTokens} />
+										<TokenBalance />
 									</motion.div>
 								)}
 								{user.publicMetadata.role === 'admin' && (
