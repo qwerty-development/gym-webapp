@@ -21,6 +21,7 @@ import {
 	fetchUserTokens,
 	fetchUserEssentialTill
 } from '../../../../../utils/userRequests'
+import BulkCalendarAdd from '@/app/components/admin/BulkCalendarAdd'
 import {
 	fetchTotalUsers,
 	fetchTotalActivities,
@@ -44,7 +45,8 @@ import {
 	FaBars,
 	FaClock,
 	FaShoppingCart,
-	FaListUl
+	FaListUl,
+	FaCalendarPlus
 } from 'react-icons/fa'
 import Link from 'next/link'
 import useConfirmationModal from '../../../../../utils/useConfirmationModel'
@@ -127,6 +129,7 @@ export default function Dashboard() {
 		workoutDay: 0
 	})
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
+	const [showBulkCalendarAdd, setShowBulkCalendarAdd] = useState<any>(false)
 
 	const [isChatOpen, setIsChatOpen] = useState(false)
 	const [showCalendarView, setShowCalendarView] = useState(false)
@@ -1096,11 +1099,20 @@ export default function Dashboard() {
 											: 'Group Classes Reservations'}
 									</h2>
 									{user.publicMetadata.role === 'admin' && (
-										<Link href='/admin/calendar-view'>
-											<button className='flex items-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
-												<FaCalendarAlt className='mr-2' /> View Calendar
-											</button>
-										</Link>
+										<div className='flex gap-4'>
+											<Link href='/admin/calendar-view'>
+												<button className='flex items-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
+													<FaCalendarAlt className='mr-2' /> View Calendar
+												</button>
+											</Link>
+											<motion.button
+												onClick={() => setShowBulkCalendarAdd(true)}
+												whileHover={{ scale: 1.05 }}
+												whileTap={{ scale: 0.95 }}
+												className='flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
+												<FaCalendarPlus className='mr-2' /> Bulk Add to Calendar
+											</motion.button>
+										</div>
 									)}
 								</div>
 
@@ -1460,6 +1472,17 @@ export default function Dashboard() {
 				</div>
 			</Modal>
 			{isCancelling && <LoadingOverlay />}
+			{user.publicMetadata.role === 'admin' && (
+				<BulkCalendarAdd
+					sessions={
+						activeTab === 'individual'
+							? adminIndividualSessions
+							: adminGroupSessions
+					}
+					isVisible={showBulkCalendarAdd}
+					onClose={() => setShowBulkCalendarAdd(false)}
+				/>
+			)}
 		</div>
 	)
 }
