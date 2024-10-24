@@ -10,6 +10,13 @@ const TokenBalance = ({ userTokens }: any) => (
 			<li className='flex items-center justify-between text-gray-300'>
 				<span className='flex items-center'>
 					<FaTicketAlt className='mr-2 text-green-500' />
+					Shakes
+				</span>
+				<span className='font-bold'>{userTokens.shake}</span>
+			</li>
+			<li className='flex items-center justify-between text-gray-300'>
+				<span className='flex items-center'>
+					<FaTicketAlt className='mr-2 text-green-500' />
 					Private Sessions
 				</span>
 				<span className='font-bold'>{userTokens.private}</span>
@@ -21,6 +28,7 @@ const TokenBalance = ({ userTokens }: any) => (
 				</span>
 				<span className='font-bold'>{userTokens.semiPrivate}</span>
 			</li>
+
 			<li className='flex items-center justify-between text-gray-300'>
 				<span className='flex items-center'>
 					<FaTicketAlt className='mr-2 text-green-500' />

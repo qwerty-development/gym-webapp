@@ -40,7 +40,7 @@ export default function NavbarComponent() {
 		const { data, error } = await supabase
 			.from('users')
 			.select(
-				'private_token, semiPrivate_token, public_token, workoutDay_token'
+				'private_token, semiPrivate_token, public_token, workoutDay_token, shake_token'
 			)
 			.eq('user_id', id)
 			.single()

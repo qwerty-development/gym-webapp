@@ -126,7 +126,8 @@ export default function Dashboard() {
 		private: 0,
 		semiPrivate: 0,
 		public: 0,
-		workoutDay: 0
+		workoutDay: 0,
+		shake: 0
 	})
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
 	const [showBulkCalendarAdd, setShowBulkCalendarAdd] = useState<any>(false)
@@ -383,7 +384,8 @@ export default function Dashboard() {
 						private: userToken.private_token,
 						semiPrivate: userToken.semiPrivate_token,
 						public: userToken.public_token,
-						workoutDay: userToken.workoutDay_token
+						workoutDay: userToken.workoutDay_token,
+						shake: userToken.shake_token
 					})
 				}
 			}

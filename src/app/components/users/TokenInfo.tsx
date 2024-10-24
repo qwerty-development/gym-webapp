@@ -10,6 +10,13 @@ const TokenInfo = ({ tokens }: any) => (
 			<li className='flex items-center justify-between text-gray-300'>
 				<span className='flex items-center'>
 					<FaTicketAlt className='mr-2 text-green-500' />
+					Shakes
+				</span>
+				<span className='font-bold'>{tokens.shake_token}</span>
+			</li>
+			<li className='flex items-center justify-between text-gray-300'>
+				<span className='flex items-center'>
+					<FaTicketAlt className='mr-2 text-green-500' />
 					Private Sessions
 				</span>
 				<span className='font-bold'>{tokens.private_token}</span>
