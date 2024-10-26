@@ -316,19 +316,42 @@ export const fetchClothe = async () => {
 export const handlePurchase = async (userId, cart, totalPrice) => {
 	const supabase = supabaseClient()
 
-	// Check user's wallet balance
 	const { data: userData, error: userError } = await supabase
 		.from('users')
-		.select('wallet')
+		.select('wallet, shake_token')
 		.eq('user_id', userId)
 		.single()
 
 	if (userError) {
-		console.error('Error fetching user wallet:', userError.message)
-		return { success: false, error: 'Error fetching user wallet' }
+		console.error('Error fetching user data:', userError.message)
+		return { success: false, error: 'Error fetching user data' }
 	}
 
-	if (userData.wallet < totalPrice) {
+	// Calculate total price after accounting for shake tokens
+	let adjustedTotalPrice = totalPrice
+	let shakeTokensToUse = 0
+	const proteinItems = cart.filter(
+		item =>
+			item.name.toLowerCase().includes('protein shake') ||
+			item.name.toLowerCase().includes('protein pudding')
+	)
+
+	if (proteinItems.length > 0 && userData.shake_token > 0) {
+		let remainingShakeTokens = userData.shake_token
+		for (const item of proteinItems) {
+			if (remainingShakeTokens >= item.quantity) {
+				adjustedTotalPrice -= item.price * item.quantity
+				shakeTokensToUse += item.quantity
+				remainingShakeTokens -= item.quantity
+			} else if (remainingShakeTokens > 0) {
+				adjustedTotalPrice -= item.price * remainingShakeTokens
+				shakeTokensToUse += remainingShakeTokens
+				remainingShakeTokens = 0
+			}
+		}
+	}
+
+	if (userData.wallet < adjustedTotalPrice) {
 		return {
 			success: false,
 			error: 'You do not have enough credits to make this purchase.'
@@ -344,10 +367,6 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 			.single()
 
 		if (fetchError) {
-			console.error(
-				`Error fetching current quantity for item ${item.id}:`,
-				fetchError.message
-			)
 			return {
 				success: false,
 				error: `Error fetching quantity for item ${item.id}`
@@ -362,23 +381,25 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 		}
 	}
 
-	// Update user's wallet
+	// Update user's wallet and shake tokens
 	const { error: updateError } = await supabase
 		.from('users')
-		.update({ wallet: userData.wallet - totalPrice })
+		.update({
+			wallet: userData.wallet - adjustedTotalPrice,
+			shake_token: userData.shake_token - shakeTokensToUse
+		})
 		.eq('user_id', userId)
 
 	if (updateError) {
-		console.error('Error updating user wallet:', updateError.message)
-		return { success: false, error: 'Error updating user wallet' }
+		console.error('Error updating user data:', updateError.message)
+		return { success: false, error: 'Error updating user data' }
 	}
 
-	// Transform cart items to an array of UUIDs and decrease quantities
+	// Transform cart items and decrease quantities
 	const items = []
 	for (const item of cart) {
 		items.push(...Array(item.quantity).fill(item.id))
 
-		// Fetch current quantity
 		const { data: currentItem, error: fetchError } = await supabase
 			.from('market')
 			.select('quantity')
@@ -393,7 +414,6 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 			continue
 		}
 
-		// Decrease the quantity of the item in the market table
 		const newQuantity = Math.max(0, currentItem.quantity - item.quantity)
 		const { error: quantityError } = await supabase
 			.from('market')
@@ -405,13 +425,10 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 				`Error updating quantity for item ${item.id}:`,
 				quantityError.message
 			)
-			// You might want to handle this error more gracefully
 		}
 	}
 
-	console.log('Items to insert:', items) // Log the items array to verify
-
-	// Record transaction in market_transactions table
+	// Record transactions
 	const { error: marketTransactionError } = await supabase
 		.from('market_transactions')
 		.insert({
@@ -419,35 +436,49 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 			items: items,
 			date: new Date(),
 			claimed: false,
-			price: totalPrice
+			price: adjustedTotalPrice
 		})
 
 	if (marketTransactionError) {
-		console.error(
-			'Error recording market transaction:',
-			marketTransactionError.message
-		)
 		return { success: false, error: 'Error recording market transaction' }
 	}
 
-	// Record transaction in the new transactions table
-	const transactionData = {
-		user_id: userId,
-		name: `Market purchase: ${cart.length} item${cart.length > 1 ? 's' : ''}`,
-		type: 'market transaction',
-		amount: `-${totalPrice} credits`
+	// Create transaction records array
+	const transactionRecords = []
+
+	if (adjustedTotalPrice > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Market purchase: ${cart.length} item${cart.length > 1 ? 's' : ''}`,
+			type: 'market transaction',
+			amount: `-${adjustedTotalPrice} credits`
+		})
 	}
 
-	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert(transactionData)
-
-	if (transactionError) {
-		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return false here as the purchase was successful
+	if (shakeTokensToUse > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Used protein shake tokens`,
+			type: 'shake token redemption',
+			amount: `-${shakeTokensToUse} shake tokens`
+		})
 	}
 
-	return { success: true }
+	if (transactionRecords.length > 0) {
+		const { error: transactionError } = await supabase
+			.from('transactions')
+			.insert(transactionRecords)
+
+		if (transactionError) {
+			console.error('Error recording transactions:', transactionError.message)
+		}
+	}
+
+	return {
+		success: true,
+		shakeTokensUsed: shakeTokensToUse,
+		creditsUsed: adjustedTotalPrice
+	}
 }
 
 export const fetchShopTransactions = async () => {

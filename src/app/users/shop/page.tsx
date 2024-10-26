@@ -83,9 +83,11 @@ const Shop: React.FC = () => {
 	}
 
 	const getTotalPrice = () => {
-		return cart
-			.reduce((total, item) => total + item.price * item.quantity, 0)
-			.toFixed(2)
+		const total = cart.reduce((total, item) => {
+			const itemTotal = item.price * item.quantity
+			return total + itemTotal
+		}, 0)
+		return total.toFixed(2)
 	}
 
 	const toggleCart = () => {
@@ -100,11 +102,15 @@ const Shop: React.FC = () => {
 
 		const userId = user.id
 		const totalPrice = parseFloat(getTotalPrice())
-		const result = await handlePurchase(userId, cart, totalPrice)
+		const result: any = await handlePurchase(userId, cart, totalPrice)
 
 		if (result.success) {
 			setCart([])
-			toast.success('Purchase successful!')
+			const tokenMessage =
+				result!.shakeTokensUsed > 0
+					? ` (Used ${result.shakeTokensUsed} shake tokens)`
+					: ''
+			toast.success(`Purchase successful!${tokenMessage}`)
 			refreshWalletBalance()
 			refreshTokens()
 			const marketItems = await fetchMarketItems()
