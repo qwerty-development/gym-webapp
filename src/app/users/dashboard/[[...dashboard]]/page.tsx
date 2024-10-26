@@ -397,7 +397,7 @@ export default function Dashboard() {
 		setButtonLoading(true)
 
 		try {
-			const response = selectedReservation?.count
+			const response: any = selectedReservation?.count
 				? await payForGroupItems({
 						userId: user.id,
 						activityId: selectedReservation.activity.id,
@@ -426,8 +426,8 @@ export default function Dashboard() {
 					: ''
 				toast.success(`Items added successfully!${tokenMessage}`)
 
-				if (response.tokensEarned > 0) {
-					toast.success(response.message, {
+				if (response!.tokensEarned > 0) {
+					toast.success(response!.message, {
 						duration: 5000, // Show for longer
 						icon: '🎉',
 						style: {
@@ -1137,7 +1137,8 @@ export default function Dashboard() {
 												whileHover={{ scale: 1.05 }}
 												whileTap={{ scale: 0.95 }}
 												className='flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
-												<FaCalendarPlus className='mr-2' /> Bulk Add to Calendar
+												<FaCalendarPlus className='mr-2' />
+												Add to Calendar
 											</motion.button>
 										</div>
 									)}

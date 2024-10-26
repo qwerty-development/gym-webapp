@@ -74,6 +74,10 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
 							<option value='credit refill'>Credit Refill</option>
 							<option value='bundle purchase'>Bundle Purchase</option>
 							<option value='market transaction'>Market Transaction</option>
+							<option value='essentials update'>Essentials Update</option>
+							<option value='token update'>token update</option>
+							<option value='punch card reward'>Punch Card Reward</option>
+							<option value='shake token redemption'>Shake Token</option>
 						</select>
 					</div>
 					<div>
