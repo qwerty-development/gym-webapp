@@ -14,6 +14,202 @@ export const fetchMarket = async () => {
 	return data
 }
 
+export const handlePurchase = async (userId, cart, totalPrice) => {
+	const supabase = supabaseClient()
+
+	// Fetch user data including shake tokens and punches
+	const { data: userData, error: userError } = await supabase
+		.from('users')
+		.select('wallet, shake_token, punches')
+		.eq('user_id', userId)
+		.single()
+
+	if (userError) {
+		console.error('Error fetching user data:', userError.message)
+		return { success: false, error: 'Error fetching user data' }
+	}
+
+	// Calculate total price after accounting for shake tokens
+	let adjustedTotalPrice = totalPrice
+	let shakeTokensToUse = 0
+	const proteinItems = cart.filter(
+		item =>
+			item.name.toLowerCase().includes('protein shake') ||
+			item.name.toLowerCase().includes('protein pudding')
+	)
+
+	// Calculate total punches to add (one per protein item, regardless of payment method)
+	const totalProteinItems = proteinItems.reduce(
+		(sum, item) => sum + item.quantity,
+		0
+	)
+
+	// Calculate shake token usage
+	if (proteinItems.length > 0 && userData.shake_token > 0) {
+		let remainingShakeTokens = userData.shake_token
+		for (const item of proteinItems) {
+			if (remainingShakeTokens >= item.quantity) {
+				adjustedTotalPrice -= item.price * item.quantity
+				shakeTokensToUse += item.quantity
+				remainingShakeTokens -= item.quantity
+			} else if (remainingShakeTokens > 0) {
+				adjustedTotalPrice -= item.price * remainingShakeTokens
+				shakeTokensToUse += remainingShakeTokens
+				remainingShakeTokens = 0
+			}
+		}
+	}
+
+	if (userData.wallet < adjustedTotalPrice) {
+		return {
+			success: false,
+			error: 'You do not have enough credits to make this purchase.'
+		}
+	}
+
+	// Check if all items have sufficient quantity
+	for (const item of cart) {
+		const { data: currentItem, error: fetchError } = await supabase
+			.from('market')
+			.select('quantity')
+			.eq('id', item.id)
+			.single()
+
+		if (fetchError) {
+			return {
+				success: false,
+				error: `Error fetching quantity for item ${item.id}`
+			}
+		}
+
+		if (currentItem.quantity < item.quantity) {
+			return {
+				success: false,
+				error: `Not enough quantity available for item ${item.name}`
+			}
+		}
+	}
+
+	// Calculate punch card rewards
+	const newPunchCount = userData.punches + totalProteinItems
+	const completedCards = Math.floor(newPunchCount / 10)
+	const previousCards = Math.floor(userData.punches / 10)
+	const newTokensToAward = (completedCards - previousCards) * 2
+	const finalPunchCount = newPunchCount % 10
+
+	// Update user's wallet, shake tokens, and punches
+	const { error: updateError } = await supabase
+		.from('users')
+		.update({
+			wallet: userData.wallet - adjustedTotalPrice,
+			shake_token: userData.shake_token - shakeTokensToUse + newTokensToAward,
+			punches: finalPunchCount
+		})
+		.eq('user_id', userId)
+
+	if (updateError) {
+		console.error('Error updating user data:', updateError.message)
+		return { success: false, error: 'Error updating user data' }
+	}
+
+	// Transform cart items and decrease quantities
+	const items = []
+	for (const item of cart) {
+		items.push(...Array(item.quantity).fill(item.id))
+
+		const { data: currentItem, error: fetchError } = await supabase
+			.from('market')
+			.select('quantity')
+			.eq('id', item.id)
+			.single()
+
+		if (fetchError) {
+			console.error(
+				`Error fetching current quantity for item ${item.id}:`,
+				fetchError.message
+			)
+			continue
+		}
+
+		const newQuantity = Math.max(0, currentItem.quantity - item.quantity)
+		const { error: quantityError } = await supabase
+			.from('market')
+			.update({ quantity: newQuantity })
+			.eq('id', item.id)
+
+		if (quantityError) {
+			console.error(
+				`Error updating quantity for item ${item.id}:`,
+				quantityError.message
+			)
+		}
+	}
+
+	// Record market transaction
+	const { error: marketTransactionError } = await supabase
+		.from('market_transactions')
+		.insert({
+			user_id: userId,
+			items: items,
+			date: new Date(),
+			claimed: false,
+			price: adjustedTotalPrice
+		})
+
+	if (marketTransactionError) {
+		return { success: false, error: 'Error recording market transaction' }
+	}
+
+	// Create transaction records array
+	const transactionRecords = []
+
+	if (adjustedTotalPrice > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Market purchase: ${cart.length} item${cart.length > 1 ? 's' : ''}`,
+			type: 'market transaction',
+			amount: `-${adjustedTotalPrice} credits`
+		})
+	}
+
+	if (shakeTokensToUse > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Used protein shake tokens`,
+			type: 'shake token redemption',
+			amount: `-${shakeTokensToUse} shake tokens`
+		})
+	}
+
+	if (newTokensToAward > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: 'Earned free shake tokens from punch card completion',
+			type: 'punch card reward',
+			amount: `+${newTokensToAward} shake tokens`
+		})
+	}
+
+	if (transactionRecords.length > 0) {
+		const { error: transactionError } = await supabase
+			.from('transactions')
+			.insert(transactionRecords)
+
+		if (transactionError) {
+			console.error('Error recording transactions:', transactionError.message)
+		}
+	}
+
+	return {
+		success: true,
+		shakeTokensUsed: shakeTokensToUse,
+		creditsUsed: adjustedTotalPrice,
+		punchesAdded: totalProteinItems,
+		tokensEarned: newTokensToAward,
+		newPunchCount: finalPunchCount
+	}
+}
+
 export const payForItems = async ({
 	userId,
 	activityId,
@@ -24,7 +220,7 @@ export const payForItems = async ({
 }) => {
 	const supabase = await supabaseClient()
 
-	// Fetch user's data including shake tokens
+	// Fetch user's data including shake tokens and punches
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select('*')
@@ -36,7 +232,7 @@ export const payForItems = async ({
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Identify protein items and calculate adjusted prices
+	// Calculate total price and identify items using tokens/credits
 	let adjustedTotalPrice = 0
 	let shakeTokensToUse = 0
 	let itemsUsingTokens = []
@@ -48,6 +244,10 @@ export const payForItems = async ({
 			item.name.toLowerCase().includes('protein pudding')
 	)
 
+	// Calculate total punches to add (one per protein item, regardless of payment method)
+	const totalProteinItems = proteinItems.length
+
+	// Calculate shake token usage
 	if (proteinItems.length > 0 && userData.shake_token > 0) {
 		let remainingShakeTokens = userData.shake_token
 		proteinItems.forEach(item => {
@@ -84,6 +284,13 @@ export const payForItems = async ({
 		return { error: 'Not enough credits to pay for the items.' }
 	}
 
+	// Calculate punch card rewards
+	const newPunchCount = userData.punches + totalProteinItems
+	const completedCards = Math.floor(newPunchCount / 10)
+	const previousCards = Math.floor(userData.punches / 10)
+	const newTokensToAward = (completedCards - previousCards) * 2
+	const finalPunchCount = newPunchCount % 10
+
 	// Fetch time slot data
 	const { data: timeSlotData, error: timeSlotError } = await supabase
 		.from('time_slots')
@@ -100,12 +307,13 @@ export const payForItems = async ({
 		return { error: timeSlotError?.message || 'Time slot not found.' }
 	}
 
-	// Update user's wallet and shake tokens
+	// Update user's wallet, shake tokens, and punches
 	const { error: updateError } = await supabase
 		.from('users')
 		.update({
 			wallet: userData.wallet - adjustedTotalPrice,
-			shake_token: userData.shake_token - shakeTokensToUse
+			shake_token: userData.shake_token - shakeTokensToUse + newTokensToAward,
+			punches: finalPunchCount
 		})
 		.eq('user_id', userId)
 
@@ -169,6 +377,15 @@ export const payForItems = async ({
 		})
 	}
 
+	if (newTokensToAward > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: 'Earned free shake tokens from punch card completion',
+			type: 'punch card reward',
+			amount: `+${newTokensToAward} shake tokens`
+		})
+	}
+
 	if (transactionRecords.length > 0) {
 		await supabase.from('transactions').insert(transactionRecords)
 	}
@@ -177,7 +394,10 @@ export const payForItems = async ({
 		data: { ...timeSlotData, additions: newAdditions },
 		message: 'Items added to time slot successfully.',
 		shakeTokensUsed: shakeTokensToUse,
-		creditsUsed: adjustedTotalPrice
+		creditsUsed: adjustedTotalPrice,
+		punchesAdded: totalProteinItems,
+		tokensEarned: newTokensToAward,
+		newPunchCount: finalPunchCount
 	}
 }
 
@@ -191,7 +411,7 @@ export const payForGroupItems = async ({
 }) => {
 	const supabase = await supabaseClient()
 
-	// Fetch user's data including shake tokens
+	// Fetch user's data including shake tokens and punches
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select('*')
@@ -202,7 +422,7 @@ export const payForGroupItems = async ({
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Identify protein items and calculate adjusted prices
+	// Calculate total price and identify items using tokens/credits
 	let adjustedTotalPrice = 0
 	let shakeTokensToUse = 0
 	let itemsUsingTokens = []
@@ -214,6 +434,10 @@ export const payForGroupItems = async ({
 			item.name.toLowerCase().includes('protein pudding')
 	)
 
+	// Calculate total punches to add (one per protein item, regardless of payment method)
+	const totalProteinItems = proteinItems.length
+
+	// Calculate shake token usage
 	if (proteinItems.length > 0 && userData.shake_token > 0) {
 		let remainingShakeTokens = userData.shake_token
 		proteinItems.forEach(item => {
@@ -249,6 +473,13 @@ export const payForGroupItems = async ({
 		return { error: 'Not enough credits to pay for the items.' }
 	}
 
+	// Calculate punch card rewards
+	const newPunchCount = userData.punches + totalProteinItems
+	const completedCards = Math.floor(newPunchCount / 10)
+	const previousCards = Math.floor(userData.punches / 10)
+	const newTokensToAward = (completedCards - previousCards) * 2
+	const finalPunchCount = newPunchCount % 10
+
 	// Fetch group time slot data
 	const { data: timeSlotData, error: timeSlotError } = await supabase
 		.from('group_time_slots')
@@ -265,12 +496,13 @@ export const payForGroupItems = async ({
 		return { error: timeSlotError?.message || 'Group time slot not found.' }
 	}
 
-	// Update user's wallet and shake tokens
+	// Update user's wallet, shake tokens, and punches
 	const { error: updateError } = await supabase
 		.from('users')
 		.update({
 			wallet: userData.wallet - adjustedTotalPrice,
-			shake_token: userData.shake_token - shakeTokensToUse
+			shake_token: userData.shake_token - shakeTokensToUse + newTokensToAward,
+			punches: finalPunchCount
 		})
 		.eq('user_id', userId)
 
@@ -342,6 +574,15 @@ export const payForGroupItems = async ({
 		})
 	}
 
+	if (newTokensToAward > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: 'Earned free shake tokens from punch card completion',
+			type: 'punch card reward',
+			amount: `+${newTokensToAward} shake tokens`
+		})
+	}
+
 	if (transactionRecords.length > 0) {
 		await supabase.from('transactions').insert(transactionRecords)
 	}
@@ -350,7 +591,10 @@ export const payForGroupItems = async ({
 		data: { ...timeSlotData, additions: newAdditions },
 		message: 'Items added to group time slot successfully.',
 		shakeTokensUsed: shakeTokensToUse,
-		creditsUsed: adjustedTotalPrice
+		creditsUsed: adjustedTotalPrice,
+		punchesAdded: totalProteinItems,
+		tokensEarned: newTokensToAward,
+		newPunchCount: finalPunchCount
 	}
 }
 
@@ -386,173 +630,6 @@ export const fetchClothe = async () => {
 	}
 
 	return data
-}
-export const handlePurchase = async (userId, cart, totalPrice) => {
-	const supabase = supabaseClient()
-
-	const { data: userData, error: userError } = await supabase
-		.from('users')
-		.select('wallet, shake_token')
-		.eq('user_id', userId)
-		.single()
-
-	if (userError) {
-		console.error('Error fetching user data:', userError.message)
-		return { success: false, error: 'Error fetching user data' }
-	}
-
-	// Calculate total price after accounting for shake tokens
-	let adjustedTotalPrice = totalPrice
-	let shakeTokensToUse = 0
-	const proteinItems = cart.filter(
-		item =>
-			item.name.toLowerCase().includes('protein shake') ||
-			item.name.toLowerCase().includes('protein pudding')
-	)
-
-	if (proteinItems.length > 0 && userData.shake_token > 0) {
-		let remainingShakeTokens = userData.shake_token
-		for (const item of proteinItems) {
-			if (remainingShakeTokens >= item.quantity) {
-				adjustedTotalPrice -= item.price * item.quantity
-				shakeTokensToUse += item.quantity
-				remainingShakeTokens -= item.quantity
-			} else if (remainingShakeTokens > 0) {
-				adjustedTotalPrice -= item.price * remainingShakeTokens
-				shakeTokensToUse += remainingShakeTokens
-				remainingShakeTokens = 0
-			}
-		}
-	}
-
-	if (userData.wallet < adjustedTotalPrice) {
-		return {
-			success: false,
-			error: 'You do not have enough credits to make this purchase.'
-		}
-	}
-
-	// Check if all items have sufficient quantity
-	for (const item of cart) {
-		const { data: currentItem, error: fetchError } = await supabase
-			.from('market')
-			.select('quantity')
-			.eq('id', item.id)
-			.single()
-
-		if (fetchError) {
-			return {
-				success: false,
-				error: `Error fetching quantity for item ${item.id}`
-			}
-		}
-
-		if (currentItem.quantity < item.quantity) {
-			return {
-				success: false,
-				error: `Not enough quantity available for item ${item.name}`
-			}
-		}
-	}
-
-	// Update user's wallet and shake tokens
-	const { error: updateError } = await supabase
-		.from('users')
-		.update({
-			wallet: userData.wallet - adjustedTotalPrice,
-			shake_token: userData.shake_token - shakeTokensToUse
-		})
-		.eq('user_id', userId)
-
-	if (updateError) {
-		console.error('Error updating user data:', updateError.message)
-		return { success: false, error: 'Error updating user data' }
-	}
-
-	// Transform cart items and decrease quantities
-	const items = []
-	for (const item of cart) {
-		items.push(...Array(item.quantity).fill(item.id))
-
-		const { data: currentItem, error: fetchError } = await supabase
-			.from('market')
-			.select('quantity')
-			.eq('id', item.id)
-			.single()
-
-		if (fetchError) {
-			console.error(
-				`Error fetching current quantity for item ${item.id}:`,
-				fetchError.message
-			)
-			continue
-		}
-
-		const newQuantity = Math.max(0, currentItem.quantity - item.quantity)
-		const { error: quantityError } = await supabase
-			.from('market')
-			.update({ quantity: newQuantity })
-			.eq('id', item.id)
-
-		if (quantityError) {
-			console.error(
-				`Error updating quantity for item ${item.id}:`,
-				quantityError.message
-			)
-		}
-	}
-
-	// Record transactions
-	const { error: marketTransactionError } = await supabase
-		.from('market_transactions')
-		.insert({
-			user_id: userId,
-			items: items,
-			date: new Date(),
-			claimed: false,
-			price: adjustedTotalPrice
-		})
-
-	if (marketTransactionError) {
-		return { success: false, error: 'Error recording market transaction' }
-	}
-
-	// Create transaction records array
-	const transactionRecords = []
-
-	if (adjustedTotalPrice > 0) {
-		transactionRecords.push({
-			user_id: userId,
-			name: `Market purchase: ${cart.length} item${cart.length > 1 ? 's' : ''}`,
-			type: 'market transaction',
-			amount: `-${adjustedTotalPrice} credits`
-		})
-	}
-
-	if (shakeTokensToUse > 0) {
-		transactionRecords.push({
-			user_id: userId,
-			name: `Used protein shake tokens`,
-			type: 'shake token redemption',
-			amount: `-${shakeTokensToUse} shake tokens`
-		})
-	}
-
-	if (transactionRecords.length > 0) {
-		const { error: transactionError } = await supabase
-			.from('transactions')
-			.insert(transactionRecords)
-
-		if (transactionError) {
-			console.error('Error recording transactions:', transactionError.message)
-		}
-	}
-
-	return {
-		success: true,
-		shakeTokensUsed: shakeTokensToUse,
-		creditsUsed: adjustedTotalPrice
-	}
 }
 
 export const fetchShopTransactions = async () => {
