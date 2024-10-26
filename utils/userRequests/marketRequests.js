@@ -24,7 +24,7 @@ export const payForItems = async ({
 }) => {
 	const supabase = await supabaseClient()
 
-	// Fetch user's current credits
+	// Fetch user's data including shake tokens
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select('*')
@@ -32,26 +32,59 @@ export const payForItems = async ({
 		.single()
 
 	if (userError || !userData) {
-		console.error('Error fetching user credits:', userError?.message)
+		console.error('Error fetching user data:', userError?.message)
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Calculate total price of selected items
-	const totalPrice = selectedItems.reduce(
-		(total, item) => total + item.price,
+	// Identify protein items and calculate adjusted prices
+	let adjustedTotalPrice = 0
+	let shakeTokensToUse = 0
+	let itemsUsingTokens = []
+	let itemsUsingCredits = []
+
+	const proteinItems = selectedItems.filter(
+		item =>
+			item.name.toLowerCase().includes('protein shake') ||
+			item.name.toLowerCase().includes('protein pudding')
+	)
+
+	if (proteinItems.length > 0 && userData.shake_token > 0) {
+		let remainingShakeTokens = userData.shake_token
+		proteinItems.forEach(item => {
+			if (remainingShakeTokens > 0) {
+				itemsUsingTokens.push(item)
+				shakeTokensToUse++
+				remainingShakeTokens--
+			} else {
+				itemsUsingCredits.push(item)
+				adjustedTotalPrice += item.price
+			}
+		})
+	} else {
+		itemsUsingCredits = proteinItems
+		adjustedTotalPrice += proteinItems.reduce(
+			(sum, item) => sum + item.price,
+			0
+		)
+	}
+
+	// Add non-protein items to credits calculation
+	const nonProteinItems = selectedItems.filter(
+		item =>
+			!item.name.toLowerCase().includes('protein shake') &&
+			!item.name.toLowerCase().includes('protein pudding')
+	)
+	itemsUsingCredits = [...itemsUsingCredits, ...nonProteinItems]
+	adjustedTotalPrice += nonProteinItems.reduce(
+		(sum, item) => sum + item.price,
 		0
 	)
 
-	if (totalPrice === 0) {
-		return { error: 'No items selected.' }
-	}
-
-	// Check if the user has enough credits
-	if (userData.wallet < totalPrice) {
+	if (adjustedTotalPrice > userData.wallet) {
 		return { error: 'Not enough credits to pay for the items.' }
 	}
 
-	// Fetch the time slot ID based on activity, coach, date, and start time
+	// Fetch time slot data
 	const { data: timeSlotData, error: timeSlotError } = await supabase
 		.from('time_slots')
 		.select('*')
@@ -64,23 +97,23 @@ export const payForItems = async ({
 		.single()
 
 	if (timeSlotError || !timeSlotData) {
-		console.error('Error fetching time slot data:', timeSlotError?.message)
 		return { error: timeSlotError?.message || 'Time slot not found.' }
 	}
 
-	// Deduct credits from user's account
-	const newWalletBalance = userData.wallet - totalPrice
+	// Update user's wallet and shake tokens
 	const { error: updateError } = await supabase
 		.from('users')
-		.update({ wallet: newWalletBalance })
+		.update({
+			wallet: userData.wallet - adjustedTotalPrice,
+			shake_token: userData.shake_token - shakeTokensToUse
+		})
 		.eq('user_id', userId)
 
 	if (updateError) {
-		console.error('Error updating user credits:', updateError.message)
 		return { error: updateError.message }
 	}
 
-	// Add the selected item names to the additions array in the time slot
+	// Update time slot additions
 	const newAdditions = [
 		...(timeSlotData.additions || []),
 		...selectedItems.map(item => item.name)
@@ -91,10 +124,10 @@ export const payForItems = async ({
 		.eq('id', timeSlotData.id)
 
 	if (additionsError) {
-		console.error('Error updating time slot additions:', additionsError.message)
 		return { error: additionsError.message }
 	}
 
+	// Update market item quantities
 	for (const item of selectedItems) {
 		const { data, error: quantityError } = await supabase
 			.from('market')
@@ -102,42 +135,49 @@ export const payForItems = async ({
 			.eq('id', item.id)
 			.single()
 
-		if (quantityError) {
-			console.error('Error fetching item quantity:', quantityError.message)
-			continue
-		}
+		if (quantityError) continue
 
-		const newQuantity = Math.max(data.quantity - 1, 0) // Ensure quantity doesn't go below 0
-
-		const { error: updateError } = await supabase
+		const newQuantity = Math.max(data.quantity - 1, 0)
+		await supabase
 			.from('market')
 			.update({ quantity: newQuantity })
 			.eq('id', item.id)
-
-		if (updateError) {
-			console.error('Error updating item quantity:', updateError.message)
-			// You might want to handle this error more gracefully
-		}
 	}
 
-	const itemNames = selectedItems.map(item => item.name).join(', ')
-	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert({
-			user_id: userId,
-			name: `Purchased items for individual session: ${itemNames}`,
-			type: 'market transaction',
-			amount: `-${totalPrice} credits`
-		})
+	// Record transactions
+	const transactionRecords = []
 
-	if (transactionError) {
-		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return here as the purchase was successful
+	if (adjustedTotalPrice > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Purchased items for individual session: ${itemsUsingCredits
+				.map(item => item.name)
+				.join(', ')}`,
+			type: 'market transaction',
+			amount: `-${adjustedTotalPrice} credits`
+		})
+	}
+
+	if (shakeTokensToUse > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Used shake tokens for: ${itemsUsingTokens
+				.map(item => item.name)
+				.join(', ')}`,
+			type: 'shake token redemption',
+			amount: `-${shakeTokensToUse} shake tokens`
+		})
+	}
+
+	if (transactionRecords.length > 0) {
+		await supabase.from('transactions').insert(transactionRecords)
 	}
 
 	return {
 		data: { ...timeSlotData, additions: newAdditions },
-		message: 'Items added to time slot and credits deducted.'
+		message: 'Items added to time slot successfully.',
+		shakeTokensUsed: shakeTokensToUse,
+		creditsUsed: adjustedTotalPrice
 	}
 }
 
@@ -151,7 +191,7 @@ export const payForGroupItems = async ({
 }) => {
 	const supabase = await supabaseClient()
 
-	// Fetch user's current credits
+	// Fetch user's data including shake tokens
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select('*')
@@ -159,26 +199,57 @@ export const payForGroupItems = async ({
 		.single()
 
 	if (userError || !userData) {
-		console.error('Error fetching user credits:', userError?.message)
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Calculate total price of selected items
-	const totalPrice = selectedItems.reduce(
-		(total, item) => total + item.price,
+	// Identify protein items and calculate adjusted prices
+	let adjustedTotalPrice = 0
+	let shakeTokensToUse = 0
+	let itemsUsingTokens = []
+	let itemsUsingCredits = []
+
+	const proteinItems = selectedItems.filter(
+		item =>
+			item.name.toLowerCase().includes('protein shake') ||
+			item.name.toLowerCase().includes('protein pudding')
+	)
+
+	if (proteinItems.length > 0 && userData.shake_token > 0) {
+		let remainingShakeTokens = userData.shake_token
+		proteinItems.forEach(item => {
+			if (remainingShakeTokens > 0) {
+				itemsUsingTokens.push(item)
+				shakeTokensToUse++
+				remainingShakeTokens--
+			} else {
+				itemsUsingCredits.push(item)
+				adjustedTotalPrice += item.price
+			}
+		})
+	} else {
+		itemsUsingCredits = proteinItems
+		adjustedTotalPrice += proteinItems.reduce(
+			(sum, item) => sum + item.price,
+			0
+		)
+	}
+
+	const nonProteinItems = selectedItems.filter(
+		item =>
+			!item.name.toLowerCase().includes('protein shake') &&
+			!item.name.toLowerCase().includes('protein pudding')
+	)
+	itemsUsingCredits = [...itemsUsingCredits, ...nonProteinItems]
+	adjustedTotalPrice += nonProteinItems.reduce(
+		(sum, item) => sum + item.price,
 		0
 	)
 
-	if (totalPrice === 0) {
-		return { error: 'No items selected.' }
-	}
-
-	// Check if the user has enough credits
-	if (userData.wallet < totalPrice) {
+	if (adjustedTotalPrice > userData.wallet) {
 		return { error: 'Not enough credits to pay for the items.' }
 	}
 
-	// Fetch the group time slot ID based on activity, coach, date, and start time
+	// Fetch group time slot data
 	const { data: timeSlotData, error: timeSlotError } = await supabase
 		.from('group_time_slots')
 		.select('*')
@@ -191,36 +262,34 @@ export const payForGroupItems = async ({
 		.single()
 
 	if (timeSlotError || !timeSlotData) {
-		console.error(
-			'Error fetching group time slot data:',
-			timeSlotError?.message
-		)
 		return { error: timeSlotError?.message || 'Group time slot not found.' }
 	}
 
-	// Deduct credits from user's account
-	const newWalletBalance = userData.wallet - totalPrice
+	// Update user's wallet and shake tokens
 	const { error: updateError } = await supabase
 		.from('users')
-		.update({ wallet: newWalletBalance })
+		.update({
+			wallet: userData.wallet - adjustedTotalPrice,
+			shake_token: userData.shake_token - shakeTokensToUse
+		})
 		.eq('user_id', userId)
 
 	if (updateError) {
-		console.error('Error updating user credits:', updateError.message)
 		return { error: updateError.message }
 	}
 
-	// Create a new addition entry
+	// Create new addition entry
 	const newAddition = {
 		user_id: userId,
 		items: selectedItems.map(item => ({
 			id: item.id,
 			name: item.name,
-			price: item.price
+			price: item.price,
+			usedToken: itemsUsingTokens.some(tokenItem => tokenItem.id === item.id)
 		}))
 	}
 
-	// Add the new addition entry to the additions array in the group time slot
+	// Update group time slot additions
 	const newAdditions = [...(timeSlotData.additions || []), newAddition]
 	const { error: additionsError } = await supabase
 		.from('group_time_slots')
@@ -228,13 +297,10 @@ export const payForGroupItems = async ({
 		.eq('id', timeSlotData.id)
 
 	if (additionsError) {
-		console.error(
-			'Error updating group time slot additions:',
-			additionsError.message
-		)
 		return { error: additionsError.message }
 	}
 
+	// Update market item quantities
 	for (const item of selectedItems) {
 		const { data, error: quantityError } = await supabase
 			.from('market')
@@ -242,41 +308,49 @@ export const payForGroupItems = async ({
 			.eq('id', item.id)
 			.single()
 
-		if (quantityError) {
-			console.error('Error fetching item quantity:', quantityError.message)
-			continue
-		}
+		if (quantityError) continue
 
-		const newQuantity = Math.max(data.quantity - 1, 0) // Ensure quantity doesn't go below 0
-
-		const { error: updateError } = await supabase
+		const newQuantity = Math.max(data.quantity - 1, 0)
+		await supabase
 			.from('market')
 			.update({ quantity: newQuantity })
 			.eq('id', item.id)
-
-		if (updateError) {
-			console.error('Error updating item quantity:', updateError.message)
-			// You might want to handle this error more gracefully
-		}
 	}
-	const itemNames = selectedItems.map(item => item.name).join(', ')
-	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert({
-			user_id: userId,
-			name: `Purchased items for group session: ${itemNames}`,
-			type: 'market transaction',
-			amount: `-${totalPrice} credits`
-		})
 
-	if (transactionError) {
-		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return here as the purchase was successful
+	// Record transactions
+	const transactionRecords = []
+
+	if (adjustedTotalPrice > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Purchased items for group session: ${itemsUsingCredits
+				.map(item => item.name)
+				.join(', ')}`,
+			type: 'market transaction',
+			amount: `-${adjustedTotalPrice} credits`
+		})
+	}
+
+	if (shakeTokensToUse > 0) {
+		transactionRecords.push({
+			user_id: userId,
+			name: `Used shake tokens for: ${itemsUsingTokens
+				.map(item => item.name)
+				.join(', ')}`,
+			type: 'shake token redemption',
+			amount: `-${shakeTokensToUse} shake tokens`
+		})
+	}
+
+	if (transactionRecords.length > 0) {
+		await supabase.from('transactions').insert(transactionRecords)
 	}
 
 	return {
 		data: { ...timeSlotData, additions: newAdditions },
-		message: 'Items added to group time slot and credits deducted.'
+		message: 'Items added to group time slot successfully.',
+		shakeTokensUsed: shakeTokensToUse,
+		creditsUsed: adjustedTotalPrice
 	}
 }
 

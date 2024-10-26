@@ -374,32 +374,31 @@ export default function Example() {
 			console.error('User is not signed in')
 			return
 		}
-		const response = isPrivateTraining
+		const response: any = isPrivateTraining
 			? await payForItems({
 					userId: user.id,
-					activityId: selectedActivity, // This should be the selected activity ID
-					coachId: selectedCoach, // This should be the selected coach ID
-					date: formatDate(selectedDate), // This should be the selected date
-					startTime: selectedTime.split(' - ')[0], // This should be the start time of the selected slot
+					activityId: selectedActivity,
+					coachId: selectedCoach,
+					date: formatDate(selectedDate),
+					startTime: selectedTime.split(' - ')[0],
 					selectedItems
 			  })
 			: await payForGroupItems({
 					userId: user.id,
-					activityId: selectedActivity, // This should be the selected activity ID
-					coachId: selectedCoach, // This should be the selected coach ID
-					date: formatDate(selectedDate), // This should be the selected date
-					startTime: selectedTime.split(' - ')[0], // This should be the start time of the selected slot
+					activityId: selectedActivity,
+					coachId: selectedCoach,
+					date: formatDate(selectedDate),
+					startTime: selectedTime.split(' - ')[0],
 					selectedItems
 			  })
 
 		if (response.error) {
-			toast.error(response.error) // Display error toast
+			toast.error(response.error)
 		} else {
 			setSelectedItems([])
 			refreshWalletBalance()
 			refreshTokens()
-			// Clear selected items after payment
-			setTotalPrice(0) // Reset total price after payment
+			setTotalPrice(0)
 			setModalIsOpen(false)
 			setSelectedActivity(null)
 			setSelectedCoach(null)
@@ -408,8 +407,12 @@ export default function Example() {
 			setAvailableTimes([])
 			setGroupAvailableTimes([])
 			setHighlightDates([])
-			toast.success('Items Added Successfully') // Display success toast
-			// Close the modal after payment
+
+			const tokenMessage =
+				response!.shakeTokensUsed > 0
+					? ` (Used ${response.shakeTokensUsed} shake tokens)`
+					: ''
+			toast.success(`Items added successfully!${tokenMessage}`)
 			setLoading(false)
 		}
 	}
@@ -468,17 +471,15 @@ export default function Example() {
 		)
 		let newSelectedItems
 		if (alreadySelected) {
-			// Remove item from selectedItems
-			newSelectedItems = selectedItems?.filter(
+			newSelectedItems = selectedItems.filter(
 				selectedItem => selectedItem.id !== item.id
 			)
 		} else {
-			// Add item to selectedItems
 			newSelectedItems = [...selectedItems, item]
 		}
 		setSelectedItems(newSelectedItems)
 
-		// Update total price
+		// Calculate total price (final price might be lower due to shake tokens)
 		const totalPrice = newSelectedItems.reduce(
 			(total, currentItem) => total + currentItem.price,
 			0
