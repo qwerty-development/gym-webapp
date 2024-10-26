@@ -12,7 +12,6 @@ import {
 	updateUserRecord,
 	cancelReservation,
 	cancelReservationGroup,
-	fetchAllActivities,
 	fetchMarket,
 	payForItems,
 	payForGroupItems,
@@ -382,45 +381,77 @@ export default function Dashboard() {
 		}
 		setSelectedItems(newSelectedItems)
 
-		const newTotalPrice = newSelectedItems.reduce(
+		const totalPrice = newSelectedItems.reduce(
 			(total, currentItem) => total + currentItem.price,
 			0
 		)
-		setTotalPrice(newTotalPrice)
+		setTotalPrice(totalPrice)
 	}
 
 	const handlePay = async () => {
+		if (!user?.id || !selectedReservation) {
+			toast.error('Missing required information')
+			return
+		}
+
 		setButtonLoading(true)
 
-		const response = selectedReservation?.count
-			? await payForGroupItems({
-					userId: user?.id,
-					activityId: selectedReservation?.activity.id,
-					coachId: selectedReservation?.coach.id,
-					date: selectedReservation?.date,
-					startTime: selectedReservation?.start_time,
-					selectedItems
-			  })
-			: await payForItems({
-					userId: user?.id,
-					activityId: selectedReservation?.activity.id,
-					coachId: selectedReservation?.coach.id,
-					date: selectedReservation?.date,
-					startTime: selectedReservation?.start_time,
-					selectedItems
-			  })
+		try {
+			const response = selectedReservation?.count
+				? await payForGroupItems({
+						userId: user.id,
+						activityId: selectedReservation.activity.id,
+						coachId: selectedReservation.coach.id,
+						date: selectedReservation.date,
+						startTime: selectedReservation.start_time,
+						selectedItems
+				  })
+				: await payForItems({
+						userId: user.id,
+						activityId: selectedReservation.activity.id,
+						coachId: selectedReservation.coach.id,
+						date: selectedReservation.date,
+						startTime: selectedReservation.start_time,
+						selectedItems
+				  })
 
-		setButtonLoading(false)
-		if (response.error) {
-			toast.error(response.error)
-		} else {
-			toast.success('Items Added Successfully')
-			setSelectedItems([])
-			setTotalPrice(0)
-			setModalIsOpen(false)
-			refreshWalletBalance()
-			refreshTokens()
-			const fetchedReservations = await fetchReservations(user?.id)
+			if (response.error) {
+				toast.error(response.error)
+			} else {
+				// Create success message including shake token usage if any
+				const tokenMessage = response.shakeTokensUsed
+					? ` (Used ${response.shakeTokensUsed} shake token${
+							response.shakeTokensUsed > 1 ? 's' : ''
+					  })`
+					: ''
+				toast.success(`Items added successfully!${tokenMessage}`)
+
+				// Reset states
+				setSelectedItems([])
+				setTotalPrice(0)
+				setModalIsOpen(false)
+
+				// Refresh balances
+				refreshWalletBalance()
+				refreshTokens()
+
+				// Refresh reservations
+				await refreshReservations()
+			}
+		} catch (error) {
+			toast.error('An error occurred while processing your request')
+			console.error('Payment error:', error)
+		} finally {
+			setButtonLoading(false)
+		}
+	}
+
+	const refreshReservations = async () => {
+		if (!user?.id) return
+
+		try {
+			// Fetch and transform individual reservations
+			const fetchedReservations = await fetchReservations(user.id)
 			if (fetchedReservations) {
 				const transformedReservations = fetchedReservations.map(
 					(reservation: any) => ({
@@ -428,7 +459,10 @@ export default function Dashboard() {
 						date: reservation.date,
 						start_time: reservation.start_time.split(':').slice(0, 2).join(':'),
 						end_time: reservation.end_time.split(':').slice(0, 2).join(':'),
-						coach: { name: reservation.coach.name, id: reservation.coach.id },
+						coach: {
+							name: reservation.coach.name,
+							id: reservation.coach.id
+						},
 						activity: {
 							name: reservation.activity.name,
 							credits: reservation.activity.credits,
@@ -437,11 +471,11 @@ export default function Dashboard() {
 						additions: reservation.additions
 					})
 				)
-
 				setReservations(transformedReservations)
 			}
 
-			const fetchedGroupReservations = await fetchReservationsGroup(user?.id)
+			// Fetch and transform group reservations
+			const fetchedGroupReservations = await fetchReservationsGroup(user.id)
 			if (fetchedGroupReservations) {
 				const transformedGroupReservations = fetchedGroupReservations.map(
 					(reservation: any) => ({
@@ -462,14 +496,16 @@ export default function Dashboard() {
 						count: reservation.count,
 						additions: reservation.additions
 							? reservation.additions.filter(
-									(addition: any) => addition.user_id === user?.id
+									(addition: any) => addition.user_id === user.id
 							  )
 							: []
 					})
 				)
-
 				setGroupReservations(transformedGroupReservations)
 			}
+		} catch (error) {
+			console.error('Error refreshing reservations:', error)
+			toast.error('Failed to refresh reservations')
 		}
 	}
 
