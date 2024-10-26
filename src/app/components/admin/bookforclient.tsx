@@ -142,16 +142,33 @@ export default function BookForClient() {
 		}
 		setSelectedItems(newSelectedItems)
 
-		const newTotalPrice = newSelectedItems.reduce(
+		// Update total price (final cost might be lower due to shake tokens)
+		const totalPrice = newSelectedItems.reduce(
 			(total, currentItem) => total + currentItem.price,
 			0
 		)
-		setTotalPrice(newTotalPrice)
+		setTotalPrice(totalPrice)
+	}
+
+	const getTokenUsageInfo = () => {
+		const proteinItems = selectedItems.filter(
+			item =>
+				item.name.toLowerCase().includes('protein shake') ||
+				item.name.toLowerCase().includes('protein pudding')
+		)
+
+		if (proteinItems.length === 0) return null
+
+		return (
+			<p className='text-sm text-gray-400 mt-2'>
+				* Protein items will use available shake tokens if any
+			</p>
+		)
 	}
 
 	const handlePay = async () => {
 		setLoading(true)
-		const response = isPrivateTraining
+		const response: any = isPrivateTraining
 			? await payForItems({
 					userId: selectedUser,
 					activityId: selectedActivity,
@@ -173,7 +190,11 @@ export default function BookForClient() {
 		if (response.error) {
 			toast.error(response.error)
 		} else {
-			toast.success('Items Added Successfully')
+			const tokenMessage =
+				response!.shakeTokensUsed > 0
+					? ` (Used ${response.shakeTokensUsed} shake tokens)`
+					: ''
+			toast.success(`Items added successfully!${tokenMessage}`)
 			setSelectedItems([])
 			setTotalPrice(0)
 			setModalIsOpen(false)
@@ -762,6 +783,7 @@ export default function BookForClient() {
 				<div className='text-right'>
 					<p className='text-lg sm:text-xl md:text-2xl font-bold text-green-400 mb-3 sm:mb-4 md:mb-6'>
 						Total Price: {totalPrice} Credits
+						{getTokenUsageInfo()}
 					</p>
 					<div className='flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-6'>
 						<motion.button
