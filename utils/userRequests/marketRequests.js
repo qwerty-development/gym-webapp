@@ -206,7 +206,11 @@ export const handlePurchase = async (userId, cart, totalPrice) => {
 		creditsUsed: adjustedTotalPrice,
 		punchesAdded: totalProteinItems,
 		tokensEarned: newTokensToAward,
-		newPunchCount: finalPunchCount
+		newPunchCount: finalPunchCount,
+		message:
+			newTokensToAward > 0
+				? `Purchase successful! 🎉 You've completed your punch card and earned ${newTokensToAward} free shake tokens! Your new punch count is ${finalPunchCount}.`
+				: `Purchase successful! You have ${finalPunchCount} punches on your card.`
 	}
 }
 
@@ -392,7 +396,10 @@ export const payForItems = async ({
 
 	return {
 		data: { ...timeSlotData, additions: newAdditions },
-		message: 'Items added to time slot successfully.',
+		message:
+			newTokensToAward > 0
+				? `Items added to time slot successfully! 🎉 You've completed your punch card and earned ${newTokensToAward} free shake tokens! Your new punch count is ${finalPunchCount}.`
+				: `Items added to time slot successfully. You have ${finalPunchCount} punches on your card.`,
 		shakeTokensUsed: shakeTokensToUse,
 		creditsUsed: adjustedTotalPrice,
 		punchesAdded: totalProteinItems,
@@ -589,7 +596,10 @@ export const payForGroupItems = async ({
 
 	return {
 		data: { ...timeSlotData, additions: newAdditions },
-		message: 'Items added to group time slot successfully.',
+		message:
+			newTokensToAward > 0
+				? `Items added to group time slot successfully! 🎉 You've completed your punch card and earned ${newTokensToAward} free shake tokens! Your new punch count is ${finalPunchCount}.`
+				: `Items added to group time slot successfully. You have ${finalPunchCount} punches on your card.`,
 		shakeTokensUsed: shakeTokensToUse,
 		creditsUsed: adjustedTotalPrice,
 		punchesAdded: totalProteinItems,

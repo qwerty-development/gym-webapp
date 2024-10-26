@@ -413,6 +413,17 @@ export default function Example() {
 					? ` (Used ${response.shakeTokensUsed} shake tokens)`
 					: ''
 			toast.success(`Items added successfully!${tokenMessage}`)
+			if (response.tokensEarned > 0) {
+				toast.success(response.message, {
+					duration: 5000, // Show for longer
+					icon: '🎉',
+					style: {
+						background: '#10B981', // Green background
+						color: 'white',
+						fontWeight: 'bold'
+					}
+				})
+			}
 			setLoading(false)
 		}
 	}

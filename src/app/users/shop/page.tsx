@@ -111,6 +111,18 @@ const Shop: React.FC = () => {
 					? ` (Used ${result.shakeTokensUsed} shake tokens)`
 					: ''
 			toast.success(`Purchase successful!${tokenMessage}`)
+
+			if (result.tokensEarned > 0) {
+				toast.success(result.message, {
+					duration: 5000, // Show for longer
+					icon: '🎉',
+					style: {
+						background: '#10B981', // Green background
+						color: 'white',
+						fontWeight: 'bold'
+					}
+				})
+			}
 			refreshWalletBalance()
 			refreshTokens()
 			const marketItems = await fetchMarketItems()
