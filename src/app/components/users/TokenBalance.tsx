@@ -3,21 +3,14 @@ import { FaTicketAlt } from 'react-icons/fa'
 import { useWallet } from './WalletContext'
 
 const TokenBalance = () => {
-  const {userTokens} = useWallet()
+	const { userTokens } = useWallet()
 
-  return (
+	return (
 		<div className='bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
 			<h3 className='text-2xl font-bold text-green-400 mb-4'>
 				Your Bundles Balance
 			</h3>
 			<ul className='space-y-3'>
-				<li className='flex items-center justify-between text-gray-300'>
-					<span className='flex items-center'>
-						<FaTicketAlt className='mr-2 text-green-500' />
-						Shakes
-					</span>
-					<span className='font-bold'>{userTokens.shake_token}</span>
-				</li>
 				<li className='flex items-center justify-between text-gray-300'>
 					<span className='flex items-center'>
 						<FaTicketAlt className='mr-2 text-green-500' />
@@ -50,6 +43,5 @@ const TokenBalance = () => {
 			</ul>
 		</div>
 	)
-
 }
 export default TokenBalance
