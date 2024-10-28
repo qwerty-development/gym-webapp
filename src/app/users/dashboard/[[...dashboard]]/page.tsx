@@ -3,9 +3,7 @@ import React, { useState, useEffect } from 'react'
 import NavbarComponent from '@/app/components/users/navbar'
 import { UserButton, useUser } from '@clerk/nextjs'
 import CalendarView from '@/app/components/admin/CalendarView'
-import ChatBox from '@/app/components/users/ChatBox' // Adjust the path as necessary
-import { RiRobotLine } from 'react-icons/ri'
-
+import ChatBox from '@/app/components/users/ChatBox'
 import {
 	fetchReservations,
 	fetchReservationsGroup,
@@ -33,17 +31,15 @@ import { Menu, Transition } from '@headlessui/react'
 import { AddToCalendarButton } from 'add-to-calendar-button-react'
 import { RingLoader } from 'react-spinners'
 import { useWallet } from '@/app/components/users/WalletContext'
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import Modal from 'react-modal'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
 	FaUser,
 	FaCalendarAlt,
 	FaUsers,
-	FaBars,
 	FaClock,
 	FaShoppingCart,
-	FaListUl,
 	FaCalendarPlus
 } from 'react-icons/fa'
 import Link from 'next/link'
@@ -52,7 +48,7 @@ import ConfirmationModal from '@/app/components/users/ConfirmationModal'
 import { FaChevronLeft, FaChevronRight, FaChevronDown } from 'react-icons/fa'
 import TokenBalance from '@/app/components/users/TokenBalance'
 import { supabaseClient } from '../../../../../utils/supabaseClient'
-import { userInfo } from 'os'
+import LoyaltyCard from '@/app/components/users/LoyaltyCard'
 
 type Reservation = {
 	id: number
@@ -1012,8 +1008,15 @@ export default function Dashboard() {
 										initial={{ opacity: 0, x: 20 }}
 										animate={{ opacity: 1, x: 0 }}
 										transition={{ delay: 0.2 }}
-										className='hidden md:block'>
+										className='hidden md:block space-y-6'>
+										{' '}
 										<TokenBalance />
+										<LoyaltyCard
+											punches={userData?.punches || 0}
+											shake_token={userData?.shake_token || 0}
+											name={`${userData?.first_name} ${userData?.last_name}`}
+											createdAt={userData?.created_at}
+										/>
 									</motion.div>
 								)}
 								{user.publicMetadata.role === 'admin' && (
