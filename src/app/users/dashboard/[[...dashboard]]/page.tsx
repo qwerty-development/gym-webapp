@@ -8,8 +8,8 @@ import {
 	fetchReservations,
 	fetchReservationsGroup,
 	updateUserRecord,
-	cancelReservation,
-	cancelReservationGroup,
+	cancelReservation, //here
+	cancelReservationGroup, //here
 	fetchMarket,
 	payForItems,
 	payForGroupItems,
@@ -24,8 +24,8 @@ import {
 	fetchTodaysSessions,
 	fetchAllBookedSlotsToday,
 	fetchUpcomingSessions2 as fetchUpcomingSessions,
-	cancelBookingIndividual,
-	cancelGroupBooking
+	cancelBookingIndividual, //here
+	cancelGroupBooking //here
 } from '../../../../../utils/adminRequests'
 import { Menu, Transition } from '@headlessui/react'
 import { AddToCalendarButton } from 'add-to-calendar-button-react'
@@ -535,18 +535,18 @@ export default function Dashboard() {
 				return
 			}
 
-			const cancelled = await cancelReservation(
+			const result: any = await cancelReservation(
 				reservationId,
 				user.id,
 				setReservations
 			)
 
-			if (cancelled) {
+			if (result.success) {
 				refreshWalletBalance()
 				refreshTokens()
-				toast.success('Reservation cancelled successfully!')
+				toast.success(result.message)
 			} else {
-				toast.error('Failed to cancel reservation!')
+				toast.error(result.error || 'Failed to cancel reservation!')
 			}
 		}
 		setButtonLoading(false)
@@ -564,43 +564,54 @@ export default function Dashboard() {
 			return
 		}
 
-		const cancelled = await cancelBookingIndividual(session)
+		const result: any = await cancelBookingIndividual(session)
 
-		if (cancelled) {
-			toast.success('Session Cancelled Succesfully')
+		if (result.success) {
+			toast.success(result.message || 'Session Cancelled Successfully')
 			setAdminIndividualSessions(prevSessions =>
 				prevSessions.filter(s => s.id !== session.id)
 			)
 		} else {
-			toast.error('Failed to Cancel Session')
+			toast.error(result.error || 'Failed to Cancel Session')
 		}
 
 		setIsCancelling(false)
 	}
 
-	const handleCancelAdminGroup = async (id: any) => {
+	const handleCancelAdminGroup = async (id: number) => {
 		setIsCancelling(true)
-		const confirmed = await showConfirmationModal(
-			'Are you sure you want to cancel this session?'
-		)
 
-		if (!confirmed) {
-			setIsCancelling(false)
-			return
-		}
-
-		const cancelled = await cancelGroupBooking(id)
-
-		if (cancelled) {
-			toast.success('Session Cancelled Succesfully')
-			setAdminGroupSessions(prevSessions =>
-				prevSessions.filter(s => s.id !== id)
+		try {
+			const confirmed = await showConfirmationModal(
+				'Are you sure you want to cancel this group session? This will cancel for all participants and process all necessary refunds (credits, tokens, shake tokens, and punches).'
 			)
-		} else {
-			toast.error('Failed to Cancel Session')
-		}
 
-		setIsCancelling(false)
+			if (!confirmed) {
+				setIsCancelling(false)
+				return
+			}
+
+			const result: any = await cancelGroupBooking(id)
+
+			if (result.success) {
+				setAdminGroupSessions(prevSessions =>
+					prevSessions.filter(s => s.id !== id)
+				)
+
+				// Refresh relevant data
+				if (typeof refreshWalletBalance === 'function') refreshWalletBalance()
+				if (typeof refreshTokens === 'function') refreshTokens()
+
+				toast.success(result.message)
+			} else {
+				toast.error(result.error || 'Failed to cancel group session')
+			}
+		} catch (error) {
+			console.error('Error in handleCancelAdminGroup:', error)
+			toast.error('An unexpected error occurred while cancelling the session')
+		} finally {
+			setIsCancelling(false)
+		}
 	}
 
 	const handleCancelGroup = async (reservationId: number) => {
@@ -616,18 +627,18 @@ export default function Dashboard() {
 				return
 			}
 
-			const cancelled = await cancelReservationGroup(
+			const result: any = await cancelReservationGroup(
 				reservationId,
 				user.id,
 				setGroupReservations
 			)
 
-			if (cancelled) {
+			if (result.success) {
 				refreshWalletBalance()
 				refreshTokens()
-				toast.success('Group reservation cancelled successfully!')
+				toast.success(result.message)
 			} else {
-				toast.error('Failed to cancel group reservation!')
+				toast.error(result.error || 'Failed to cancel group reservation!')
 			}
 		}
 		setButtonLoading(false)
