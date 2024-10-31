@@ -17,6 +17,7 @@ import {
 	updateUserisFree
 } from '../../../../utils/adminRequests'
 import toast from 'react-hot-toast'
+import { RingLoader } from 'react-spinners'
 
 interface User {
 	id: number
@@ -48,6 +49,13 @@ interface TokenUpdates {
 	shake_token: number
 }
 
+interface LoadingStates {
+	updateCredits: boolean
+	toggleFree: { [key: number]: boolean }
+	searchUsers: boolean
+	modalUpdate: boolean
+}
+
 const ModifyCreditsComponent = () => {
 	const [users, setUsers] = useState<User[]>([])
 	const [essentialsTill, setEssentialsTill] = useState('')
@@ -68,6 +76,22 @@ const ModifyCreditsComponent = () => {
 		workoutDay_token: 0,
 		shake_token: 0
 	})
+
+	const [loadingStates, setLoadingStates] = useState<LoadingStates>({
+		updateCredits: false,
+		toggleFree: {},
+		searchUsers: false,
+		modalUpdate: false
+	})
+
+	const isAnyLoading = () => {
+		return (
+			loadingStates.updateCredits ||
+			loadingStates.searchUsers ||
+			loadingStates.modalUpdate ||
+			Object.values(loadingStates.toggleFree).some(state => state)
+		)
+	}
 
 	// Function to sort users
 	const sortUsers = (users: User[], sortType: string) => {
@@ -96,7 +120,7 @@ const ModifyCreditsComponent = () => {
 
 	useEffect(() => {
 		const loadUsers = async () => {
-			setIsLoading(true)
+			setLoadingStates(prev => ({ ...prev, searchUsers: true }))
 			try {
 				const data = await fetchUsers(searchQuery)
 				if (data) {
@@ -107,7 +131,7 @@ const ModifyCreditsComponent = () => {
 				console.error('Error fetching users:', error)
 				toast.error('Failed to load users')
 			} finally {
-				setIsLoading(false)
+				setLoadingStates(prev => ({ ...prev, searchUsers: false }))
 			}
 		}
 		loadUsers()
@@ -121,6 +145,7 @@ const ModifyCreditsComponent = () => {
 	}, [selectedUserId, users])
 
 	const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		if (isAnyLoading()) return
 		setSortOption(e.target.value)
 		setUsers(prevUsers => sortUsers(prevUsers, e.target.value))
 	}
@@ -141,7 +166,13 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const handleToggleFree = async (userId: number, currentIsFree: boolean) => {
-		setIsUpdating(true)
+		if (loadingStates.toggleFree[userId]) return
+
+		setLoadingStates(prev => ({
+			...prev,
+			toggleFree: { ...prev.toggleFree, [userId]: true }
+		}))
+
 		try {
 			const { error } = await updateUserisFree(userId, !currentIsFree)
 			if (!error) {
@@ -158,11 +189,15 @@ const ModifyCreditsComponent = () => {
 			console.error('Update failed:', error)
 			toast.error('Failed to update user free status.')
 		} finally {
-			setIsUpdating(false)
+			setLoadingStates(prev => ({
+				...prev,
+				toggleFree: { ...prev.toggleFree, [userId]: false }
+			}))
 		}
 	}
 
 	const handleTokenChange = (tokenType: keyof TokenUpdates, value: number) => {
+		if (loadingStates.modalUpdate) return
 		setTokenUpdates(prev => ({
 			...prev,
 			[tokenType]: prev[tokenType] + value
@@ -170,6 +205,7 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const handleTokenInput = (tokenType: keyof TokenUpdates, value: string) => {
+		if (loadingStates.modalUpdate) return
 		const numValue = parseInt(value, 10)
 		setTokenUpdates(prev => ({
 			...prev,
@@ -178,65 +214,67 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const handleUpdateCredits = async () => {
-		if (selectedUserId !== null && selectedUser) {
-			setIsUpdating(true)
-			try {
-				let creditChange = parseInt(newCredits, 10) || 0
-				creditChange = creditChange * (1 + sale / 100)
-				const updatedCredits = (selectedUser.wallet || 0) + creditChange
+		if (loadingStates.modalUpdate || !selectedUserId || !selectedUser) return
 
-				const { error } = await updateUserCredits(
-					selectedUserId,
-					updatedCredits,
-					sale,
-					newCredits,
-					tokenUpdates,
-					essentialsTill
-				)
+		setLoadingStates(prev => ({ ...prev, modalUpdate: true }))
+		try {
+			let creditChange = parseInt(newCredits, 10) || 0
+			creditChange = creditChange * (1 + sale / 100)
+			const updatedCredits = (selectedUser.wallet || 0) + creditChange
 
-				if (!error) {
-					const updatedUser = {
-						...selectedUser,
-						wallet: updatedCredits,
-						private_token: Math.max(
-							0,
-							selectedUser.private_token + tokenUpdates.private_token
-						),
-						semiPrivate_token: Math.max(
-							0,
-							selectedUser.semiPrivate_token + tokenUpdates.semiPrivate_token
-						),
-						public_token: Math.max(
-							0,
-							selectedUser.public_token + tokenUpdates.public_token
-						),
-						workoutDay_token: Math.max(
-							0,
-							selectedUser.workoutDay_token + tokenUpdates.workoutDay_token
-						),
-						shake_token: Math.max(
-							0,
-							selectedUser.shake_token + tokenUpdates.shake_token
-						),
-						essential_till: essentialsTill || selectedUser.essential_till
-					}
+			const { error } = await updateUserCredits(
+				selectedUserId,
+				updatedCredits,
+				sale,
+				newCredits,
+				tokenUpdates,
+				essentialsTill
+			)
 
-					updateUsersState(updatedUser)
-					toast.success('User credits and tokens updated successfully')
-					handleCloseModal()
-				} else {
-					toast.error('Failed to update user credits and tokens.')
+			if (!error) {
+				const updatedUser = {
+					...selectedUser,
+					wallet: updatedCredits,
+					private_token: Math.max(
+						0,
+						selectedUser.private_token + tokenUpdates.private_token
+					),
+					semiPrivate_token: Math.max(
+						0,
+						selectedUser.semiPrivate_token + tokenUpdates.semiPrivate_token
+					),
+					public_token: Math.max(
+						0,
+						selectedUser.public_token + tokenUpdates.public_token
+					),
+					workoutDay_token: Math.max(
+						0,
+						selectedUser.workoutDay_token + tokenUpdates.workoutDay_token
+					),
+					shake_token: Math.max(
+						0,
+						selectedUser.shake_token + tokenUpdates.shake_token
+					),
+					essential_till: essentialsTill || selectedUser.essential_till
 				}
-			} catch (error) {
-				console.error('Update failed:', error)
+
+				updateUsersState(updatedUser)
+				toast.success('User credits and tokens updated successfully')
+				handleCloseModal()
+			} else {
 				toast.error('Failed to update user credits and tokens.')
-			} finally {
-				setIsUpdating(false)
 			}
+		} catch (error) {
+			console.error('Update failed:', error)
+			toast.error('Failed to update user credits and tokens.')
+		} finally {
+			setLoadingStates(prev => ({ ...prev, modalUpdate: false }))
 		}
 	}
 
 	const handleCloseModal = () => {
+		if (loadingStates.modalUpdate) return
+
 		setSelectedUserId(null)
 		setSelectedUser(null)
 		setNewCredits('')
@@ -253,6 +291,8 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const openModal = (userId: number) => {
+		if (isAnyLoading()) return
+
 		setSelectedUserId(userId)
 		setModalIsOpen(true)
 		setTokenUpdates({
@@ -275,15 +315,17 @@ const ModifyCreditsComponent = () => {
 	}
 
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (loadingStates.searchUsers) return
 		setSearchQuery(e.target.value)
 	}
 
 	const handleSearch = () => {
+		if (loadingStates.searchUsers) return
 		setSearchTrigger(prev => prev + 1)
 	}
 
 	const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter') {
+		if (e.key === 'Enter' && !loadingStates.searchUsers) {
 			handleSearch()
 		}
 	}
@@ -314,25 +356,29 @@ const ModifyCreditsComponent = () => {
 						value={searchQuery}
 						onChange={handleSearchChange}
 						onKeyPress={handleKeyPress}
-						disabled={isUpdating || isLoading}
-						className='w-full p-3 bg-gray-800 border-2 border-green-500 rounded-l-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
+						disabled={loadingStates.searchUsers || isAnyLoading()}
+						className='w-full p-3 bg-gray-800 border-2 border-green-500 rounded-l-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 disabled:opacity-50'
 					/>
 					<motion.button
 						onClick={handleSearch}
-						disabled={isUpdating || isLoading}
-						whileHover={{ scale: 1.05 }}
-						whileTap={{ scale: 0.95 }}
-						className='px-6 py-3 bg-green-500 text-white rounded-r-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-300'>
-						<FaSearch />
+						disabled={loadingStates.searchUsers || isAnyLoading()}
+						whileHover={{ scale: loadingStates.searchUsers ? 1 : 1.05 }}
+						whileTap={{ scale: loadingStates.searchUsers ? 1 : 0.95 }}
+						className='px-6 py-3 bg-green-500 text-white rounded-r-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed'>
+						{loadingStates.searchUsers ? (
+							<RingLoader color='#ffffff' size={20} />
+						) : (
+							<FaSearch />
+						)}
 					</motion.button>
 				</div>
 
 				<motion.select
 					value={sortOption}
 					onChange={handleSortChange}
-					disabled={isUpdating || isLoading}
-					whileHover={{ scale: 1.05 }}
-					className='w-fit p-3 bg-gray-800 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'>
+					disabled={isAnyLoading()}
+					whileHover={{ scale: isAnyLoading() ? 1 : 1.05 }}
+					className='w-fit p-3 bg-gray-800 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 disabled:opacity-50'>
 					<option value='alphabetical'>Sort Alphabetically</option>
 					<option value='newest'>Sort by Newest</option>
 				</motion.select>
@@ -343,131 +389,151 @@ const ModifyCreditsComponent = () => {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.5, delay: 0.2 }}
 				className='overflow-x-auto relative shadow-md sm:rounded-2xl'>
-				<table className='w-full text-sm text-left text-gray-300'>
-					<thead className='text-xs uppercase bg-gray-800'>
-						<tr>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Username
-							</th>
-							<th scope='col' className='py-4 px-6 text-left text-nowrap'>
-								First Name
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Last Name
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Wallet
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Gender
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Email
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Phone
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								DOB
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Age
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Height
-							</th>
-							<th scope='col' className='py-4 px-6 text-left'>
-								Weight
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								is Free
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								Private Sessions
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								Semi-Private Sessions
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								Class Sessions
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								Workout of the Day
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								Shake Tokens
-							</th>
-							<th scope='col' className='py-4 px-6 text-center'>
-								Essentials
-							</th>
-							<th scope='col' className='py-4 px-6 text-right'>
-								Actions
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						{users.map(user => (
-							<motion.tr
-								key={user.id}
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								transition={{ duration: 0.3 }}
-								className='bg-gray-700 border-b border-gray-600 hover:bg-gray-600'>
-								<td className='py-4 px-6'>{user.username}</td>
-								<td className='py-4 px-6'>{user.first_name}</td>
-								<td className='py-4 px-6'>{user.last_name}</td>
-								<td className='py-4 px-6'>{user.wallet}</td>
-								<td className='py-4 px-6'>{user.gender}</td>
-								<td className='py-4 px-6'>{user.email}</td>
-								<td className='py-4 px-6'>{user.phone}</td>
-								<td className='py-4 px-6'>{user.DOB}</td>
-								<td className='py-4 px-6'>{calculateAge(user.DOB)}</td>
-								<td className='py-4 px-6'>{user.height}</td>
-								<td className='py-4 px-6'>
-									{user.weight.length > 0
-										? user.weight[user.weight.length - 1].value
-										: ''}
-								</td>
-								<td className='py-4 px-6 text-center'>
-									<motion.button
-										whileHover={{ scale: 1.1 }}
-										whileTap={{ scale: 0.9 }}
-										onClick={() =>
-											handleToggleFree(user.id, user.isFree || false)
-										}
-										disabled={isUpdating || isLoading}
-										className={`p-2 rounded-full ${
-											user.isFree ? 'bg-green-500' : 'bg-red-700'
-										}`}>
-										{user.isFree ? <FaCheckCircle /> : <FaTimesCircle />}
-									</motion.button>
-								</td>
-								<td className='py-4 px-6 text-center'>{user.private_token}</td>
-								<td className='py-4 px-6 text-center'>
-									{user.semiPrivate_token}
-								</td>
-								<td className='py-4 px-6 text-center'>{user.public_token}</td>
-								<td className='py-4 px-6 text-center'>
-									{user.workoutDay_token}
-								</td>
-								<td className='py-4 px-6 text-center'>{user.shake_token}</td>
-								<td className='py-4 px-6 text-center'>
-									{renderEssentialsTill(user.essential_till)}
-								</td>
-								<td className='py-4 px-6 text-right'>
-									<motion.button
-										onClick={() => openModal(user.id)}
-										disabled={isUpdating || isLoading}
-										whileHover={{ scale: 1.05 }}
-										whileTap={{ scale: 0.95 }}
-										className='px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-300'>
-										<FaUserEdit />
-									</motion.button>
-								</td>
-							</motion.tr>
-						))}
-					</tbody>
-				</table>
+				{loadingStates.searchUsers ? (
+					<div className='flex justify-center items-center p-8'>
+						<RingLoader color='#10B981' size={60} />
+					</div>
+				) : (
+					<table className='w-full text-sm text-left text-gray-300'>
+						<thead className='text-xs uppercase bg-gray-800'>
+							<tr>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Username
+								</th>
+								<th scope='col' className='py-4 px-6 text-left text-nowrap'>
+									First Name
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Last Name
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Wallet
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Gender
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Email
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Phone
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									DOB
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Age
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Height
+								</th>
+								<th scope='col' className='py-4 px-6 text-left'>
+									Weight
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									is Free
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									Private Sessions
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									Semi-Private Sessions
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									Class Sessions
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									Workout of the Day
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									Shake Tokens
+								</th>
+								<th scope='col' className='py-4 px-6 text-center'>
+									Essentials
+								</th>
+								<th scope='col' className='py-4 px-6 text-right'>
+									Actions
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							{users.map(user => (
+								<motion.tr
+									key={user.id}
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									transition={{ duration: 0.3 }}
+									className='bg-gray-700 border-b border-gray-600 hover:bg-gray-600'>
+									<td className='py-4 px-6'>{user.username}</td>
+									<td className='py-4 px-6'>{user.first_name}</td>
+									<td className='py-4 px-6'>{user.last_name}</td>
+									<td className='py-4 px-6'>{user.wallet}</td>
+									<td className='py-4 px-6'>{user.gender}</td>
+									<td className='py-4 px-6'>{user.email}</td>
+									<td className='py-4 px-6'>{user.phone}</td>
+									<td className='py-4 px-6'>{user.DOB}</td>
+									<td className='py-4 px-6'>{calculateAge(user.DOB)}</td>
+									<td className='py-4 px-6'>{user.height}</td>
+									<td className='py-4 px-6'>
+										{user.weight.length > 0
+											? user.weight[user.weight.length - 1].value
+											: ''}
+									</td>
+									<td className='py-4 px-6 text-center'>
+										<motion.button
+											whileHover={{
+												scale: loadingStates.toggleFree[user.id] ? 1 : 1.1
+											}}
+											whileTap={{
+												scale: loadingStates.toggleFree[user.id] ? 1 : 0.9
+											}}
+											onClick={() =>
+												handleToggleFree(user.id, user.isFree || false)
+											}
+											disabled={
+												loadingStates.toggleFree[user.id] || isAnyLoading()
+											}
+											className={`p-2 rounded-full ${
+												user.isFree ? 'bg-green-500' : 'bg-red-700'
+											} disabled:opacity-50 disabled:cursor-not-allowed`}>
+											{loadingStates.toggleFree[user.id] ? (
+												<RingLoader color='#ffffff' size={12} />
+											) : user.isFree ? (
+												<FaCheckCircle />
+											) : (
+												<FaTimesCircle />
+											)}
+										</motion.button>
+									</td>
+									<td className='py-4 px-6 text-center'>
+										{user.private_token}
+									</td>
+									<td className='py-4 px-6 text-center'>
+										{user.semiPrivate_token}
+									</td>
+									<td className='py-4 px-6 text-center'>{user.public_token}</td>
+									<td className='py-4 px-6 text-center'>
+										{user.workoutDay_token}
+									</td>
+									<td className='py-4 px-6 text-center'>{user.shake_token}</td>
+									<td className='py-4 px-6 text-center'>
+										{renderEssentialsTill(user.essential_till)}
+									</td>
+									<td className='py-4 px-6 text-right'>
+										<motion.button
+											onClick={() => openModal(user.id)}
+											disabled={isAnyLoading()}
+											whileHover={{ scale: isAnyLoading() ? 1 : 1.05 }}
+											whileTap={{ scale: isAnyLoading() ? 1 : 0.95 }}
+											className='px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed'>
+											<FaUserEdit />
+										</motion.button>
+									</td>
+								</motion.tr>
+							))}
+						</tbody>
+					</table>
+				)}
 			</motion.div>
 
 			<Modal
@@ -485,7 +551,8 @@ const ModifyCreditsComponent = () => {
 						placeholder='New Credits'
 						value={newCredits}
 						onChange={e => setNewCredits(e.target.value)}
-						className='p-3 w-full bg-gray-700 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
+						disabled={loadingStates.modalUpdate}
+						className='p-3 w-full bg-gray-700 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 disabled:opacity-50'
 					/>
 					<div className='flex flex-row justify-center items-center gap-2 w-full'>
 						<label className='text-green-400' htmlFor='sales'>
@@ -498,10 +565,12 @@ const ModifyCreditsComponent = () => {
 							value={sale}
 							min={0}
 							max={100}
+							disabled={loadingStates.modalUpdate}
 							onChange={e => setSale(parseInt(e.target.value))}
-							className='p-3 flex-grow bg-gray-700 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
+							className='p-3 flex-grow bg-gray-700 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 disabled:opacity-50'
 						/>
 					</div>
+
 					{Object.entries(tokenUpdates).map(([tokenType, value]) => (
 						<div
 							key={tokenType}
@@ -510,12 +579,13 @@ const ModifyCreditsComponent = () => {
 								{tokenNames[tokenType as keyof typeof tokenNames]}:
 							</label>
 							<motion.button
-								whileHover={{ scale: 1.1 }}
-								whileTap={{ scale: 0.9 }}
+								whileHover={{ scale: loadingStates.modalUpdate ? 1 : 1.1 }}
+								whileTap={{ scale: loadingStates.modalUpdate ? 1 : 0.9 }}
 								onClick={() =>
 									handleTokenChange(tokenType as keyof TokenUpdates, -1)
 								}
-								className='p-2 bg-red-500 text-white rounded-full'>
+								disabled={loadingStates.modalUpdate}
+								className='p-2 bg-red-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed'>
 								<FaMinus />
 							</motion.button>
 							<input
@@ -527,19 +597,22 @@ const ModifyCreditsComponent = () => {
 										e.target.value
 									)
 								}
-								className='p-2 w-1/3 bg-gray-700 text-white border-2 border-green-500 rounded-full text-center'
+								disabled={loadingStates.modalUpdate}
+								className='p-2 w-1/3 bg-gray-700 text-white border-2 border-green-500 rounded-full text-center disabled:opacity-50'
 							/>
 							<motion.button
-								whileHover={{ scale: 1.1 }}
-								whileTap={{ scale: 0.9 }}
+								whileHover={{ scale: loadingStates.modalUpdate ? 1 : 1.1 }}
+								whileTap={{ scale: loadingStates.modalUpdate ? 1 : 0.9 }}
 								onClick={() =>
 									handleTokenChange(tokenType as keyof TokenUpdates, 1)
 								}
-								className='p-2 bg-green-500 text-white rounded-full'>
+								disabled={loadingStates.modalUpdate}
+								className='p-2 bg-green-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed'>
 								<FaPlus />
 							</motion.button>
 						</div>
 					))}
+
 					<div className='flex flex-row justify-center items-center gap-2 w-full'>
 						<label className='text-green-400' htmlFor='essentialsTill'>
 							Essentials Till
@@ -549,22 +622,30 @@ const ModifyCreditsComponent = () => {
 							type='date'
 							value={essentialsTill}
 							onChange={e => setEssentialsTill(e.target.value)}
-							className='p-3 flex-grow bg-gray-700 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
+							disabled={loadingStates.modalUpdate}
+							className='p-3 flex-grow bg-gray-700 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 disabled:opacity-50'
 						/>
 					</div>
+
 					<div className='flex flex-row justify-between gap-5 w-full'>
 						<motion.button
 							onClick={handleUpdateCredits}
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className='px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-300'>
-							Update
+							disabled={loadingStates.modalUpdate}
+							whileHover={{ scale: loadingStates.modalUpdate ? 1 : 1.05 }}
+							whileTap={{ scale: loadingStates.modalUpdate ? 1 : 0.95 }}
+							className='px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[100px]'>
+							{loadingStates.modalUpdate ? (
+								<RingLoader color='#ffffff' size={20} />
+							) : (
+								'Update'
+							)}
 						</motion.button>
 						<motion.button
 							onClick={handleCloseModal}
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className='px-6 py-3 bg-red-700 text-white rounded-full hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-300'>
+							disabled={loadingStates.modalUpdate}
+							whileHover={{ scale: loadingStates.modalUpdate ? 1 : 1.05 }}
+							whileTap={{ scale: loadingStates.modalUpdate ? 1 : 0.95 }}
+							className='px-6 py-3 bg-red-700 text-white rounded-full hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed'>
 							Close
 						</motion.button>
 					</div>
