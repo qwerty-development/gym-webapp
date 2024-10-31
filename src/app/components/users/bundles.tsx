@@ -338,8 +338,8 @@ export default function Bundles() {
 				</div>
 
 				<div>
-					<h1 className='text-3xl text-green-500 font-bold mb-8'>
-						Protein Shake Bundle
+					<h1 className='text-3xl text-green-500 font-bold  mt-20 md:mt-0 mb-5 md:mb-8'>
+						Protein Bundle
 					</h1>
 					<div className='flex flex-col justify-between rounded-3xl bg-gray-200 p-8 ring-1 ring-gray-200 xl:p-10 h-full'>
 						<div className='flex flex-col items-center text-center'>
