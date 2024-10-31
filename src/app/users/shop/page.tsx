@@ -247,7 +247,7 @@ const Shop: React.FC = () => {
 				{/* Toggle for Medium Screens */}
 				<div className='hidden md:block lg:hidden sticky top-0 z-20 bg-gray-800 py-2 mb-4'>
 					<div className='flex justify-center space-x-2'>
-						{['general', 'clothe', 'bundles'].map(shop => (
+						{['general', 'clothes', 'bundles'].map(shop => (
 							<button
 								key={shop}
 								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
@@ -267,7 +267,7 @@ const Shop: React.FC = () => {
 				{/* Toggle for Small Screens */}
 				<div className='md:hidden sticky top-0 z-20 bg-gray-800 py-2 mb-4'>
 					<div className='flex justify-center space-x-2'>
-						{['general', 'clothe', 'bundles'].map(shop => (
+						{['general', 'clothes', 'bundles'].map(shop => (
 							<button
 								key={shop}
 								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
