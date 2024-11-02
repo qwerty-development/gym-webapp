@@ -346,7 +346,7 @@ const Shop = () => {
 		<div className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800'>
 			<NavbarComponent />
 
-			<div className='max-w-7xl mx-auto lg:ml-32 2xl:mx-auto px-4 sm:px-6 lg:px-8 py-12'>
+			<div className='max-w-7xl mx-auto lg:ml-52 2xl:mx-auto px-4 sm:px-6 lg:px-8 py-12'>
 				<motion.h1
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
@@ -355,27 +355,57 @@ const Shop = () => {
 				</motion.h1>
 
 				{/* Desktop Sidebar */}
-				<div className='hidden lg:block fixed left-0 top-0 h-full bg-gray-800 z-30 w-64 p-6'>
-					<h2 className='text-2xl font-bold mb-8 text-green-500'>Menu</h2>
-					<nav className='space-y-4'>
-						{[
-							{ id: 'general', label: 'Items', icon: '🛍️' },
-							{ id: 'clothes', label: 'Clothes', icon: '👕' },
-							{ id: 'bundles', label: 'Bundles', icon: '📦' }
-						].map(item => (
+				<div className='hidden lg:block fixed left-0 top-0 h-full bg-gray-800 z-30 transform transition-transform duration-300 ease-in-out w-48'>
+					<h2 className='text-xl font-bold mb-4 mt-16 md:mt-4 ml-4 text-green-500'>
+						Menu
+					</h2>
+					<ul className='space-y-2'>
+						<li
+							className={`text-white p-2 px-4 transition-colors duration-200 ${
+								activeShop === 'general' ? 'bg-green-500' : ''
+							}`}>
 							<button
-								key={item.id}
-								onClick={() => setActiveShop(item.id as typeof activeShop)}
-								className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors ${
-									activeShop === item.id
-										? 'bg-green-500 text-white'
-										: 'text-gray-300 hover:bg-gray-700'
-								}`}>
-								<span className='mr-3'>{item.icon}</span>
-								{item.label}
+								className='flex items-center w-full text-left'
+								onClick={() => setActiveShop('general')}>
+								<img
+									src='https://www.svgrepo.com/show/307607/food-and-drink-food-edible-healthy.svg'
+									className='mr-2 h-6 w-6 filter invert'
+									alt='Items Icon'
+								/>
+								<span className='text-sm'>Items</span>
 							</button>
-						))}
-					</nav>
+						</li>
+						<li
+							className={`text-white p-2 px-4 transition-colors duration-200 ${
+								activeShop === 'clothes' ? 'bg-green-500' : ''
+							}`}>
+							<button
+								className='flex items-center w-full text-left'
+								onClick={() => setActiveShop('clothes')}>
+								<img
+									src='https://www.svgrepo.com/show/506321/shirt.svg'
+									className='mr-2 h-6 w-6 filter invert'
+									alt='Clothe Icon'
+								/>
+								<span className='text-sm'>Clothes</span>
+							</button>
+						</li>
+						<li
+							className={`text-white p-2 px-4 transition-colors duration-200 ${
+								activeShop === 'bundles' ? 'bg-green-500' : ''
+							}`}>
+							<button
+								className='flex items-center w-full text-left hover:text-green-400'
+								onClick={() => setActiveShop('bundles')}>
+								<img
+									src='https://www.svgrepo.com/show/371744/bundle.svg'
+									className='mr-2 h-6 w-6 filter invert'
+									alt='Bundles Icon'
+								/>
+								<span className='text-sm'>Bundles</span>
+							</button>
+						</li>
+					</ul>
 				</div>
 
 				{/* Mobile/Tablet Navigation */}
