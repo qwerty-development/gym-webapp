@@ -221,7 +221,7 @@ export default function Bundles() {
 			case 'BELIEVE':
 				return <FaUsers className='text-green-500 h-8 w-8' />
 			case 'ESSENTIALS':
-				return <FaShieldAlt className='text-purple-500 h-8 w-8' />
+				return <FaShieldAlt className='text-blue-500 h-8 w-8' />
 			case 'PROTEIN SHAKE PACK':
 				return <FaBlender className='text-pink-500 h-8 w-8' />
 			default:
@@ -232,7 +232,7 @@ export default function Bundles() {
 	const renderTierCard = (
 		tier: any,
 		type: string,
-		mainColor: string = 'green'
+		mainColor: any = 'green'
 	) => {
 		const isProcessingThis =
 			isProcessing && selectedTier === `${type}-${tier.name}`
@@ -409,7 +409,7 @@ export default function Bundles() {
 						<motion.h2
 							initial={{ opacity: 0, y: -20 }}
 							animate={{ opacity: 1, y: 0 }}
-							className='text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-600'>
+							className='text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600'>
 							Essentials Bundle
 						</motion.h2>
 						{essentialsTillDate && (
@@ -422,15 +422,14 @@ export default function Bundles() {
 							</motion.p>
 						)}
 					</div>
-					{renderTierCard(essentialsTier, 'essentials', 'purple')}
+					{renderTierCard(essentialsTier, 'essentials', 'blue')}
 				</div>
 
-				{/* Protein Bundle */}
 				<div className='space-y-6'>
 					<motion.h2
 						initial={{ opacity: 0, y: -20 }}
 						animate={{ opacity: 1, y: 0 }}
-						className='text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-pink-600'>
+						className='text-3xl font-bold mt-12 md:mt-0  text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-600'>
 						Protein Bundle
 					</motion.h2>
 					{renderTierCard(proteinShakeTier, 'protein', 'red')}
