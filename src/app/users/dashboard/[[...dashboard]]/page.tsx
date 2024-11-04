@@ -154,6 +154,9 @@ export default function Dashboard() {
 		GroupReservation[]
 	>([])
 	const [allSessions, setAllSessions] = useState<Session[]>([])
+	const [claimingTransactionId, setClaimingTransactionId] = useState<
+		string | null
+	>(null)
 
 	const [isLoading, setIsLoading] = useState<boolean>(true) // State to track loading status
 	const { refreshWalletBalance, refreshTokens } = useWallet()
@@ -163,9 +166,19 @@ export default function Dashboard() {
 	).length
 	const [shopTransactions, setShopTransactions] = useState<any[]>([])
 
+	const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
+
 	const loadShopTransactions = async () => {
-		const transactions = await fetchShopTransactions()
-		setShopTransactions(transactions)
+		try {
+			setIsLoadingTransactions(true)
+			const transactions = await fetchShopTransactions()
+			setShopTransactions(transactions)
+		} catch (error) {
+			console.error('Error loading transactions:', error)
+			toast.error('Failed to load transactions')
+		} finally {
+			setIsLoadingTransactions(false)
+		}
 	}
 	const [essentialTill, setEssentialTill] = useState<string | null>(null)
 
@@ -222,17 +235,29 @@ export default function Dashboard() {
 
 	useEffect(() => {
 		if (user && user.publicMetadata.role === 'admin') {
-			loadShopTransactions()
+			loadShopTransactions().catch(error => {
+				console.error('Error in loadShopTransactions:', error)
+				toast.error('Failed to load transactions')
+			})
 		}
 	}, [user])
-	const handleClaimTransaction = async (transactionId: string) => {
-		const success = await claimTransaction(transactionId)
 
-		if (success) {
-			toast.success('Transaction claimed successfully')
-			loadShopTransactions() // Refresh the transactions list
-		} else {
-			toast.error('Failed to claim transaction')
+	const handleClaimTransaction = async (transactionId: string) => {
+		try {
+			setClaimingTransactionId(transactionId) // Set the claiming transaction ID
+			const success = await claimTransaction(transactionId)
+
+			if (success) {
+				toast.success('Transaction claimed successfully')
+				await loadShopTransactions() // Refresh the transactions list
+			} else {
+				toast.error('Failed to claim transaction')
+			}
+		} catch (error) {
+			console.error('Error claiming transaction:', error)
+			toast.error('An error occurred while claiming the transaction')
+		} finally {
+			setClaimingTransactionId(null) // Reset the claiming transaction ID
 		}
 	}
 
@@ -1290,11 +1315,22 @@ export default function Dashboard() {
 			</div>
 
 			{user.publicMetadata.role === 'admin' && (
-				<div className=' space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
+				<div className='space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
 					<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
 						Shop Transactions
 					</h2>
-					{shopTransactions.length === 0 ? (
+					{isLoadingTransactions ? (
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							className='flex justify-center items-center p-8'>
+							<motion.div
+								animate={{ rotate: 360 }}
+								transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+								className='w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full'
+							/>
+						</motion.div>
+					) : shopTransactions.length === 0 ? (
 						<motion.div
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -1380,8 +1416,31 @@ export default function Dashboard() {
 												onClick={() =>
 													handleClaimTransaction(transaction.transaction_id)
 												}
-												className='bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200'>
-												Claim
+												disabled={
+													claimingTransactionId === transaction.transaction_id
+												}
+												className={`flex items-center justify-center space-x-2 ${
+													claimingTransactionId === transaction.transaction_id
+														? 'bg-green-700 cursor-not-allowed'
+														: 'bg-green-500 hover:bg-green-600'
+												} text-white font-bold py-2 px-4 rounded-lg transition duration-200`}>
+												{claimingTransactionId ===
+												transaction.transaction_id ? (
+													<>
+														<motion.div
+															animate={{ rotate: 360 }}
+															transition={{
+																duration: 1,
+																repeat: Infinity,
+																ease: 'linear'
+															}}
+															className='w-5 h-5 border-2 border-white border-t-transparent rounded-full'
+														/>
+														<span>Claiming...</span>
+													</>
+												) : (
+													'Claim'
+												)}
 											</button>
 										</div>
 									</div>
