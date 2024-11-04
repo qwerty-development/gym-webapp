@@ -387,7 +387,7 @@ const Shop = () => {
 									className='mr-2 h-6 w-6 filter invert'
 									alt='Clothe Icon'
 								/>
-								<span className='text-sm'>Clothes</span>
+								<span className='text-sm'>Apparels</span>
 							</button>
 						</li>
 						<li
@@ -420,7 +420,9 @@ const Shop = () => {
 										? 'bg-green-500 text-white'
 										: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
 								}`}>
-								{shop.charAt(0).toUpperCase() + shop.slice(1)}
+								{shop !== 'clothes'
+									? shop.charAt(0).toUpperCase() + shop.slice(1)
+									: 'Apparels'}
 							</button>
 						))}
 					</div>
