@@ -6,6 +6,7 @@ import AdminNavbarComponent from '@/app/components/admin/adminnavbar'
 import { motion } from 'framer-motion'
 import Select from 'react-select'
 import DatePicker from 'react-datepicker'
+import SearchableSelect from '@/app/components/admin/SearchableSelect'
 import {
 	FaFilter,
 	FaSortAmountDown,
@@ -20,22 +21,30 @@ import SessionsChart from '@/app/components/admin/SessionsChart'
 import { saveAs } from 'file-saver'
 import 'react-datepicker/dist/react-datepicker.css'
 
+interface Option {
+	value: string
+	label: string
+}
+
 const CompletedSessions = () => {
 	const router = useRouter()
-	const [users, setUsers] = useState<any>([])
-	const [coaches, setCoaches] = useState<any>([])
-	const [activities, setActivities] = useState<any>([])
-	const [selectedUser, setSelectedUser] = useState<any>(null)
-	const [selectedCoach, setSelectedCoach] = useState<any>(null)
-	const [selectedActivity, setSelectedActivity] = useState<any>(null)
-	const [sessions, setSessions] = useState<any>([])
-	const [loading, setLoading] = useState<any>(false)
-	const [currentPage, setCurrentPage] = useState<any>(1)
-	const [totalPages, setTotalPages] = useState<any>(0)
-	const [sortBy, setSortBy] = useState<any>('date')
-	const [sortOrder, setSortOrder] = useState<any>('desc')
-	const [filter, setFilter] = useState<any>('all')
-	const [dateRange, setDateRange] = useState<any>([null, null])
+	const [users, setUsers] = useState<Option[]>([])
+	const [coaches, setCoaches] = useState<Option[]>([])
+	const [activities, setActivities] = useState<Option[]>([])
+	const [selectedUser, setSelectedUser] = useState<Option | null>(null)
+	const [selectedCoach, setSelectedCoach] = useState<Option | null>(null)
+	const [selectedActivity, setSelectedActivity] = useState<Option | null>(null)
+	const [sessions, setSessions] = useState<any[]>([])
+	const [loading, setLoading] = useState(false)
+	const [currentPage, setCurrentPage] = useState(1)
+	const [totalPages, setTotalPages] = useState(0)
+	const [sortBy, setSortBy] = useState('date')
+	const [sortOrder, setSortOrder] = useState('desc')
+	const [filter, setFilter] = useState('all')
+	const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+		null,
+		null
+	])
 	const [startDate, endDate] = dateRange
 	const [summary, setSummary] = useState<any>(null)
 	const [selectedSession, setSelectedSession] = useState<any>(null)
@@ -76,7 +85,7 @@ const CompletedSessions = () => {
 		const fetchedCoaches = await fetchCoaches()
 		setCoaches(
 			fetchedCoaches.map(coach => ({
-				value: coach.id,
+				value: coach.id.toString(),
 				label: coach.name
 			}))
 		)
@@ -86,7 +95,7 @@ const CompletedSessions = () => {
 		const fetchedActivities = await fetchActivities()
 		setActivities(
 			fetchedActivities.map(activity => ({
-				value: activity.id,
+				value: activity.id.toString(),
 				label: activity.name
 			}))
 		)
@@ -96,7 +105,7 @@ const CompletedSessions = () => {
 		setLoading(true)
 		const response = await fetch(
 			`/api/completed-sessions?userId=${
-				selectedUser.value
+				selectedUser!.value
 			}&page=${currentPage}&sortBy=${sortBy}&sortOrder=${sortOrder}&filter=${filter}&startDate=${
 				startDate?.toISOString().split('T')[0] || ''
 			}&endDate=${endDate?.toISOString().split('T')[0] || ''}&activityId=${
@@ -173,7 +182,7 @@ const CompletedSessions = () => {
 		].join('\n')
 
 		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-		saveAs(blob, `completed_sessions_${selectedUser.label}.csv`)
+		saveAs(blob, `completed_sessions_${selectedUser!.label}.csv`)
 	}
 
 	return (
@@ -185,66 +194,79 @@ const CompletedSessions = () => {
 				</h1>
 
 				<div className='mb-8'>
-					<Select
+					<SearchableSelect
 						options={users}
 						value={selectedUser}
-						onChange={handleUserChange}
+						onChange={setSelectedUser}
 						placeholder='Select a user'
-						className='react-select-container'
-						classNamePrefix='react-select'
 					/>
 				</div>
 
 				{selectedUser && (
 					<>
-						<div className='mb-4 flex flex-wrap justify-between items-center'>
-							<select
-								value={filter}
-								onChange={handleFilterChange}
-								className='bg-gray-700 text-white rounded-md px-3 py-2 mb-2 sm:mb-0'>
-								<option value='all'>All Sessions</option>
-								<option value='private'>Private Sessions</option>
-								<option value='group'>Group Sessions</option>
-							</select>
+						<div className='mb-8'>
+							{/* First Row - Main Filters */}
 
-							<Select
-								options={coaches}
-								value={selectedCoach}
-								onChange={handleCoachChange}
-								placeholder='Select a coach'
-								className='react-select-container'
-								classNamePrefix='react-select'
-								isClearable
-							/>
+							{/* Second Row - Additional Filters */}
+							{selectedUser && (
+								<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+									{/* Session Type Filter */}
+									<div className='w-full'>
+										<select
+											value={filter}
+											onChange={handleFilterChange}
+											className='w-full bg-gray-800 text-white mt-1  px-4 py-3 pb-4 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all duration-200 shadow-md'>
+											<option value='all'>All Sessions</option>
+											<option value='private'>Private Sessions</option>
+											<option value='group'>Group Sessions</option>
+										</select>
+									</div>
 
-							<Select
-								options={activities}
-								value={selectedActivity}
-								onChange={handleActivityChange}
-								placeholder='Select an activity'
-								className='react-select-container'
-								classNamePrefix='react-select'
-								isClearable
-							/>
+									{/* Coach Select */}
+									<div className='w-full'>
+										<SearchableSelect
+											options={coaches}
+											value={selectedCoach}
+											onChange={setSelectedCoach}
+											placeholder='Select a coach'
+										/>
+									</div>
 
-							<DatePicker
-								selectsRange={true}
-								startDate={startDate}
-								endDate={endDate}
-								onChange={update => {
-									setDateRange(update)
-									setCurrentPage(1)
-								}}
-								className='bg-gray-700 text-white rounded-md px-3 py-2 mb-2 sm:mb-0'
-								placeholderText='Select date range'
-							/>
+									{/* Activity Select */}
+									<div className='w-full'>
+										<SearchableSelect
+											options={activities}
+											value={selectedActivity}
+											onChange={setSelectedActivity}
+											placeholder='Select an activity'
+										/>
+									</div>
 
-							<button
-								onClick={exportToCSV}
-								className='px-4 py-2 bg-blue-600 text-white rounded-md flex items-center'>
-								<FaFileExport className='mr-2' />
-								Export to CSV
-							</button>
+									{/* Date Range and Export Group */}
+									<div className='w-full flex flex-col sm:flex-row lg:flex-col gap-4'>
+										<DatePicker
+											selectsRange={true}
+											startDate={startDate}
+											endDate={endDate}
+											onChange={update => {
+												setDateRange(update)
+												setCurrentPage(1)
+											}}
+											className='w-full bg-gray-800 text-white mt-1 px-4 py-3 pb-4 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all duration-200 shadow-md '
+											placeholderText='Select date range'
+										/>
+
+										<motion.button
+											onClick={exportToCSV}
+											whileHover={{ scale: 1.02 }}
+											whileTap={{ scale: 0.98 }}
+											className='w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center justify-center'>
+											<FaFileExport className='mr-2' />
+											Export to CSV
+										</motion.button>
+									</div>
+								</div>
+							)}
 						</div>
 
 						{summary && (
