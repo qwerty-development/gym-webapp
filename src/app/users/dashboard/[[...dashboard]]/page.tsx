@@ -4,6 +4,7 @@ import NavbarComponent from '@/app/components/users/navbar'
 import { UserButton, useUser } from '@clerk/nextjs'
 import CalendarView from '@/app/components/admin/CalendarView'
 import ChatBox from '@/app/components/users/ChatBox'
+import PhoneVerification from '@/app/components/users/PhoneVerification'
 import {
 	fetchReservations,
 	fetchReservationsGroup,
@@ -50,6 +51,7 @@ import { FaChevronLeft, FaChevronRight, FaChevronDown } from 'react-icons/fa'
 import TokenBalance from '@/app/components/users/TokenBalance'
 import { supabaseClient } from '../../../../../utils/supabaseClient'
 import LoyaltyCard from '@/app/components/users/LoyaltyCard'
+import { DefaultContext } from 'react-icons/lib'
 
 type Reservation = {
 	id: number
@@ -117,6 +119,9 @@ export default function Dashboard() {
 	const [adminIndividualSessions, setAdminIndividualSessions] = useState<any[]>(
 		[]
 	)
+	const [phoneVerified, setPhoneVerified] = useState<boolean>(false)
+	const [phoneVerificationLoading, setPhoneVerificationLoading] =
+		useState<boolean>(true)
 
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
 	const [showBulkCalendarAdd, setShowBulkCalendarAdd] = useState<any>(false)
@@ -670,11 +675,69 @@ export default function Dashboard() {
 		setButtonLoading(false)
 		setIsCancelling(false)
 	}
+	useEffect(() => {
+		const verifyPhone = async () => {
+			if (!user) return
+			try {
+				const supabase = await supabaseClient()
+				const { data, error } = await supabase
+					.from('users')
+					.select('phone')
+					.eq('user_id', user.id)
+					.single()
+
+				if (error) {
+					console.error('Error checking phone verification:', error)
+					return
+				}
+
+				setPhoneVerified(!!data?.phone)
+			} catch (error) {
+				console.error('Error in phone verification:', error)
+			} finally {
+				setPhoneVerificationLoading(false)
+			}
+		}
+
+		verifyPhone()
+	}, [user])
 
 	if (!isLoaded || !isSignedIn) {
-		return null
+		return (
+			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
+				<RingLoader color={'#10B981'} size={120} />
+			</div>
+		)
 	}
 
+	if (isLoading) {
+		return (
+			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
+				<RingLoader color={'#10B981'} size={120} />
+			</div>
+		)
+	}
+
+	if (phoneVerificationLoading) {
+		return (
+			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
+				<RingLoader color={'#10B981'} size={120} />
+			</div>
+		)
+	}
+
+	if (
+		!phoneVerified &&
+		user?.publicMetadata.role !== 'admin' &&
+		!phoneVerificationLoading
+	) {
+		return (
+			<PhoneVerification
+				userId={user.id}
+				onVerificationComplete={() => setPhoneVerified(true)}
+			/>
+		)
+	}
 	type UnifiedReservation = Reservation | GroupReservation
 
 	const allReservations: UnifiedReservation[] = [
