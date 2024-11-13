@@ -404,8 +404,8 @@ export default function Bundles() {
 				transition={{ delay: 0.4 }}
 				className='mt-32 grid gap-8 lg:grid-cols-2'>
 				{/* Essentials Bundle */}
-				<div className='space-y-6'>
-					<div>
+				<div className='flex flex-col h-full'>
+					<div className='mb-6'>
 						<motion.h2
 							initial={{ opacity: 0, y: -20 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -425,13 +425,22 @@ export default function Bundles() {
 					{renderTierCard(essentialsTier, 'essentials', 'blue')}
 				</div>
 
-				<div className='space-y-6'>
-					<motion.h2
-						initial={{ opacity: 0, y: -20 }}
-						animate={{ opacity: 1, y: 0 }}
-						className='text-3xl font-bold mt-12 md:mt-0  text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-600'>
-						Protein Bundle
-					</motion.h2>
+				{/* Protein Bundle */}
+				<div className='flex flex-col h-full'>
+					<div className='mb-6'>
+						<motion.h2
+							initial={{ opacity: 0, y: -20 }}
+							animate={{ opacity: 1, y: 0 }}
+							className='text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-600'>
+							Protein Bundle
+						</motion.h2>
+						{essentialsTillDate && (
+							<div className='mt-2 text-gray-400 invisible'>
+								{/* Invisible placeholder to maintain alignment */}
+								Placeholder
+							</div>
+						)}
+					</div>
 					{renderTierCard(proteinShakeTier, 'protein', 'red')}
 				</div>
 			</motion.div>
