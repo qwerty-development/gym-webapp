@@ -1,4 +1,17 @@
 import { supabaseClient } from '../supabaseClient'
+const vistaFinaleBundle = {
+	name: 'VISTA FINALE',
+	id: 'tier-finale',
+	price: 750,
+	originalPrice: 1000,
+	description: '8 Week Premium Transformation',
+	tokens: {
+		private_token: 20,
+		public_token: 10,
+		shake_token: 10
+	}
+}
+
 const classestiers = [
 	{
 		name: 'BELIEVE',
@@ -45,6 +58,7 @@ const classestiers = [
 		mostPopular: false
 	}
 ]
+
 const individualtiers = [
 	{
 		name: 'Workout of the day',
@@ -112,7 +126,87 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Determine the bundle details
+	// Handle Vista Finale bundle specially
+	if (bundleType === 'finale') {
+		if (userData.wallet < vistaFinaleBundle.price) {
+			return {
+				error: 'Not enough credits to purchase the Vista Finale bundle.'
+			}
+		}
+
+		// Calculate new balances
+		const newWalletBalance = userData.wallet - vistaFinaleBundle.price
+		const newPrivateTokens =
+			userData.private_token + vistaFinaleBundle.tokens.private_token
+		const newPublicTokens =
+			userData.public_token + vistaFinaleBundle.tokens.public_token
+		const newShakeTokens =
+			userData.shake_token + vistaFinaleBundle.tokens.shake_token
+
+		// Update user data
+		const { error: updateError } = await supabase
+			.from('users')
+			.update({
+				wallet: newWalletBalance,
+				private_token: newPrivateTokens,
+				public_token: newPublicTokens,
+				shake_token: newShakeTokens
+			})
+			.eq('user_id', userId)
+
+		if (updateError) {
+			console.error('Error updating user data:', updateError.message)
+			return { error: updateError.message }
+		}
+
+		// Record transactions
+		const transactionRecords = [
+			{
+				user_id: userId,
+				name: 'Purchased Vista Finale bundle',
+				type: 'bundle purchase',
+				amount: `-${vistaFinaleBundle.price} credits`
+			},
+			{
+				user_id: userId,
+				name: 'Received Private Training tokens',
+				type: 'bundle purchase',
+				amount: `+${vistaFinaleBundle.tokens.private_token} private tokens`
+			},
+			{
+				user_id: userId,
+				name: 'Received Class tokens',
+				type: 'bundle purchase',
+				amount: `+${vistaFinaleBundle.tokens.public_token} public tokens`
+			},
+			{
+				user_id: userId,
+				name: 'Received Shake tokens',
+				type: 'bundle purchase',
+				amount: `+${vistaFinaleBundle.tokens.shake_token} shake tokens`
+			}
+		]
+
+		const { error: transactionError } = await supabase
+			.from('transactions')
+			.insert(transactionRecords)
+
+		if (transactionError) {
+			console.error('Error recording transactions:', transactionError.message)
+		}
+
+		return {
+			data: {
+				newWalletBalance,
+				private_token: newPrivateTokens,
+				public_token: newPublicTokens,
+				shake_token: newShakeTokens
+			},
+			message: 'Vista Finale bundle purchased successfully.'
+		}
+	}
+
+	// Handle other bundles
 	let bundlePrice, tokenType, tokenAmount
 	if (bundleType === 'classes') {
 		const bundle = classestiers.find(tier => tier.name === bundleName)
@@ -121,14 +215,14 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		}
 		bundlePrice = parseInt(bundle.priceMonthly)
 		tokenType = 'public'
-		tokenAmount = parseInt(bundle.description.split(' ')[0]) // Extract number of classes
+		tokenAmount = parseInt(bundle.description.split(' ')[0])
 	} else if (bundleType === 'individual') {
 		const bundle = individualtiers.find(tier => tier.name === bundleName)
 		if (!bundle) {
 			return { error: 'Invalid bundle name for individual training.' }
 		}
 		bundlePrice = parseInt(bundle.price.monthly)
-		tokenAmount = parseInt(bundle.description.split(' ')[0]) // Extract number of classes
+		tokenAmount = parseInt(bundle.description.split(' ')[0])
 		switch (bundleName) {
 			case 'Workout of the day':
 				tokenType = 'workoutDay'
@@ -150,16 +244,16 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		return { error: 'Invalid bundle type.' }
 	}
 
-	// Check if the user has enough credits
+	// Check if user has enough credits
 	if (userData.wallet < bundlePrice) {
 		return { error: 'Not enough credits to purchase the bundle.' }
 	}
 
-	// Deduct credits and add tokens
+	// Update balances
 	const newWalletBalance = userData.wallet - bundlePrice
 	const newTokenBalance = userData[`${tokenType}_token`] + tokenAmount
 
-	// Update user data with the new token balance
+	// Update user data
 	const updateFields = {
 		wallet: newWalletBalance,
 		[`${tokenType}_token`]: newTokenBalance
@@ -175,7 +269,7 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		return { error: updateError.message }
 	}
 
-	// Insert bundle purchase record
+	// Record transactions
 	const transactionRecords = [
 		{
 			user_id: userId,
@@ -197,7 +291,6 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 
 	if (transactionError) {
 		console.error('Error recording transactions:', transactionError.message)
-		// Note: We're not returning here to ensure the purchase is still considered successful
 	}
 
 	return {

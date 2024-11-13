@@ -14,8 +14,32 @@ import {
 	FaUsers,
 	FaShieldAlt,
 	FaBlender,
-	FaCoffee
+	FaCoffee,
+	FaStar,
+	FaTrophy
 } from 'react-icons/fa'
+
+const vistaFinaleBundle = {
+	name: 'VISTA FINALE',
+	id: 'tier-finale',
+	href: '#',
+	priceOriginal: '1000 Credits',
+	priceMonthly: '750 Credits',
+	discount: '25% OFF',
+	description: '8 Week Premium Transformation',
+	features: [
+		'20 Personal Training Sessions',
+		'10 Group Classes',
+		'10 Premium Protein Shakes',
+		'InBody Composition Test',
+		'Personalized Diet Plan (Optional)',
+		'Physio Session',
+		'Limited Edition Vista Merchandise',
+		'8 Week Commitment to Excellence'
+	],
+	mostPopular: true,
+	isSpecial: true
+}
 
 const classestiers = [
 	{
@@ -131,11 +155,6 @@ const proteinShakeTier = {
 	mostPopular: false
 }
 
-const allTiers = [...classestiers, essentialsTier]
-function classNames(...classes: string[]) {
-	return classes.filter(Boolean).join(' ')
-}
-
 export default function Bundles() {
 	const [essentialsTillDate, setEssentialsTillDate] = useState<string | null>(
 		null
@@ -180,6 +199,12 @@ export default function Bundles() {
 				if (result.data) {
 					setEssentialsTillDate(result.data.essential_till)
 				}
+			} else if (bundleName === 'VISTA FINALE') {
+				result = await purchaseBundle({
+					userId: user.id,
+					bundleType: 'finale',
+					bundleName
+				})
 			} else {
 				result = await purchaseBundle({
 					userId: user.id,
@@ -214,6 +239,8 @@ export default function Bundles() {
 
 	const getBundleIcon = (bundleName: string) => {
 		switch (bundleName) {
+			case 'VISTA FINALE':
+				return <FaTrophy className='text-yellow-400 h-12 w-12' />
 			case 'EXCEED':
 				return <FaCrown className='text-yellow-500 h-8 w-8' />
 			case 'ACHIEVE':
@@ -232,11 +259,12 @@ export default function Bundles() {
 	const renderTierCard = (
 		tier: any,
 		type: string,
-		mainColor: any = 'green'
+		mainColor: string = 'green'
 	) => {
 		const isProcessingThis =
 			isProcessing && selectedTier === `${type}-${tier.name}`
 		const isPopular = tier.mostPopular
+		const isSpecial = tier.isSpecial
 
 		return (
 			<motion.div
@@ -245,7 +273,9 @@ export default function Bundles() {
 				whileHover={{ y: -5, transition: { duration: 0.2 } }}
 				className={`flex flex-col justify-between rounded-3xl p-8 xl:p-10 h-full transform transition-all duration-300
           ${
-						isPopular
+						isSpecial
+							? 'bg-gradient-to-br from-purple-900 to-purple-600 text-white ring-2 ring-yellow-400 shadow-xl'
+							: isPopular
 							? `bg-${mainColor}-600 text-white ring-${mainColor}-500 shadow-xl`
 							: 'bg-gray-800 ring-1 ring-gray-700'
 					}`}>
@@ -253,13 +283,16 @@ export default function Bundles() {
 					{/* Icon & Title */}
 					<div className='flex flex-col items-center space-y-4'>
 						{getBundleIcon(tier.name)}
-						<h3
-							className={`text-2xl font-bold ${
-								isPopular ? 'text-white' : 'text-gray-100'
-							}`}>
-							{tier.name}
-						</h3>
-						{isPopular && (
+						<h3 className={`text-2xl font-bold text-white`}>{tier.name}</h3>
+						{isSpecial && (
+							<motion.span
+								initial={{ scale: 0 }}
+								animate={{ scale: 1 }}
+								className='inline-block px-3 py-1 text-sm font-semibold rounded-full bg-yellow-400 text-purple-900'>
+								Limited Time Offer - {tier.discount}
+							</motion.span>
+						)}
+						{isPopular && !isSpecial && (
 							<motion.span
 								initial={{ scale: 0 }}
 								animate={{ scale: 1 }}
@@ -271,15 +304,26 @@ export default function Bundles() {
 
 					{/* Price & Description */}
 					<div className='space-y-4'>
-						<p
-							className={`text-3xl font-bold ${
-								isPopular ? 'text-white' : `text-${mainColor}-400`
-							}`}>
-							{tier.priceMonthly || `${tier.price?.monthly} credits`}
-						</p>
+						{isSpecial ? (
+							<div className='space-y-2'>
+								<p className='text-lg line-through text-gray-300'>
+									{tier.priceOriginal}
+								</p>
+								<p className='text-3xl font-bold text-white'>
+									{tier.priceMonthly}
+								</p>
+							</div>
+						) : (
+							<p
+								className={`text-3xl font-bold ${
+									isPopular ? 'text-white' : `text-${mainColor}-400`
+								}`}>
+								{tier.priceMonthly || `${tier.price?.monthly} credits`}
+							</p>
+						)}
 						<p
 							className={`text-xl ${
-								isPopular ? 'text-white' : 'text-gray-300'
+								isPopular || isSpecial ? 'text-white' : 'text-gray-300'
 							}`}>
 							{tier.description}
 						</p>
@@ -293,12 +337,14 @@ export default function Bundles() {
 								initial={{ opacity: 0, x: -20 }}
 								animate={{ opacity: 1, x: 0 }}
 								transition={{ delay: index * 0.1 }}
-								className={`flex items-center space-x-2 ${
-									isPopular ? 'text-white' : 'text-gray-300'
-								}`}>
+								className='flex items-center space-x-2 text-white'>
 								<svg
 									className={`h-5 w-5 ${
-										isPopular ? 'text-white' : `text-${mainColor}-400`
+										isSpecial
+											? 'text-yellow-400'
+											: isPopular
+											? 'text-white'
+											: `text-${mainColor}-400`
 									}`}
 									fill='none'
 									strokeLinecap='round'
@@ -324,7 +370,9 @@ export default function Bundles() {
             mt-8 w-full px-4 py-3 rounded-xl font-semibold text-sm
             transition-all duration-300 transform
             ${
-							isPopular
+							isSpecial
+								? 'bg-yellow-400 text-purple-900 hover:bg-yellow-300'
+								: isPopular
 								? `bg-white text-${mainColor}-600 hover:bg-gray-100`
 								: `bg-${mainColor}-500 text-white hover:bg-${mainColor}-600`
 						}
@@ -350,7 +398,24 @@ export default function Bundles() {
 
 	return (
 		<div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12'>
-			{/* Group Classes Section */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				className='mb-32'>
+				<div className='text-center mb-12'>
+					<motion.h2
+						initial={{ opacity: 0, y: -20 }}
+						animate={{ opacity: 1, y: 0 }}
+						className='text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-600'>
+						Premium Transformation Package
+					</motion.h2>
+					<p className='mt-4 text-lg text-gray-400'>
+						Experience the ultimate fitness transformation with our most
+						comprehensive package
+					</p>
+				</div>
+				{renderTierCard(vistaFinaleBundle, 'finale', 'purple')}
+			</motion.div>
 			<motion.div
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
