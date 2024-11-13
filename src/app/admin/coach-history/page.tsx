@@ -473,7 +473,7 @@ export default function CoachHistory() {
 
 												<div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-4'>
 													<div className='bg-gray-700 p-4 rounded-lg'>
-														<h3 className='text-lg font-semibold'>
+														<h3 className='text-lg font-semibold text-white'>
 															Total Sessions
 														</h3>
 														<p className='text-2xl text-green-400'>
@@ -482,7 +482,9 @@ export default function CoachHistory() {
 													</div>
 
 													<div className='bg-gray-700 p-4 rounded-lg'>
-														<h3 className='text-lg font-semibold'>Peak Time</h3>
+														<h3 className='text-lg font-semibold text-white'>
+															Peak Time
+														</h3>
 														<p className='text-2xl text-green-400'>
 															{Object.entries(coach.popularTimeSlots).sort(
 																([, a], [, b]) => b - a
@@ -552,7 +554,7 @@ export default function CoachHistory() {
 												{/* Charts Section */}
 												<div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
 													<div className='bg-gray-700 p-4 rounded-lg'>
-														<h3 className='text-lg font-semibold mb-4'>
+														<h3 className='text-lg font-semibold mb-4 text-white'>
 															Activity Breakdown
 														</h3>
 														<div className='h-[300px] flex items-center justify-center'>
@@ -572,7 +574,7 @@ export default function CoachHistory() {
 														</div>
 													</div>
 													<div className='bg-gray-700 p-4 rounded-lg'>
-														<h3 className='text-lg font-semibold mb-4'>
+														<h3 className='text-lg font-semibold mb-4 text-white'>
 															Popular Time Slots
 														</h3>
 														<div className='h-[300px]'>
