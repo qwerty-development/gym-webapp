@@ -705,7 +705,7 @@ export default function Dashboard() {
 	if (!isLoaded || !isSignedIn) {
 		return (
 			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
-				<RingLoader color={'#10B981'} size={120} />
+				<RingLoader color={'#10B981'} size={130} />
 			</div>
 		)
 	}
@@ -713,7 +713,7 @@ export default function Dashboard() {
 	if (isLoading) {
 		return (
 			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
-				<RingLoader color={'#10B981'} size={120} />
+				<RingLoader color={'#10B981'} size={130} />
 			</div>
 		)
 	}
@@ -721,7 +721,7 @@ export default function Dashboard() {
 	if (phoneVerificationLoading) {
 		return (
 			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
-				<RingLoader color={'#10B981'} size={120} />
+				<RingLoader color={'#10B981'} size={130} />
 			</div>
 		)
 	}
