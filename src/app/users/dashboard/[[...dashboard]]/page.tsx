@@ -52,6 +52,7 @@ import TokenBalance from '@/app/components/users/TokenBalance'
 import { supabaseClient } from '../../../../../utils/supabaseClient'
 import LoyaltyCard from '@/app/components/users/LoyaltyCard'
 import { DefaultContext } from 'react-icons/lib'
+import UserInfoVerification from '@/app/components/users/UserInfoVerification'
 
 type Reservation = {
 	id: number
@@ -122,6 +123,10 @@ export default function Dashboard() {
 	const [phoneVerified, setPhoneVerified] = useState<boolean>(false)
 	const [phoneVerificationLoading, setPhoneVerificationLoading] =
 		useState<boolean>(true)
+	const [userInfoVerificationLoading, setUserInfoVerificationLoading] =
+		useState<boolean>(true)
+	const [requiredFields, setRequiredFields] = useState<string[]>([])
+	const [isVerified, setIsVerified] = useState<boolean>(false)
 
 	const [adminGroupSessions, setAdminGroupSessions] = useState<any[]>([])
 	const [showBulkCalendarAdd, setShowBulkCalendarAdd] = useState<any>(false)
@@ -676,30 +681,37 @@ export default function Dashboard() {
 		setIsCancelling(false)
 	}
 	useEffect(() => {
-		const verifyPhone = async () => {
+		const checkRequiredFields = async () => {
 			if (!user) return
+
 			try {
 				const supabase = await supabaseClient()
 				const { data, error } = await supabase
 					.from('users')
-					.select('phone')
+					.select('phone, DOB, height, weight, gender')
 					.eq('user_id', user.id)
 					.single()
 
-				if (error) {
-					console.error('Error checking phone verification:', error)
-					return
-				}
+				if (error) throw error
 
-				setPhoneVerified(!!data?.phone)
+				const missingFields = []
+
+				if (!data.phone) missingFields.push('phone')
+				if (!data.DOB) missingFields.push('DOB')
+				if (!data.height) missingFields.push('height')
+				if (!data.weight || !data.weight.length) missingFields.push('weight')
+				if (!data.gender) missingFields.push('gender')
+
+				setRequiredFields(missingFields)
+				setIsVerified(missingFields.length === 0)
 			} catch (error) {
-				console.error('Error in phone verification:', error)
+				console.error('Error checking required fields:', error)
 			} finally {
-				setPhoneVerificationLoading(false)
+				setUserInfoVerificationLoading(false)
 			}
 		}
 
-		verifyPhone()
+		checkRequiredFields()
 	}, [user])
 
 	if (!isLoaded || !isSignedIn) {
@@ -718,7 +730,7 @@ export default function Dashboard() {
 		)
 	}
 
-	if (phoneVerificationLoading) {
+	if (userInfoVerificationLoading) {
 		return (
 			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
 				<RingLoader color={'#10B981'} size={130} />
@@ -727,14 +739,16 @@ export default function Dashboard() {
 	}
 
 	if (
-		!phoneVerified &&
+		!isVerified &&
 		user?.publicMetadata.role !== 'admin' &&
-		!phoneVerificationLoading
+		!userInfoVerificationLoading &&
+		requiredFields.length > 0
 	) {
 		return (
-			<PhoneVerification
+			<UserInfoVerification
 				userId={user.id}
-				onVerificationComplete={() => setPhoneVerified(true)}
+				requiredFields={requiredFields}
+				onVerificationComplete={() => setIsVerified(true)}
 			/>
 		)
 	}
