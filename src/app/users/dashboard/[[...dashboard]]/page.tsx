@@ -108,7 +108,7 @@ interface Session {
 }
 
 const LoadingOverlay = () => (
-	<div className='fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50'>
+	<div className='fixed     inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50'>
 		<div className='p-5 mx-auto text-center flex flex-col justify-center items-center rounded-lg'>
 			<RingLoader color={'#10B981'} size={70} />
 			<p className='mt-4 text-green-400 text-xl'>Cancelling reservation...</p>
@@ -716,7 +716,7 @@ export default function Dashboard() {
 
 	if (!isLoaded || !isSignedIn) {
 		return (
-			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
+			<div className='min-h-screen    flex items-center justify-center bg-gray-800'>
 				<RingLoader color={'#10B981'} size={130} />
 			</div>
 		)
@@ -724,7 +724,7 @@ export default function Dashboard() {
 
 	if (isLoading) {
 		return (
-			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
+			<div className='min-h-screen     flex items-center justify-center bg-gray-800'>
 				<RingLoader color={'#10B981'} size={130} />
 			</div>
 		)
@@ -732,7 +732,7 @@ export default function Dashboard() {
 
 	if (userInfoVerificationLoading) {
 		return (
-			<div className='min-h-screen flex items-center justify-center bg-gray-800'>
+			<div className='min-h-screen    flex items-center justify-center bg-gray-800'>
 				<RingLoader color={'#10B981'} size={130} />
 			</div>
 		)

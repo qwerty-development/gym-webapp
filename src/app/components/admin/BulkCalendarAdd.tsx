@@ -225,20 +225,20 @@ export default function BulkCalendarAdd({ sessions, isVisible, onClose }: any) {
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className='fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50'
+			className='fixed inset-0 bg-black    bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50'
 			onClick={onClose}>
 			<motion.div
 				initial={{ scale: 0.9, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
 				exit={{ scale: 0.9, opacity: 0 }}
-				className='bg-gray-800 rounded-xl w-full max-w-4xl m-4 shadow-2xl overflow-hidden'
+				className='bg-gray-800 rounded-xl    w-full max-w-4xl m-4 shadow-2xl overflow-hidden'
 				onClick={e => e.stopPropagation()}>
 				<div className='p-6 border-b border-gray-700'>
 					<h2 className='text-2xl font-bold text-green-400 mb-4'>
 						Add Sessions to Calendar
 					</h2>
 
-					<div className='flex flex-col sm:flex-row gap-4'>
+					<div className='flex flex-col    sm:flex-row gap-4'>
 						<div className='relative flex-grow'>
 							<FaSearch className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
 							<input
