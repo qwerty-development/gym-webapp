@@ -9,7 +9,9 @@ import {
 	FaCheckCircle,
 	FaTimesCircle,
 	FaPlus,
-	FaMinus
+	FaMinus,
+	FaSortUp,
+	FaSortDown
 } from 'react-icons/fa'
 import {
 	fetchUsers,
@@ -56,6 +58,11 @@ interface LoadingStates {
 	modalUpdate: boolean
 }
 
+interface SortConfig {
+	key: string
+	direction: 'asc' | 'desc'
+}
+
 const ModifyCreditsComponent = () => {
 	const [users, setUsers] = useState<User[]>([])
 	const [essentialsTill, setEssentialsTill] = useState('')
@@ -67,6 +74,10 @@ const ModifyCreditsComponent = () => {
 	const [isUpdating, setIsUpdating] = useState(false)
 	const [sortOption, setSortOption] = useState('alphabetical')
 	const [modalIsOpen, setModalIsOpen] = useState(false)
+	const [sortConfig, setSortConfig] = useState<SortConfig>({
+		key: '',
+		direction: 'asc'
+	})
 	const [isLoading, setIsLoading] = useState(false)
 	const [sale, setSale] = useState(0)
 	const [tokenUpdates, setTokenUpdates] = useState<TokenUpdates>({
@@ -83,6 +94,69 @@ const ModifyCreditsComponent = () => {
 		searchUsers: false,
 		modalUpdate: false
 	})
+	const handleSort = (key: string) => {
+		let direction: 'asc' | 'desc' = 'asc'
+
+		if (sortConfig.key === key) {
+			direction = sortConfig.direction === 'asc' ? 'desc' : 'asc'
+		}
+
+		setSortConfig({ key, direction })
+
+		const sortedUsers = [...users].sort((a, b) => {
+			let aValue: any = a[key as keyof User]
+			let bValue: any = b[key as keyof User]
+
+			// Handle special cases
+			if (key === 'weight') {
+				aValue = a.weight.length > 0 ? a.weight[a.weight.length - 1].value : 0
+				bValue = b.weight.length > 0 ? b.weight[b.weight.length - 1].value : 0
+			}
+
+			// Handle null/undefined values
+			if (aValue == null) aValue = ''
+			if (bValue == null) bValue = ''
+
+			// Compare based on type
+			if (typeof aValue === 'string') {
+				return direction === 'asc'
+					? aValue.localeCompare(bValue)
+					: bValue.localeCompare(aValue)
+			}
+
+			return direction === 'asc' ? aValue - bValue : bValue - aValue
+		})
+
+		setUsers(sortedUsers)
+	}
+
+	const getSortIndicator = (key: string) => {
+		if (sortConfig.key !== key) return <FaSort className='ml-1 inline' />
+		return sortConfig.direction === 'asc' ? (
+			<FaSortUp className='ml-1 inline text-green-400' />
+		) : (
+			<FaSortDown className='ml-1 inline text-green-400' />
+		)
+	}
+
+	// Header cell component
+	const HeaderCell = ({
+		children,
+		sortKey
+	}: {
+		children: React.ReactNode
+		sortKey: string
+	}) => (
+		<th
+			scope='col'
+			className='py-4 px-6 text-left cursor-pointer hover:bg-gray-700 transition-colors'
+			onClick={() => handleSort(sortKey)}>
+			<div className='flex items-center'>
+				{children}
+				{getSortIndicator(sortKey)}
+			</div>
+		</th>
+	)
 
 	const isAnyLoading = () => {
 		return (
@@ -372,16 +446,6 @@ const ModifyCreditsComponent = () => {
 						)}
 					</motion.button>
 				</div>
-
-				<motion.select
-					value={sortOption}
-					onChange={handleSortChange}
-					disabled={isAnyLoading()}
-					whileHover={{ scale: isAnyLoading() ? 1 : 1.05 }}
-					className='w-fit p-3 bg-gray-800 text-white border-2 border-green-500 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 disabled:opacity-50'>
-					<option value='alphabetical'>Sort Alphabetically</option>
-					<option value='newest'>Sort by Newest</option>
-				</motion.select>
 			</div>
 
 			<motion.div
@@ -395,62 +459,36 @@ const ModifyCreditsComponent = () => {
 					</div>
 				) : (
 					<table className='w-full text-sm text-left text-gray-300'>
-						<thead className='text-xs uppercase bg-gray-800'>
+						<thead className='text-xs uppercase bg-gray-800 sticky top-0'>
 							<tr>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Username
-								</th>
-								<th scope='col' className='py-4 px-6 text-left text-nowrap'>
-									First Name
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Last Name
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Wallet
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Gender
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Email
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Phone
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									DOB
-								</th>
+								<HeaderCell sortKey='username'>Username</HeaderCell>
+								<HeaderCell sortKey='first_name'>First Name</HeaderCell>
+								<HeaderCell sortKey='last_name'>Last Name</HeaderCell>
+								<HeaderCell sortKey='wallet'>Wallet</HeaderCell>
+								<HeaderCell sortKey='gender'>Gender</HeaderCell>
+								<HeaderCell sortKey='email'>Email</HeaderCell>
+								<HeaderCell sortKey='phone'>Phone</HeaderCell>
+								<HeaderCell sortKey='DOB'>DOB</HeaderCell>
 								<th scope='col' className='py-4 px-6 text-left'>
 									Age
 								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Height
-								</th>
-								<th scope='col' className='py-4 px-6 text-left'>
-									Weight
-								</th>
+								<HeaderCell sortKey='height'>Height</HeaderCell>
+								<HeaderCell sortKey='weight'>Weight</HeaderCell>
 								<th scope='col' className='py-4 px-6 text-center'>
 									is Free
 								</th>
-								<th scope='col' className='py-4 px-6 text-center'>
+								<HeaderCell sortKey='private_token'>
 									Private Sessions
-								</th>
-								<th scope='col' className='py-4 px-6 text-center'>
+								</HeaderCell>
+								<HeaderCell sortKey='semiPrivate_token'>
 									Semi-Private Sessions
-								</th>
-								<th scope='col' className='py-4 px-6 text-center'>
-									Class Sessions
-								</th>
-								<th scope='col' className='py-4 px-6 text-center'>
+								</HeaderCell>
+								<HeaderCell sortKey='public_token'>Class Sessions</HeaderCell>
+								<HeaderCell sortKey='workoutDay_token'>
 									Workout of the Day
-								</th>
-								<th scope='col' className='py-4 px-6 text-center'>
-									Shake Tokens
-								</th>
-								<th scope='col' className='py-4 px-6 text-center'>
-									Essentials
-								</th>
+								</HeaderCell>
+								<HeaderCell sortKey='shake_token'>Shake Tokens</HeaderCell>
+								<HeaderCell sortKey='essential_till'>Essentials</HeaderCell>
 								<th scope='col' className='py-4 px-6 text-right'>
 									Actions
 								</th>
