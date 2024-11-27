@@ -191,7 +191,7 @@ export const fetchUpcomingSessions = async type => {
         count
       `
 			)
-			.gte('date', now.split('T')[0])
+			.gte('date', OneMonthAgo.split('T')[0])
 			.gt('count', 0)
 			.order('date', { ascending: true })
 			.order('start_time', { ascending: true })
