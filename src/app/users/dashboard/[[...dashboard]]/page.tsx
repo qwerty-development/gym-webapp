@@ -45,6 +45,7 @@ import {
 	FaCalendarPlus
 } from 'react-icons/fa'
 import Link from 'next/link'
+import { fetchUsersWithLowBalances } from '../../../../../utils/adminRequests'
 import useConfirmationModal from '../../../../../utils/useConfirmationModel'
 import ConfirmationModal from '@/app/components/users/ConfirmationModal'
 import { FaChevronLeft, FaChevronRight, FaChevronDown } from 'react-icons/fa'
@@ -195,6 +196,19 @@ export default function Dashboard() {
 	useEffect(() => {
 		if (user) {
 			fetchUserData()
+		}
+	}, [user])
+
+	const [usersWithLowBalances, setUsersWithLowBalances] = useState<any>([])
+
+	useEffect(() => {
+		const fetchLowBalanceUsers = async () => {
+			const users: any = await fetchUsersWithLowBalances()
+			setUsersWithLowBalances(users)
+		}
+
+		if (user?.publicMetadata.role === 'admin') {
+			fetchLowBalanceUsers()
 		}
 	}, [user])
 
@@ -1523,6 +1537,123 @@ export default function Dashboard() {
 									</div>
 								</motion.div>
 							))}
+						</div>
+					)}
+				</div>
+			)}
+
+			{user.publicMetadata.role === 'admin' && (
+				<div className='space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
+					<div className='flex justify-between items-center'>
+						<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
+							Users With Low Balances
+						</h2>
+						<div className='text-sm text-gray-400'>
+							* Shows users with remaining credits (1-9) or tokens (1)
+						</div>
+					</div>
+					{usersWithLowBalances.length === 0 ? (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							className='bg-gray-800 rounded-xl p-8 text-center'>
+							<FaUsers className='text-green-500 text-5xl mb-4 mx-auto' />
+							<p className='text-xl text-gray-300'>
+								No users currently have low balances.
+							</p>
+						</motion.div>
+					) : (
+						<div className='overflow-x-auto rounded-lg shadow'>
+							<table className='min-w-full divide-y divide-gray-700'>
+								<thead className='bg-gray-800'>
+									<tr>
+										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+											Name
+										</th>
+										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+											Email
+										</th>
+										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+											Phone
+										</th>
+										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+											Credits
+										</th>
+										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+											Private Tokens
+										</th>
+										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+											Public Tokens
+										</th>
+									</tr>
+								</thead>
+								<tbody className='bg-gray-900 divide-y divide-gray-700'>
+									{usersWithLowBalances.map((user: any, index: any) => {
+										const hasLowCredits = user.wallet > 0 && user.wallet < 10
+										const hasLowPrivateTokens =
+											user.private_token > 0 && user.private_token < 2
+										const hasLowPublicTokens =
+											user.public_token > 0 && user.public_token < 2
+
+										return (
+											<motion.tr
+												key={user.id}
+												initial={{ opacity: 0, y: 20 }}
+												animate={{ opacity: 1, y: 0 }}
+												transition={{ delay: index * 0.05 }}
+												className='hover:bg-gray-800 transition-colors duration-200'>
+												<td className='px-6 py-4 whitespace-nowrap'>
+													<div className='flex items-center'>
+														<div className='text-sm font-medium text-gray-300'>
+															{user.first_name} {user.last_name}
+														</div>
+													</div>
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap'>
+													<div className='text-sm text-gray-300'>
+														{user.email}
+													</div>
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap'>
+													<div className='text-sm text-gray-300'>
+														{user.phone || 'N/A'}
+													</div>
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap'>
+													<div
+														className={`text-sm ${
+															hasLowCredits
+																? 'text-red-400 font-bold'
+																: 'text-gray-300'
+														}`}>
+														{user.wallet} credits
+													</div>
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap'>
+													<div
+														className={`text-sm ${
+															hasLowPrivateTokens
+																? 'text-red-400 font-bold'
+																: 'text-gray-300'
+														}`}>
+														{user.private_token}
+													</div>
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap'>
+													<div
+														className={`text-sm ${
+															hasLowPublicTokens
+																? 'text-red-400 font-bold'
+																: 'text-gray-300'
+														}`}>
+														{user.public_token}
+													</div>
+												</td>
+											</motion.tr>
+										)
+									})}
+								</tbody>
+							</table>
 						</div>
 					)}
 				</div>

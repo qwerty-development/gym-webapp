@@ -263,3 +263,63 @@ export const fetchTotalUsers = async () => {
 
 	return count || 0
 }
+
+export const fetchUsersWithLowBalances = async () => {
+	const supabase = await supabaseClient()
+
+	// Fetch active users with verified phone numbers
+	const { data, error } = await supabase
+		.from('users')
+		.select('*')
+		.neq('isFree', true)
+		.neq('phone', '')
+
+	if (error) {
+		console.error('Error fetching users with low balances:', error)
+		return []
+	}
+
+	// Filter users based on refined conditions
+	const filteredUsers = data.filter(user => {
+		const credits = user.wallet || 0
+		const privateTokens = user.private_token || 0
+		const publicTokens = user.public_token || 0
+
+		// Skip users with no activity
+		if (credits === 0 && privateTokens === 0 && publicTokens === 0) {
+			return false
+		}
+
+		// Include users who are running low on either credits OR tokens
+		const hasLowCredits = credits > 0 && credits < 10
+		const hasLowPrivateTokens = privateTokens > 0 && privateTokens < 2
+		const hasLowPublicTokens = publicTokens > 0 && publicTokens < 2
+
+		// Must have at least one low balance but not be completely empty
+		return (
+			(hasLowCredits || hasLowPrivateTokens || hasLowPublicTokens) &&
+			!(credits === 0 && privateTokens === 0 && publicTokens === 0)
+		)
+	})
+
+	// Enhanced sorting algorithm
+	return filteredUsers.sort((a, b) => {
+		// First prioritize users with both low credits and tokens
+		const aHasBothLow =
+			a.wallet < 10 && (a.private_token < 2 || a.public_token < 2)
+		const bHasBothLow =
+			b.wallet < 10 && (b.private_token < 2 || b.public_token < 2)
+
+		if (aHasBothLow !== bHasBothLow) {
+			return aHasBothLow ? -1 : 1
+		}
+
+		// Then sort by lowest credits
+		if (a.wallet !== b.wallet) {
+			return a.wallet - b.wallet
+		}
+
+		// Finally sort by total tokens
+		return a.private_token + a.public_token - (b.private_token + b.public_token)
+	})
+}
