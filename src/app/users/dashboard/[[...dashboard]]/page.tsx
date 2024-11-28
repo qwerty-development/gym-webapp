@@ -136,7 +136,7 @@ export default function Dashboard() {
 	const [showCalendarView, setShowCalendarView] = useState(false)
 
 	const [isCancelling, setIsCancelling] = useState(false)
-	const [totalUsers, setTotalUsers] = useState(0)
+	const [totalUsers, setTotalUsers] = useState({ total: 0, active: 0 })
 	const [totalActivities, setTotalActivities] = useState(0)
 
 	const [todaysSessions, setTodaysSessions] = useState(0)
@@ -321,15 +321,12 @@ export default function Dashboard() {
 		const fetchAdminData = async () => {
 			const users = await fetchTotalUsers()
 			const activities = await fetchTotalActivities()
-
 			const sessions = await fetchTodaysSessions()
 
 			setTotalUsers(users)
 			setTotalActivities(activities)
-
 			setTodaysSessions(sessions)
 		}
-
 		fetchAdminData()
 	}, [isCancelling])
 
@@ -1056,10 +1053,32 @@ export default function Dashboard() {
 											<>
 												<div>
 													<p className='text-gray-300'>Total Users</p>
-													<p className='text-3xl font-bold text-white'>
-														{totalUsers}
-													</p>
+													<div className='flex items-end gap-2'>
+														<p className='text-3xl font-bold text-white'>
+															{totalUsers.total}
+														</p>
+													</div>
 												</div>
+
+												<div>
+													<p className='text-gray-300'>Active Users</p>
+													<div className='flex items-center gap-2'>
+														<p className='text-3xl font-bold text-white'>
+															{totalUsers.active}
+														</p>
+														<div className='h-1 flex-1 bg-gray-700 rounded-full overflow-hidden'>
+															<div
+																className='h-full bg-green-500 transition-all duration-500'
+																style={{
+																	width: `${Math.round(
+																		(totalUsers.active / totalUsers.total) * 100
+																	)}%`
+																}}
+															/>
+														</div>
+													</div>
+												</div>
+
 												<div>
 													<p className='text-gray-300'>Total Activities</p>
 													<p className='text-3xl font-bold text-white'>

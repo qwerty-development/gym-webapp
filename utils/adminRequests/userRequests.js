@@ -250,18 +250,33 @@ export const updateUserCreditsCancellation = async (userId, totalRefund) => {
 		return { success: false, error: 'User not found' }
 	}
 }
+
 export const fetchTotalUsers = async () => {
 	const supabase = await supabaseClient()
-	const { count, error } = await supabase
-		.from('users')
-		.select('*', { count: 'exact', head: true })
+	try {
+		const { data: activeData, error: activeError } = await supabase
+			.from('users')
+			.select('id')
+			.or(
+				'wallet.gt.0,private_token.gt.0,public_token.gt.0,punches.gt.0,shake_token.gt.0'
+			)
 
-	if (error) {
-		console.error('Error fetching total users:', error.message)
-		return 0
+		const { data: totalData, error: totalError } = await supabase
+			.from('users')
+			.select('id')
+
+		if (activeError || totalError) throw activeError || totalError
+
+		console.log(activeData)
+		console.log(totalData)
+		return {
+			total: totalData?.length || 0,
+			active: activeData?.length || 0
+		}
+	} catch (error) {
+		console.error('Error fetching total users:', error)
+		return { total: 0, active: 0 }
 	}
-
-	return count || 0
 }
 
 export const fetchUsersWithLowBalances = async () => {
