@@ -464,37 +464,32 @@ async function deleteConflictingTimeSlots(
 	startTime,
 	endTime
 ) {
-	// Delete conflicting individual time slots
 	const { error: individualError } = await supabase
 		.from('time_slots')
 		.delete()
 		.eq('coach_id', coachId)
 		.eq('date', date)
 		.neq('booked', true)
-		.eq('start_time', startTime)
-		.eq('end_time', endTime)
+		.filter('start_time', 'lt', endTime)
+		.filter('end_time', 'gt', startTime)
 
 	if (individualError) {
 		console.error(
-			'Error deleting conflicting individual time slots:',
+			'Error deleting conflicting individual slots:',
 			individualError.message
 		)
 	}
 
-	// Delete conflicting group time slots
 	const { error: groupError } = await supabase
 		.from('group_time_slots')
 		.delete()
 		.eq('coach_id', coachId)
 		.eq('date', date)
 		.eq('count', 0)
-		.eq('start_time', startTime)
-		.eq('end_time', endTime)
+		.filter('start_time', 'lt', endTime)
+		.filter('end_time', 'gt', startTime)
 
 	if (groupError) {
-		console.error(
-			'Error deleting conflicting group time slots:',
-			groupError.message
-		)
+		console.error('Error deleting conflicting group slots:', groupError.message)
 	}
 }
