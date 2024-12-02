@@ -126,7 +126,55 @@ export const fetchGroupTimeSlots = async () => {
 	return sortedData
 }
 
+export const checkExistingTimeSlot = async timeSlot => {
+	const supabase = await supabaseClient()
+	const { data, error } = await supabase
+		.from('time_slots')
+		.select('*')
+		.eq('coach_id', timeSlot.coach_id)
+		.eq('activity_id', timeSlot.activity_id)
+		.eq('date', timeSlot.date)
+		.eq('start_time', timeSlot.start_time)
+		.eq('end_time', timeSlot.end_time)
+
+	if (error) {
+		console.error('Error checking existing time slot:', error.message)
+		return { error: error.message }
+	}
+
+	return { exists: data && data.length > 0 }
+}
+
+export const checkExistingGroupTimeSlot = async timeSlot => {
+	const supabase = await supabaseClient()
+	const { data, error } = await supabase
+		.from('group_time_slots')
+		.select('*')
+		.eq('coach_id', timeSlot.coach_id)
+		.eq('activity_id', timeSlot.activity_id)
+		.eq('date', timeSlot.date)
+		.eq('start_time', timeSlot.start_time)
+		.eq('end_time', timeSlot.end_time)
+
+	if (error) {
+		console.error('Error checking existing group time slot:', error.message)
+		return { error: error.message }
+	}
+
+	return { exists: data && data.length > 0 }
+}
+
 export const addTimeSlot = async timeSlot => {
+	// Check if the time slot already exists
+	const { exists, error: checkError } = await checkExistingTimeSlot(timeSlot)
+	if (checkError) {
+		return { success: false, error: checkError }
+	}
+
+	if (exists) {
+		return { success: false, error: 'Time slot already exists' }
+	}
+
 	const supabase = await supabaseClient()
 	const { data, error } = await supabase.from('time_slots').insert([timeSlot])
 
@@ -139,13 +187,25 @@ export const addTimeSlot = async timeSlot => {
 }
 
 export const addTimeSlotGroup = async timeSlot => {
+	// Check if the group time slot already exists
+	const { exists, error: checkError } = await checkExistingGroupTimeSlot(
+		timeSlot
+	)
+	if (checkError) {
+		return { success: false, error: checkError }
+	}
+
+	if (exists) {
+		return { success: false, error: 'Group time slot already exists' }
+	}
+
 	const supabase = await supabaseClient()
 	const { data, error } = await supabase
 		.from('group_time_slots')
 		.insert([timeSlot])
 
 	if (error) {
-		console.error('Error adding new time slot:', error.message)
+		console.error('Error adding new group time slot:', error.message)
 		return { success: false, error: error.message }
 	}
 
@@ -205,8 +265,6 @@ export const updateTimeSlot = async timeSlot => {
 	return { success: true, data }
 }
 
-// File: updateGroupTimeSlot.js
-
 export const updateGroupTimeSlot = async timeSlot => {
 	if (!timeSlot.id) {
 		console.error('Group Time Slot ID is required for update.')
@@ -259,5 +317,3 @@ export const updateGroupTimeSlot = async timeSlot => {
 
 	return { success: true, data }
 }
-
-

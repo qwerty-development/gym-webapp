@@ -142,6 +142,10 @@ export default function AddTimeSlotComponent() {
 			return
 		}
 
+		let successCount = 0
+		let duplicateCount = 0
+		let errorCount = 0
+
 		for (const date of selectedPrivateDates) {
 			const newTimeSlot = {
 				coach_id: selectedPrivateCoach.value,
@@ -155,14 +159,25 @@ export default function AddTimeSlotComponent() {
 			}
 
 			const result = await addTimeSlot(newTimeSlot)
-			if (!result.success) {
-				toast.error('Error adding new private time slot')
-				setButtonLoading(false)
-				return
+			if (result.success) {
+				successCount++
+			} else if (result.error === 'Time slot already exists') {
+				duplicateCount++
+			} else {
+				errorCount++
 			}
 		}
 
-		toast.success('Private time slots added successfully')
+		if (successCount > 0) {
+			toast.success(`Successfully added ${successCount} time slot(s)`)
+		}
+		if (duplicateCount > 0) {
+			toast.error(`${duplicateCount} time slot(s) already existed`)
+		}
+		if (errorCount > 0) {
+			toast.error(`Failed to add ${errorCount} time slot(s)`)
+		}
+
 		setButtonLoading(false)
 	}
 
@@ -180,6 +195,10 @@ export default function AddTimeSlotComponent() {
 			return
 		}
 
+		let successCount = 0
+		let duplicateCount = 0
+		let errorCount = 0
+
 		for (const date of selectedGroupDates) {
 			const newGroupTimeSlot = {
 				coach_id: selectedGroupCoach.value,
@@ -194,14 +213,25 @@ export default function AddTimeSlotComponent() {
 			}
 
 			const result = await addTimeSlotGroup(newGroupTimeSlot)
-			if (!result.success) {
-				toast.error('Error adding new group time slot')
-				setButtonLoading(false)
-				return
+			if (result.success) {
+				successCount++
+			} else if (result.error === 'Group time slot already exists') {
+				duplicateCount++
+			} else {
+				errorCount++
 			}
 		}
 
-		toast.success('Group time slots added successfully')
+		if (successCount > 0) {
+			toast.success(`Successfully added ${successCount} group time slot(s)`)
+		}
+		if (duplicateCount > 0) {
+			toast.error(`${duplicateCount} group time slot(s) already existed`)
+		}
+		if (errorCount > 0) {
+			toast.error(`Failed to add ${errorCount} group time slot(s)`)
+		}
+
 		setButtonLoading(false)
 	}
 
