@@ -1,11 +1,33 @@
 'use client'
 import { motion, AnimatePresence } from 'framer-motion'
+import { RotateLoader } from 'react-spinners'
 
-const CoachSelection = ({ coaches, selectedCoach, handleCoachSelect }: any) => {
+const CoachSelection = ({
+	coaches,
+	selectedCoach,
+	handleCoachSelect,
+	isLoading
+}: any) => {
+	if (isLoading) {
+		return (
+			<div className='flex justify-center items-center h-40'>
+				<RotateLoader color={'#4ADE80'} loading={true} size={20} />
+			</div>
+		)
+	}
+
+	if (!coaches?.length) {
+		return (
+			<div className='text-center text-gray-300 py-8'>
+				No coaches available for this activity at the moment.
+			</div>
+		)
+	}
+
 	return (
 		<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
 			<AnimatePresence>
-				{coaches?.map((coach: any) => (
+				{coaches.map((coach: any) => (
 					<motion.button
 						key={coach.id}
 						initial={{ opacity: 0, y: 20 }}

@@ -152,12 +152,19 @@ export default function Example() {
 		const fetchCoachesData = async () => {
 			if (selectedActivity) {
 				setCoachesLoading(true)
-				const coachesData = isPrivateTraining
-					? await fetchCoaches(selectedActivity)
-					: await fetchCoachesGroup(selectedActivity)
-				setCoaches(coachesData)
-				setCoachesLoading(false)
-				scrollToRef(coachRef)
+				try {
+					console.log('Fetching coaches for activity:', selectedActivity)
+					const coachesData = isPrivateTraining
+						? await fetchCoaches(selectedActivity)
+						: await fetchCoachesGroup(selectedActivity)
+					console.log('Fetched coaches:', coachesData)
+					setCoaches(coachesData || [])
+				} catch (error) {
+					console.error('Error fetching coaches:', error)
+					toast.error('Error loading coaches. Please try again.')
+				} finally {
+					setCoachesLoading(false)
+				}
 			} else {
 				setCoaches([])
 			}
