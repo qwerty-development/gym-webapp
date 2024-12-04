@@ -5,23 +5,26 @@ export const fetchFilteredUnbookedTimeSlots = async ({
 	date
 }) => {
 	const supabase = await supabaseClient()
+	const oneWeekAgo = new Date()
+	oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
 	let query = supabase
 		.from('time_slots')
 		.select(
 			`
-            id,
-            start_time,
-            end_time,
-            date,
-            coach_id,
-            activity_id,
-            booked,
-            user_id
-        `
+      id,
+      start_time,
+      end_time,
+      date,
+      coach_id,
+      activity_id,
+      booked,
+      user_id
+    `
 		)
-		.is('user_id', null) // Adjust based on your logic for determining unbooked slots
+		.eq('booked', false)
+		.gte('date', oneWeekAgo.toISOString().split('T')[0]) // Get slots from a week ago
 
-	// Apply filters based on provided arguments
 	if (activityId) query = query.eq('activity_id', activityId)
 	if (coachId) query = query.eq('coach_id', coachId)
 	if (date) query = query.eq('date', date)
@@ -29,7 +32,7 @@ export const fetchFilteredUnbookedTimeSlots = async ({
 	const { data, error } = await query
 
 	if (error) {
-		console.error('Error fetching filtered unbooked time slots:', error.message)
+		console.error('Error fetching time slots:', error.message)
 		return null
 	}
 
@@ -42,36 +45,35 @@ export const fetchFilteredUnbookedTimeSlotsGroup = async ({
 	date
 }) => {
 	const supabase = await supabaseClient()
+	const oneWeekAgo = new Date()
+	oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
 	let query = supabase
 		.from('group_time_slots')
 		.select(
 			`
-            id,
-            start_time,
-            end_time,
-            date,
-            coach_id,
-            activity_id,
-            booked,
-            user_id,
-			count
-        `
+      id,
+      start_time,
+      end_time,
+      date,
+      coach_id,
+      activity_id,
+      booked,
+      user_id,
+      count
+    `
 		)
-		.is('booked', false) // Adjust based on your logic for determining unbooked slots
+		.eq('booked', false)
+		.gte('date', oneWeekAgo.toISOString().split('T')[0]) // Get slots from a week ago
 
-	// Apply filters based on provided arguments
 	if (activityId) query = query.eq('activity_id', activityId)
 	if (coachId) query = query.eq('coach_id', coachId)
 	if (date) query = query.eq('date', date)
-	// if (startTime && endTime) {
-	// 	// Ensures both startTime and endTime are provided for a valid time slot filter
-	// 	query = query.gte('start_time', startTime).lte('end_time', endTime)
-	// }
 
 	const { data, error } = await query
 
 	if (error) {
-		console.error('Error fetching filtered unbooked time slots:', error.message)
+		console.error('Error fetching group time slots:', error.message)
 		return null
 	}
 

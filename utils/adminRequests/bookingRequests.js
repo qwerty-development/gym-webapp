@@ -9,6 +9,8 @@ export const bookTimeSlotForClient = async ({
 }) => {
 	const supabase = await supabaseClient()
 
+	const bookingDate = new Date(`${date}T${startTime}`)
+	const isPastBooking = bookingDate < new Date()
 	// Fetch activity details to get the credits cost
 	const { data: activityData, error: activityError } = await supabase
 		.from('activities')
@@ -111,8 +113,15 @@ export const bookTimeSlotForClient = async ({
 		console.error('Error booking time slot:', bookingError.message)
 		return { error: bookingError.message }
 	}
-	await deleteConflictingTimeSlots(supabase, coachId, date, startTime, endTime)
-	// Add transaction record
+	if (!isPastBooking) {
+		await deleteConflictingTimeSlots(
+			supabase,
+			coachId,
+			date,
+			startTime,
+			endTime
+		)
+	}
 	const { error: transactionError } = await supabase
 		.from('transactions')
 		.insert({
@@ -197,6 +206,8 @@ export const bookTimeSlotForClientGroup = async ({
 }) => {
 	const supabase = await supabaseClient()
 
+	const bookingDate = new Date(`${date}T${startTime}`)
+	const isPastBooking = bookingDate < new Date()
 	// Fetch activity details to get the credits cost, capacity, and semi-private status
 	const { data: activityData, error: activityError } = await supabase
 		.from('activities')
@@ -346,7 +357,7 @@ export const bookTimeSlotForClientGroup = async ({
 		console.error('Error booking group time slot:', timeSlotError.message)
 		return { error: timeSlotError.message }
 	}
-	if (isBooked) {
+	if (isBooked && !isPastBooking) {
 		await deleteConflictingTimeSlots(
 			supabase,
 			coachId,
