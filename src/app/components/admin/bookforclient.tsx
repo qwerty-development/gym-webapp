@@ -301,15 +301,6 @@ export default function BookForClient() {
 		fetchDatesAndTimes()
 	}, [selectedActivity, selectedCoach, selectedDate, isPrivateTraining])
 
-	const dayClassName = (date: Date) => {
-		const isPastDate =
-			date < new Date() &&
-			date >= new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
-		return `text-gray-200 hover:bg-green-500 hover:text-white ${
-			isPastDate ? 'bg-yellow-500/20' : ''
-		}`
-	}
-
 	const handleBookSession = async () => {
 		if (
 			!selectedUser ||
@@ -320,18 +311,6 @@ export default function BookForClient() {
 		) {
 			alert('Please select all booking details')
 			return
-		}
-
-		const selectedDateTime = new Date(
-			`${selectedDate?.toISOString().split('T')[0]}T${
-				selectedTime.split(' - ')[0]
-			}`
-		)
-		if (selectedDateTime < new Date()) {
-			const confirmPast = window.confirm(
-				'You are booking a session in the past. Are you sure you want to continue?'
-			)
-			if (!confirmPast) return
 		}
 
 		setLoading(true)
@@ -640,10 +619,12 @@ export default function BookForClient() {
 										}}
 										inline
 										calendarClassName='custom-datepicker rounded-xl shadow-lg bg-gray-800 border-none text-white'
-										dayClassName={dayClassName}
+										dayClassName={() =>
+											'text-gray-200 hover:bg-green-500 hover:text-white'
+										}
 										monthClassName={() => 'text-green-400'}
 										weekDayClassName={() => 'text-green-300'}
-										minDate={new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)}
+										minDate={new Date()}
 										highlightDates={highlightDates}
 									/>
 								</div>
