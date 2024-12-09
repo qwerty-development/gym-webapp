@@ -73,7 +73,7 @@ export default function BookForClient() {
 	const [selectedItems, setSelectedItems] = useState<any[]>([])
 	const [totalPrice, setTotalPrice] = useState<number>(0)
 	const [modalIsOpen, setModalIsOpen] = useState<boolean>(false)
-
+	const [timeSlotData, setTimeSlotData] = useState<any[]>([])
 	const [activities, setActivities] = useState<
 		{ id: number; name: string; credits?: number }[]
 	>([])
@@ -265,34 +265,40 @@ export default function BookForClient() {
 							coachId: selectedCoach,
 							date: selectedDate ? formatDate(selectedDate) : undefined
 					  })
+
 				if (data) {
 					if (!selectedDate) {
 						const datesForSelectedCoach = data
-							.filter(
-								(slot: { coach_id: number }) => slot.coach_id === selectedCoach
-							)
-							.map(
-								(slot: { date: string | number | Date }) => new Date(slot.date)
-							)
-							.filter((date: Date) => date >= new Date())
+							.filter(slot => slot.coach_id === selectedCoach)
+							.map(slot => new Date(slot.date))
+							.filter(date => date >= new Date())
 
 						setHighlightDates(datesForSelectedCoach)
 					}
+
 					if (selectedDate) {
-						const timesForSelectedDate = data
-							.filter(
-								(slot: { date: string | number | Date }) =>
-									new Date(slot.date).toDateString() ===
-									selectedDate.toDateString()
-							)
-							.map((slot: { start_time: string; end_time: string }) => {
-								const startTime = slot.start_time.substr(0, 5)
-								const endTime = slot.end_time.substr(0, 5)
-								return `${startTime} - ${endTime}`
-							})
+						const filteredSlots = data.filter(
+							slot =>
+								new Date(slot.date).toDateString() ===
+								selectedDate.toDateString()
+						)
+
+						setTimeSlotData(filteredSlots)
+
+						const timesForSelectedDate = filteredSlots.map((slot: any) => ({
+							time: `${slot.start_time.substr(0, 5)} - ${slot.end_time.substr(
+								0,
+								5
+							)}`,
+							count: slot?.count,
+							capacity: slot?.activities?.capacity
+						}))
+
+						const timeStrings = timesForSelectedDate.map(t => t.time)
+
 						isPrivateTraining
-							? setAvailableTimes(timesForSelectedDate)
-							: setGroupAvailableTimes(timesForSelectedDate)
+							? setAvailableTimes(timeStrings)
+							: setGroupAvailableTimes(timeStrings)
 					}
 				}
 			}
@@ -302,12 +308,26 @@ export default function BookForClient() {
 	}, [selectedActivity, selectedCoach, selectedDate, isPrivateTraining])
 
 	const dayClassName = (date: Date) => {
-		const isPastDate =
-			date < new Date() &&
-			date >= new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
-		return `text-gray-200 hover:bg-green-500 hover:text-white ${
-			isPastDate ? 'bg-yellow-500/20' : ''
-		}`
+		// Get today's date and reset time to midnight
+		const today = new Date()
+		today.setHours(0, 0, 0, 0)
+
+		// Clone and reset time of the input date
+		const compareDate = new Date(date)
+		compareDate.setHours(0, 0, 0, 0)
+
+		// Get date from a week ago
+		const weekAgo = new Date()
+		weekAgo.setDate(weekAgo.getDate() - 7)
+		weekAgo.setHours(0, 0, 0, 0)
+
+		const isPastDate = compareDate < today && compareDate >= weekAgo
+		const isToday = compareDate.getTime() === today.getTime()
+
+		return `hover:bg-green-500 hover:text-white
+        ${isPastDate ? 'bg-yellow-500/20 text-gray-200' : ''}
+        ${isToday ? ' bg-blue-500' : 'text-gray-200'}
+    `
 	}
 
 	const handleBookSession = async () => {
@@ -321,27 +341,34 @@ export default function BookForClient() {
 			alert('Please select all booking details')
 			return
 		}
-
+		const [startTime] = selectedTime.split(' - ')
 		const selectedDateTime = new Date(
-			`${selectedDate?.toISOString().split('T')[0]}T${
-				selectedTime.split(' - ')[0]
-			}`
+			`${selectedDate.getFullYear()}-${String(
+				selectedDate.getMonth() + 1
+			).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(
+				2,
+				'0'
+			)}T${startTime}`
 		)
-		if (selectedDateTime < new Date()) {
+		const now = new Date()
+		selectedDateTime.setSeconds(0)
+		selectedDateTime.setMilliseconds(0)
+		now.setSeconds(0)
+		now.setMilliseconds(0)
+		if (selectedDateTime < now) {
 			const confirmPast = window.confirm(
 				'You are booking a session in the past. Are you sure you want to continue?'
 			)
 			if (!confirmPast) return
 		}
-
 		setLoading(true)
-		const [startTime, endTime] = selectedTime.split(' - ')
+		const [startTimeStr, endTime] = selectedTime.split(' - ')
 		const result = isPrivateTraining
 			? await bookTimeSlotForClient({
 					activityId: selectedActivity,
 					coachId: selectedCoach,
 					date: formatDate(selectedDate),
-					startTime,
+					startTime: startTimeStr,
 					endTime,
 					userId: selectedUser
 			  })
@@ -349,7 +376,7 @@ export default function BookForClient() {
 					activityId: selectedActivity,
 					coachId: selectedCoach,
 					date: formatDate(selectedDate),
-					startTime,
+					startTime: startTimeStr,
 					endTime,
 					userId: selectedUser
 			  })
@@ -657,34 +684,45 @@ export default function BookForClient() {
 												{(isPrivateTraining
 													? availableTimes
 													: groupAvailableTimes
-												).map(time => (
-													<motion.button
-														key={time}
-														initial={{ opacity: 0, y: 20 }}
-														animate={{ opacity: 1, y: 0 }}
-														exit={{ opacity: 0, y: -20 }}
-														whileHover={{
-															scale: 1.05,
-															boxShadow: '0 0 20px rgba(74, 222, 128, 0.5)'
-														}}
-														whileTap={{ scale: 0.95 }}
-														className={`p-3 sm:p-4 rounded-xl text-base sm:text-lg font-semibold transition-all duration-300 ${
-															selectedTime === time
-																? 'bg-green-500 text-white'
-																: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
-														}`}
-														onClick={() => {
-															setSelectedTime(time)
-															setTimeout(() => scrollToRef(confirmRef), 100)
-														}}>
-														{time}
-														{!isPrivateTraining && (
-															<p className='text-sm mt-2'>
-																Capacity: {reservationCount}/{getCapacity()}
-															</p>
-														)}
-													</motion.button>
-												))}
+												).map(time => {
+													const timeSlotData1 = timeSlotData.find(
+														slot =>
+															`${slot.start_time.substr(
+																0,
+																5
+															)} - ${slot.end_time.substr(0, 5)}` === time
+													)
+
+													return (
+														<motion.button
+															key={time}
+															initial={{ opacity: 0, y: 20 }}
+															animate={{ opacity: 1, y: 0 }}
+															exit={{ opacity: 0, y: -20 }}
+															whileHover={{
+																scale: 1.05,
+																boxShadow: '0 0 20px rgba(74, 222, 128, 0.5)'
+															}}
+															whileTap={{ scale: 0.95 }}
+															className={`p-3 sm:p-4 rounded-xl text-base sm:text-lg font-semibold transition-all duration-300 ${
+																selectedTime === time
+																	? 'bg-green-500 text-white'
+																	: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
+															}`}
+															onClick={() => {
+																setSelectedTime(time)
+																setTimeout(() => scrollToRef(confirmRef), 100)
+															}}>
+															{time}
+															{!isPrivateTraining && (
+																<p className='text-sm mt-2'>
+																	Capacity: {timeSlotData1?.count || 0}/
+																	{timeSlotData1?.activities?.capacity || 0}
+																</p>
+															)}
+														</motion.button>
+													)
+												})}
 											</AnimatePresence>
 										</div>
 									</div>

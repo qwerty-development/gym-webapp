@@ -60,11 +60,14 @@ export const fetchFilteredUnbookedTimeSlotsGroup = async ({
       activity_id,
       booked,
       user_id,
-      count
+      count,
+      activities (
+        capacity
+      )
     `
 		)
 		.eq('booked', false)
-		.gte('date', oneWeekAgo.toISOString().split('T')[0]) // Get slots from a week ago
+		.gte('date', oneWeekAgo.toISOString().split('T')[0])
 
 	if (activityId) query = query.eq('activity_id', activityId)
 	if (coachId) query = query.eq('coach_id', coachId)
