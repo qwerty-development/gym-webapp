@@ -231,24 +231,30 @@ export const fetchUpcomingSessions = async type => {
 
 export const fetchUpcomingSessions2 = async type => {
 	const supabase = await supabaseClient()
-	const now = new Date().toISOString()
+	const now = new Date()
+	const oneWeekAgo = new Date(now)
+	oneWeekAgo.setDate(oneWeekAgo.getDate() - 3)
+
+	const currentDate = now.toISOString()
+	const pastWeekDate = oneWeekAgo.toISOString()
+
 	if (type === 'individual') {
 		const { data: individualSessions, error } = await supabase
 			.from('time_slots')
 			.select(
 				`
-            id,
-            activities ( id, name, credits ),
-            coaches ( name ),
-            date,
-            start_time,
-            end_time,
-            users ( user_id, first_name, last_name ),
-            booked,
-            additions
-        `
+                id,
+                activities ( id, name, credits ),
+                coaches ( name ),
+                date,
+                start_time,
+                end_time,
+                users ( user_id, first_name, last_name ),
+                booked,
+                additions
+            `
 			)
-			.gte('date', now.split('T')[0])
+			.gte('date', pastWeekDate.split('T')[0])
 			.eq('booked', true)
 			.order('date', { ascending: true })
 			.order('start_time', { ascending: true })
@@ -263,7 +269,8 @@ export const fetchUpcomingSessions2 = async type => {
 			user: { user_id: session.users.user_id },
 			activity: {
 				name: session.activities.name
-			}
+			},
+			isPast: new Date(`${session.date}T${session.end_time}`) < now
 		}))
 
 		return transformedSessions || []
@@ -272,19 +279,19 @@ export const fetchUpcomingSessions2 = async type => {
 			.from('group_time_slots')
 			.select(
 				`
-        id,
-        activities ( name, credits, capacity ),
-        coaches ( name ),
-        date,
-        start_time,
-        end_time,
-        user_id,
-        booked,
-        additions,
-        count
-      `
+                id,
+                activities ( name, credits, capacity ),
+                coaches ( name ),
+                date,
+                start_time,
+                end_time,
+                user_id,
+                booked,
+                additions,
+                count
+            `
 			)
-			.gte('date', now.split('T')[0])
+			.gte('date', pastWeekDate.split('T')[0])
 			.gt('count', 0)
 			.order('date', { ascending: true })
 			.order('start_time', { ascending: true })
@@ -315,7 +322,8 @@ export const fetchUpcomingSessions2 = async type => {
 			users: session.user_id
 				.map(userId => usersMap[userId] || null)
 				.filter(Boolean),
-			additions: session.additions || []
+			additions: session.additions || [],
+			isPast: new Date(`${session.date}T${session.end_time}`) < now
 		}))
 
 		return transformedSessions
