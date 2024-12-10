@@ -119,7 +119,7 @@ export async function POST(request) {
 
 		const adminMailOptions = {
 			from: 'noreply@notqwerty.com',
-			to: 'info@fitnessvista.co',
+			to: 'fitnessvista27@gmail.com',
 			subject: `Booking Cancelation:${bookingDetails.user_name}${bookingDetails.activity_name} on ${bookingDetails.activity_date} at ${bookingDetails.start_time} - ${bookingDetails.end_time} with ${bookingDetails.coach_name}`,
 			html: generateCancelEmailHTML('admin', bookingDetails)
 		}

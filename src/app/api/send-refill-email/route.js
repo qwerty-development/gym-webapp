@@ -125,7 +125,7 @@ export async function POST(request) {
 		size: fontSize + 2,
 		color: rgb(0.21, 0.47, 0.23)
 	})
-	page.drawText('Email: info@fitnessvista.co', {
+	page.drawText('Email: fitnessvista27@gmail.com', {
 		...textOptions,
 		x: rightColumnX,
 		y: height - 120 - logoDims.height
