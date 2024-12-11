@@ -2,10 +2,10 @@ import { redirect } from 'next/navigation'
 import { checkRoleAdmin } from '../../../../utils/roles'
 import { SearchUsers } from './_search-users'
 import { clerkClient } from '@clerk/nextjs'
-import { setRole, removeAdmin } from './_action'
+import { setRole, removeAdmin, deleteUser } from './_action'
 import AdminNavbarComponent from '@/app/components/admin/adminnavbar'
 import ModifyCreditsComponent from '@/app/components/admin/modifycredits'
-import { FaUserShield, FaUserMinus } from 'react-icons/fa'
+import { FaUserShield, FaUserMinus, FaUserTimes } from 'react-icons/fa'
 
 export default async function AdminDashboard(params: {
 	searchParams: { search?: string }
@@ -20,6 +20,12 @@ export default async function AdminDashboard(params: {
 	const makeAdmin = async (formData: FormData) => {
 		'use server'
 		await setRole(formData)
+		redirect('/admin/manage-users')
+	}
+
+	const DeleteUser = async (formData: FormData) => {
+		'use server'
+		await deleteUser(formData)
 		redirect('/admin/manage-users')
 	}
 
@@ -80,6 +86,15 @@ export default async function AdminDashboard(params: {
 										<input type='hidden' value='moderator' name='role' />
 										<button className='w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-full transition-all duration-300 flex items-center justify-center'>
 											<FaUserMinus className='mr-2' /> Remove Admin
+										</button>
+									</form>
+								)}
+
+								{user.publicMetadata.role !== 'admin' && (
+									<form action={DeleteUser} className='flex-1'>
+										<input type='hidden' value={user.id} name='id' />
+										<button className='w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-full transition-all duration-300 flex items-center justify-center'>
+											<FaUserTimes className='mr-2' /> Delete User
 										</button>
 									</form>
 								)}

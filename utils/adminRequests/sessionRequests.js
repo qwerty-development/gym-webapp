@@ -167,7 +167,7 @@ export const fetchUpcomingSessions = async type => {
 
 		const transformedSessions = individualSessions.map(session => ({
 			...session,
-			user: { user_id: session.users.user_id },
+			user: { user_id: session.users?.user_id },
 			activity: {
 				name: session.activities.name
 			}
@@ -266,7 +266,7 @@ export const fetchUpcomingSessions2 = async type => {
 
 		const transformedSessions = individualSessions.map(session => ({
 			...session,
-			user: { user_id: session.users.user_id },
+			user: { user_id: session.users?.user_id },
 			activity: {
 				name: session.activities.name
 			},

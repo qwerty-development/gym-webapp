@@ -826,7 +826,7 @@ export default function Dashboard() {
 								<p className='flex items-center'>
 									<FaUser className='mr-2 text-green-500' />
 									Client:{' '}
-									{`${session.users.first_name} ${session.users.last_name}`}
+									{`${session?.users?.first_name} ${session?.users?.last_name}`}
 								</p>
 							) : (
 								<ScrollableMenu users={session.users} />
@@ -850,7 +850,7 @@ export default function Dashboard() {
 												(addition: any, addIndex: number) => (
 													<li key={addIndex}>
 														<span className='font-bold text-yellow-300'>
-															{session.users.find(
+															{session?.users?.find(
 																(user: any) => user.user_id === addition.user_id
 															)?.first_name || 'Unknown'}
 														</span>
@@ -1180,7 +1180,7 @@ export default function Dashboard() {
 																Time: {session.startTime.slice(0, 5)} -{' '}
 																{session.endTime.slice(0, 5)}
 															</div>
-															<div>Users: {session.users.join(', ')}</div>
+															<div>Users: {session?.users?.join(', ')}</div>
 															{isActive && (
 																<div className='text-green-400 font-bold'>
 																	Active Now
