@@ -24,7 +24,9 @@ import {
 	FaHistory,
 	FaCalendarAlt,
 	FaUserClock,
-	FaUserTie
+	FaUserTie,
+	FaUserCheck,
+	FaDochub
 } from 'react-icons/fa'
 import Link from 'next/link'
 
@@ -116,10 +118,22 @@ export default function AdminNavbarComponent() {
 			icon: FaUsers
 		},
 		{
-			href: '/admin/book-for-client',
-			label: 'Book for Client',
-			icon: FaUserPlus
+			label: 'Clients',
+			icon: FaUserCheck,
+			submenu: [
+				{
+					href: '/admin/book-for-client',
+					label: 'Book for Client',
+					icon: FaUserPlus
+				},
+				{
+					href: '/admin/manage-bundles',
+					label: 'Purchase Bundles',
+					icon: FaStore
+				}
+			]
 		},
+
 		{
 			label: 'History',
 			icon: FaHistory,
