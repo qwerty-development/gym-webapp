@@ -233,7 +233,7 @@ export const fetchUpcomingSessions2 = async type => {
 	const supabase = await supabaseClient()
 	const now = new Date()
 	const oneWeekAgo = new Date(now)
-	oneWeekAgo.setDate(oneWeekAgo.getDate() - 3)
+	oneWeekAgo.setDate(oneWeekAgo.getDate() - 4)
 
 	const currentDate = now.toISOString()
 	const pastWeekDate = oneWeekAgo.toISOString()

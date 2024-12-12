@@ -39,9 +39,13 @@ interface CalendarViewProps {
 			| { first_name: string; last_name: string }
 		count?: number
 	}>
+	onCancelSession: (sessionId: number, isGroup: boolean) => void
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({
+	sessions,
+	onCancelSession
+}) => {
 	const [events, setEvents] = useState<CalendarEvent[]>([])
 	const [view, setView] = useState<View>(() => {
 		if (typeof window !== 'undefined' && window.innerWidth < 640) {
@@ -86,7 +90,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 			isGroup: 'count' in session,
 			clients: Array.isArray(session.users)
 				? session.users.map(u => `${u.first_name} ${u.last_name}`).join(', ')
-				: `${session.users.first_name} ${session.users.last_name}`
+				: `${session.users?.first_name} ${session.users?.last_name}`
 		}))
 		setEvents(calendarEvents)
 	}, [sessions])
@@ -362,6 +366,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({ sessions }) => {
 										<div className='ml-2 mt-1'>{selectedEvent.clients}</div>
 									</div>
 								</p>
+							</div>
+							<div className='flex justify-end mt-6 space-x-4'>
+								<motion.button
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									onClick={() => {
+										onCancelSession(selectedEvent.id, selectedEvent.isGroup)
+										setSelectedEvent(null)
+									}}
+									className='px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200'>
+									Cancel Session
+								</motion.button>
+								<motion.button
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									onClick={() => setSelectedEvent(null)}
+									className='px-6 py-3 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors duration-200'>
+									Close
+								</motion.button>
 							</div>
 						</motion.div>
 					</motion.div>

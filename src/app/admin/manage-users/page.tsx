@@ -89,7 +89,6 @@ export default async function AdminDashboard(params: {
 										</button>
 									</form>
 								)}
-
 								{user.publicMetadata.role !== 'admin' && (
 									<form action={DeleteUser} className='flex-1'>
 										<input type='hidden' value={user.id} name='id' />

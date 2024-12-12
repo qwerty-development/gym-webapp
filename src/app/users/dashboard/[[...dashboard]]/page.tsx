@@ -1264,6 +1264,9 @@ export default function Dashboard() {
 												...adminIndividualSessions,
 												...adminGroupSessions
 											]}
+											onCancelSession={function (sessionId: any): void {
+												throw new Error('Function not implemented.')
+											}}
 										/>
 									) : (
 										<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
