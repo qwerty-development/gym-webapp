@@ -257,29 +257,33 @@ export const updateUserCreditsCancellation = async (userId, totalRefund) => {
 }
 
 export const fetchTotalUsers = async () => {
-	const supabase = await supabaseClient()
 	try {
-		const { data: activeData, error: activeError } = await supabase
+		const supabase = await supabaseClient()
+
+		// Single query to get both counts using count()
+		const { count: totalCount, error: totalError } = await supabase
 			.from('users')
-			.select('id')
-			.or(
-				'wallet.gt.0,private_token.gt.0,public_token.gt.0,punches.gt.0,shake_token.gt.0'
-			)
+			.select('*', { count: 'exact', head: true })
 
-		const { data: totalData, error: totalError } = await supabase
+		if (totalError) throw totalError
+
+		// Calculate active users with count()
+		const twoMonthsAgo = new Date()
+		twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+
+		const { count: activeCount, error: activeError } = await supabase
 			.from('users')
-			.select('id')
+			.select('*', { count: 'exact', head: true })
+			.or(`refill_date.gte.${twoMonthsAgo.toISOString()},isFree.eq.true`)
 
-		if (activeError || totalError) throw activeError || totalError
+		if (activeError) throw activeError
 
-		console.log(activeData)
-		console.log(totalData)
 		return {
-			total: totalData?.length || 0,
-			active: activeData?.length || 0
+			total: totalCount || 0,
+			active: activeCount || 0
 		}
 	} catch (error) {
-		console.error('Error fetching total users:', error)
+		console.error('Error fetching user counts:', error)
 		return { total: 0, active: 0 }
 	}
 }
