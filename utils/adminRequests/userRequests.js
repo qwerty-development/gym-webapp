@@ -89,10 +89,15 @@ export const updateUserCredits = async (
 		newEssentialsTill = new Date(essentialsTill).toISOString()
 	}
 
-	// Update user's wallet, tokens, and essential_till
+	// Update user's wallet, tokens, essential_till, and refill_date
 	const { data, error } = await supabase
 		.from('users')
-		.update({ wallet, ...updatedTokens, essential_till: newEssentialsTill })
+		.update({
+			wallet,
+			...updatedTokens,
+			essential_till: newEssentialsTill,
+			refill_date: new Date().toISOString()
+		})
 		.eq('id', userId)
 
 	if (error) {
