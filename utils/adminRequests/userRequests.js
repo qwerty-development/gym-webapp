@@ -260,14 +260,12 @@ export const fetchTotalUsers = async () => {
 	try {
 		const supabase = await supabaseClient()
 
-		// Single query to get both counts using count()
 		const { count: totalCount, error: totalError } = await supabase
 			.from('users')
 			.select('*', { count: 'exact', head: true })
 
 		if (totalError) throw totalError
 
-		// Calculate active users with count()
 		const twoMonthsAgo = new Date()
 		twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
 
