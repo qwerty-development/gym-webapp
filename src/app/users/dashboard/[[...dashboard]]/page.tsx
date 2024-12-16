@@ -25,7 +25,7 @@ import {
 	fetchTotalActivities,
 	fetchTodaysSessions,
 	fetchAllBookedSlotsToday,
-	fetchUpcomingSessions2 as fetchUpcomingSessions,
+	fetchUpcomingSessions,
 	cancelBookingIndividual, //here
 	cancelGroupBooking //here
 } from '../../../../../utils/adminRequests'
