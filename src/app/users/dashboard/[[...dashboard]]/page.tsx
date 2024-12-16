@@ -4,7 +4,6 @@ import NavbarComponent from '@/app/components/users/navbar'
 import { UserButton, useUser } from '@clerk/nextjs'
 import CalendarView from '@/app/components/admin/CalendarView'
 import ChatBox from '@/app/components/users/ChatBox'
-import PhoneVerification from '@/app/components/users/PhoneVerification'
 import {
 	fetchReservations,
 	fetchReservationsGroup,
@@ -19,6 +18,11 @@ import {
 	fetchUserEssentialTill
 } from '../../../../../utils/userRequests'
 import BulkCalendarAdd from '@/app/components/admin/BulkCalendarAdd'
+import RescheduleModal from '@/app/components/users/RescheduleModal'
+import {
+	bookTimeSlot,
+	bookTimeSlotGroup
+} from '../../../../../utils/userRequests'
 import ScrollableMenu from '@/app/components/users/ScrollableMenu'
 import {
 	fetchTotalUsers,
@@ -29,7 +33,6 @@ import {
 	cancelBookingIndividual, //here
 	cancelGroupBooking //here
 } from '../../../../../utils/adminRequests'
-import { Menu, Transition } from '@headlessui/react'
 import { AddToCalendarButton } from 'add-to-calendar-button-react'
 import { RingLoader } from 'react-spinners'
 import { useWallet } from '@/app/components/users/WalletContext'
@@ -52,7 +55,6 @@ import { FaChevronLeft, FaChevronRight, FaChevronDown } from 'react-icons/fa'
 import TokenBalance from '@/app/components/users/TokenBalance'
 import { supabaseClient } from '../../../../../utils/supabaseClient'
 import LoyaltyCard from '@/app/components/users/LoyaltyCard'
-import { DefaultContext } from 'react-icons/lib'
 import UserInfoVerification from '@/app/components/users/UserInfoVerification'
 
 type Reservation = {
@@ -121,9 +123,9 @@ export default function Dashboard() {
 	const [adminIndividualSessions, setAdminIndividualSessions] = useState<any[]>(
 		[]
 	)
-	const [phoneVerified, setPhoneVerified] = useState<boolean>(false)
-	const [phoneVerificationLoading, setPhoneVerificationLoading] =
-		useState<boolean>(true)
+	const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false)
+	const [selectedRescheduleReservation, setSelectedRescheduleReservation] =
+		useState<any>(null)
 	const [userInfoVerificationLoading, setUserInfoVerificationLoading] =
 		useState<boolean>(true)
 	const [requiredFields, setRequiredFields] = useState<string[]>([])
@@ -329,6 +331,80 @@ export default function Dashboard() {
 		}
 		fetchAdminData()
 	}, [isCancelling])
+
+	const handleReschedule = async (
+		reservationId: number,
+		newDate: string,
+		newStartTime: string,
+		newEndTime: string,
+		isGroup: boolean
+	) => {
+		setIsLoading(true)
+
+		try {
+			if (isGroup) {
+				// Group session rescheduling
+				const bookResult = await bookTimeSlotGroup({
+					activityId: selectedRescheduleReservation.activity.id,
+					coachId: selectedRescheduleReservation.coach.id,
+					date: newDate,
+					startTime: newStartTime,
+					endTime: newEndTime,
+					userId: user?.id
+				})
+
+				if (bookResult.error) {
+					throw new Error(bookResult.error)
+				}
+
+				const cancelResult = await cancelReservationGroup(
+					reservationId,
+					user?.id,
+					setGroupReservations
+				)
+
+				if (!cancelResult.success) {
+					throw new Error(cancelResult.error)
+				}
+			} else {
+				// Individual session rescheduling
+				const bookResult = await bookTimeSlot({
+					activityId: selectedRescheduleReservation.activity.id,
+					coachId: selectedRescheduleReservation.coach.id,
+					date: newDate,
+					startTime: newStartTime,
+					endTime: newEndTime,
+					userId: user?.id
+				})
+
+				if (bookResult.error) {
+					throw new Error(bookResult.error)
+				}
+
+				const cancelResult = await cancelReservation(
+					reservationId,
+					user?.id,
+					setReservations
+				)
+
+				if (!cancelResult.success) {
+					throw new Error(cancelResult.error)
+				}
+			}
+
+			refreshWalletBalance()
+			refreshTokens()
+			toast.success('Session rescheduled successfully')
+
+			// Refresh reservations
+			await refreshReservations()
+		} catch (error: any) {
+			console.error('Rescheduling failed:', error)
+			toast.error(error.message || 'Failed to reschedule session')
+		} finally {
+			setIsLoading(false)
+		}
+	}
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -1376,6 +1452,17 @@ export default function Dashboard() {
 																		Add Items
 																	</button>
 																	<button
+																		onClick={() => {
+																			setSelectedRescheduleReservation(
+																				reservation
+																			)
+																			setRescheduleModalOpen(true)
+																		}}
+																		className='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
+																		disabled={buttonLoading}>
+																		Reschedule
+																	</button>
+																	<button
 																		onClick={() =>
 																			activeTab === 'individual'
 																				? handleCancel(reservation.id)
@@ -1777,6 +1864,26 @@ export default function Dashboard() {
 					onClose={() => setShowBulkCalendarAdd(false)}
 				/>
 			)}
+			<RescheduleModal
+				isOpen={rescheduleModalOpen}
+				onClose={() => {
+					setRescheduleModalOpen(false)
+					setSelectedRescheduleReservation(null)
+				}}
+				reservation={selectedRescheduleReservation}
+				isGroup={activeTab === 'group'}
+				onReschedule={async (newDate, newStartTime, newEndTime) => {
+					await handleReschedule(
+						selectedRescheduleReservation.id,
+						newDate,
+						newStartTime,
+						newEndTime,
+						activeTab === 'group'
+					)
+					setRescheduleModalOpen(false)
+					setSelectedRescheduleReservation(null)
+				}}
+			/>
 		</div>
 	)
 }
