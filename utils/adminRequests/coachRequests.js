@@ -116,14 +116,25 @@ export const fetchCoaches = async () => {
 
 	return data
 }
-
 export const fetchCoachesActivities = async activityId => {
 	const supabase = await supabaseClient()
+	const today = new Date().toISOString().split('T')[0] // Get today's date in YYYY-MM-DD format
 
 	const { data: coachesData, error: coachesError } = await supabase
 		.from('time_slots')
-		.select('coach:coaches(id, name, profile_picture, email)')
+		.select(
+			`
+            coach:coaches(
+                id,
+                name,
+                profile_picture,
+                email
+            )
+        `
+		)
 		.eq('activity_id', activityId)
+		.eq('booked', false)
+		.gte('date', today)
 		.not('coach', 'is', null)
 
 	if (coachesError) {
@@ -141,15 +152,27 @@ export const fetchCoachesActivities = async activityId => {
 
 export const fetchCoachesActivitiesGroup = async activityId => {
 	const supabase = await supabaseClient()
+	const today = new Date().toISOString().split('T')[0] // Get today's date in YYYY-MM-DD format
 
 	const { data: coachesData, error: coachesError } = await supabase
 		.from('group_time_slots')
-		.select('coach:coaches(id, name, profile_picture, email)')
+		.select(
+			`
+            coach:coaches(
+                id,
+                name,
+                profile_picture,
+                email
+            )
+        `
+		)
 		.eq('activity_id', activityId)
+		.eq('booked', false)
+		.gte('date', today)
 		.not('coach', 'is', null)
 
 	if (coachesError) {
-		console.error('Error fetching coaches:', coachesError.message) // Consistent error message
+		console.error('Error fetching group coaches:', coachesError.message)
 		return []
 	}
 
@@ -160,6 +183,7 @@ export const fetchCoachesActivitiesGroup = async activityId => {
 
 	return uniqueCoaches
 }
+
 export const fetchTotalCoaches = async () => {
 	const supabase = await supabaseClient()
 	const { count, error } = await supabase
