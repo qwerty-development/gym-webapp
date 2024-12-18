@@ -1,6 +1,7 @@
 import { supabaseClient } from '../supabaseClient'
 export const fetchCoaches = async activityId => {
 	const supabase = await supabaseClient()
+	const today = new Date().toISOString().split('T')[0] // Get today's date in YYYY-MM-DD format
 
 	const { data: coachesData, error: coachesError } = await supabase
 		.from('time_slots')
@@ -17,6 +18,7 @@ export const fetchCoaches = async activityId => {
 		.eq('activity_id', activityId)
 		.is('booked', false)
 		.not('coach', 'is', null)
+		.gte('date', today)
 
 	if (coachesError) {
 		console.error('Error fetching coaches:', coachesError.message)
@@ -33,6 +35,7 @@ export const fetchCoaches = async activityId => {
 
 export const fetchCoachesGroup = async activityId => {
 	const supabase = await supabaseClient()
+	const today = new Date().toISOString().split('T')[0] // Get today's date in YYYY-MM-DD format
 
 	// Direct join query to get coaches with available group time slots
 	const { data: coachesData, error: coachesError } = await supabase
@@ -49,6 +52,7 @@ export const fetchCoachesGroup = async activityId => {
 		)
 		.eq('activity_id', activityId)
 		.is('booked', false)
+		.gte('date', today)
 		.not('coach', 'is', null)
 
 	if (coachesError) {
