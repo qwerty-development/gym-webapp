@@ -120,63 +120,45 @@ export const fetchCoaches = async () => {
 export const fetchCoachesActivities = async activityId => {
 	const supabase = await supabaseClient()
 
-	// First, fetch all time slots for the given activityId to get associated coach_ids
-	const { data: timeSlots, error: timeSlotsError } = await supabase
+	const { data: coachesData, error: coachesError } = await supabase
 		.from('time_slots')
-		.select('coach_id')
+		.select('coach:coaches(id, name, profile_picture, email)')
 		.eq('activity_id', activityId)
-
-	if (timeSlotsError || !timeSlots.length) {
-		console.error('Error fetching time slots:', timeSlotsError?.message)
-		return []
-	}
-
-	// Extract unique coach IDs from time slots
-	const coachIds = timeSlots.map(slot => slot.coach_id)
-
-	// Then, fetch coach details for the collected coach_ids
-	const { data: coaches, error: coachesError } = await supabase
-		.from('coaches')
-		.select('*')
-		.in('id', coachIds) // This fetches all coaches whose ID is in the coachIds arraya
+		.not('coach', 'is', null)
 
 	if (coachesError) {
 		console.error('Error fetching coaches:', coachesError.message)
 		return []
 	}
 
-	return coaches
+	// Remove duplicates and transform data structure
+	const uniqueCoaches = Array.from(
+		new Set(coachesData.map(item => JSON.stringify(item.coach)))
+	).map(str => JSON.parse(str))
+
+	return uniqueCoaches
 }
 
 export const fetchCoachesActivitiesGroup = async activityId => {
 	const supabase = await supabaseClient()
 
-	// First, fetch all time slots for the given activityId to get associated coach_ids
-	const { data: timeSlots, error: timeSlotsError } = await supabase
+	const { data: coachesData, error: coachesError } = await supabase
 		.from('group_time_slots')
-		.select('coach_id')
+		.select('coach:coaches(id, name, profile_picture, email)')
 		.eq('activity_id', activityId)
-
-	if (timeSlotsError || !timeSlots.length) {
-		console.error('Error fetching time slots:', timeSlotsError?.message)
-		return []
-	}
-
-	// Extract unique coach IDs from time slots
-	const coachIds = timeSlots.map(slot => slot.coach_id)
-
-	// Then, fetch coach details for the collected coach_ids
-	const { data: coaches, error: coachesError } = await supabase
-		.from('coaches')
-		.select('*')
-		.in('id', coachIds) // This fetches all coaches whose ID is in the coachIds array
+		.not('coach', 'is', null)
 
 	if (coachesError) {
-		console.error('Error fetching coaches:', coachesError.message)
+		console.error('Error fetching coaches:', coachesError.message) // Consistent error message
 		return []
 	}
 
-	return coaches
+	// Remove duplicates and transform data structure
+	const uniqueCoaches = Array.from(
+		new Set(coachesData.map(item => JSON.stringify(item.coach)))
+	).map(str => JSON.parse(str))
+
+	return uniqueCoaches
 }
 export const fetchTotalCoaches = async () => {
 	const supabase = await supabaseClient()
