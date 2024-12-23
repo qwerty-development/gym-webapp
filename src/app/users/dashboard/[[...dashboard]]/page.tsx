@@ -19,11 +19,13 @@ import {
 } from '../../../../../utils/userRequests'
 import BulkCalendarAdd from '@/app/components/admin/BulkCalendarAdd'
 import RescheduleModal from '@/app/components/users/RescheduleModal'
+import EssentialsStatus from '@/app/components/users/EssentialStatus'
 import {
 	bookTimeSlot,
 	bookTimeSlotGroup
 } from '../../../../../utils/userRequests'
 import ScrollableMenu from '@/app/components/users/ScrollableMenu'
+import EssentialsGuard from '@/app/components/users/EssentialsGuard'
 import {
 	fetchTotalUsers,
 	fetchTotalActivities,
@@ -977,913 +979,918 @@ export default function Dashboard() {
 	}
 
 	return (
-		<div className='min-h-screen bg-gray-700 text-white font-sans'>
-			<ConfirmationModal
-				isOpen={isOpen}
-				message={message}
-				onConfirm={handleConfirm}
-				onCancel={handleCancels}
-			/>
-			<NavbarComponent />
+		<EssentialsGuard essentialsTill={userData?.essential_till} user={user}>
+			<div className='min-h-screen bg-gray-700 text-white font-sans'>
+				<ConfirmationModal
+					isOpen={isOpen}
+					message={message}
+					onConfirm={handleConfirm}
+					onCancel={handleCancels}
+				/>
+				<NavbarComponent />
 
-			{/* Navigation Tabs */}
-			<div className='lg:hidden sticky top-0 z-20 bg-gray-800 py-2 mb-4'>
-				<div className='flex justify-center space-x-2'>
-					<button
-						onClick={() => setActiveTab('individual')}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-							activeTab === 'individual'
-								? 'bg-green-500 text-white'
-								: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-						}`}>
-						Individual
-					</button>
-					<button
-						onClick={() => setActiveTab('group')}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-							activeTab === 'group'
-								? 'bg-green-500 text-white'
-								: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-						}`}>
-						Class
-					</button>
-				</div>
-			</div>
-
-			{/* Sidebar for larger screens */}
-			<div className='hidden lg:block fixed left-0 top-0 h-full w-max bg-gray-800 z-30 transform transition-transform duration-300 ease-in-out '>
-				<h2 className='text-2xl font-bold mb-4 mt-16 md:mt-4 ml-1 text-green-500'>
-					Menu
-				</h2>
-				<ul>
-					<li
-						className={`mb-5 p-2 px-6 ${
-							activeTab === 'individual' ? 'bg-green-500' : ''
-						}`}>
+				{/* Navigation Tabs */}
+				<div className='lg:hidden sticky top-0 z-20 bg-gray-800 py-2 mb-4'>
+					<div className='flex justify-center space-x-2'>
 						<button
 							onClick={() => setActiveTab('individual')}
-							className={`flex items-center ${
-								activeTab === 'group' ? 'hover:text-green-400' : ''
-							} w-full text-left`}>
-							<FaCalendarAlt size={35} className='mr-2' /> PT Reservations
+							className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+								activeTab === 'individual'
+									? 'bg-green-500 text-white'
+									: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+							}`}>
+							Individual
 						</button>
-					</li>
-					<li
-						className={`mb-10 p-2 px-6 ${
-							activeTab === 'group' ? 'bg-green-500' : ''
-						}`}>
 						<button
 							onClick={() => setActiveTab('group')}
-							className={`flex items-center ${
-								activeTab === 'individual' ? 'hover:text-green-400' : ''
-							} w-full text-left`}>
-							<FaUsers size={35} className='mr-2' /> Class Reservations
+							className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+								activeTab === 'group'
+									? 'bg-green-500 text-white'
+									: 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+							}`}>
+							Class
 						</button>
-					</li>
-				</ul>
-			</div>
-
-			<div className='lg:ml-64 p-4 md:p-8'>
-				{/* User Profile Card */}
-				<motion.div
-					initial={{ opacity: 0, y: -50 }}
-					animate={{ opacity: 1, y: 0 }}
-					className='bg-green-600 rounded-lg p-4 md:p-6 mb-6 md:mb-8'>
-					<div className='flex items-center'>
-						<div className='mr-5'>
-							<UserButton
-								userProfileMode='navigation'
-								userProfileUrl=''
-								afterSignOutUrl='/'
-								appearance={{
-									elements: {
-										userButtonBox: 'scale-150 pointer-events-none',
-										userButtonOuterIdentifier: 'bg-green-500'
-									}
-								}}
-							/>
-						</div>
-						<div>
-							<h2 className='text-xl md:text-2xl font-bold'>
-								{user.firstName} {user.lastName}
-							</h2>
-							<p className='text-sm md:text-base text-gray-200'>
-								@{user.username}
-							</p>
-							{renderEssentialTill()}
-						</div>
 					</div>
-				</motion.div>
-				<div className='fixed bottom-4 right-4 z-50'>
-					{isChatOpen ? (
-						<div className='bg-gray-900 rounded-lg shadow-lg p-4 mb-16 w-80'>
-							<button
-								onClick={() => setIsChatOpen(false)}
-								className='absolute top-2 right-2 text-gray-400 hover:text-white'>
-								&times;
-							</button>
-							<ChatBox userData={userData} />
-						</div>
-					) : (
-						<button
-							onClick={() => setIsChatOpen(true)}
-							className='bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg transition-all duration-300'>
-							<img
-								src='/dancerobot.gif'
-								alt='Dancing Robot'
-								className='w-10 h-10'
-							/>
-						</button>
-					)}
 				</div>
 
-				<AnimatePresence mode='wait'>
-					{isLoading ? (
-						<motion.div
-							key='loader'
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							className='flex justify-center items-center h-64'>
-							<RingLoader color={'#10B981'} size={100} />
-						</motion.div>
-					) : (
-						<motion.div
-							key='content'
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							className='flex flex-col  md:-mt-0 lg:flex-row gap-8 '>
-							<div className='lg:w-1/4 space-y-6 mt-0 md:mt-[4.57rem] '>
-								<motion.div
-									initial={{ opacity: 0, x: 20 }}
-									animate={{ opacity: 1, x: 0 }}
-									className='bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
-									<h3 className='text-2xl font-bold text-green-400 mb-4'>
-										{user.publicMetadata.role === 'admin'
-											? 'Admin Overview'
-											: 'Quick Stats'}
-									</h3>
-									<div className='space-y-4'>
-										{user.publicMetadata.role === 'admin' ? (
-											<>
-												<div>
-													<p className='text-gray-300'>Total Users</p>
-													<div className='flex items-end gap-2'>
-														<p className='text-3xl font-bold text-white'>
-															{totalUsers.total}
-														</p>
-													</div>
-												</div>
+				{/* Sidebar for larger screens */}
+				<div className='hidden lg:block fixed left-0 top-0 h-full w-max bg-gray-800 z-30 transform transition-transform duration-300 ease-in-out '>
+					<h2 className='text-2xl font-bold mb-4 mt-16 md:mt-4 ml-1 text-green-500'>
+						Menu
+					</h2>
+					<ul>
+						<li
+							className={`mb-5 p-2 px-6 ${
+								activeTab === 'individual' ? 'bg-green-500' : ''
+							}`}>
+							<button
+								onClick={() => setActiveTab('individual')}
+								className={`flex items-center ${
+									activeTab === 'group' ? 'hover:text-green-400' : ''
+								} w-full text-left`}>
+								<FaCalendarAlt size={35} className='mr-2' /> PT Reservations
+							</button>
+						</li>
+						<li
+							className={`mb-10 p-2 px-6 ${
+								activeTab === 'group' ? 'bg-green-500' : ''
+							}`}>
+							<button
+								onClick={() => setActiveTab('group')}
+								className={`flex items-center ${
+									activeTab === 'individual' ? 'hover:text-green-400' : ''
+								} w-full text-left`}>
+								<FaUsers size={35} className='mr-2' /> Class Reservations
+							</button>
+						</li>
+					</ul>
+				</div>
 
-												<div>
-													<p className='text-gray-300'>Active Users</p>
-													<div className='flex items-center gap-2'>
-														<p className='text-3xl font-bold text-white'>
-															{totalUsers.active}
-														</p>
-														<div className='h-1 flex-1 bg-gray-700 rounded-full overflow-hidden'>
-															<div
-																className='h-full bg-green-500 transition-all duration-500'
-																style={{
-																	width: `${Math.round(
-																		(totalUsers.active / totalUsers.total) * 100
-																	)}%`
-																}}
-															/>
+				<div className='lg:ml-64 p-4 md:p-8'>
+					{/* User Profile Card */}
+					<motion.div
+						initial={{ opacity: 0, y: -50 }}
+						animate={{ opacity: 1, y: 0 }}
+						className='bg-green-600 rounded-lg p-4 md:p-6 mb-6 md:mb-8'>
+						<div className='flex items-center'>
+							<div className='mr-5'>
+								<UserButton
+									userProfileMode='navigation'
+									userProfileUrl=''
+									afterSignOutUrl='/'
+									appearance={{
+										elements: {
+											userButtonBox: 'scale-150 pointer-events-none',
+											userButtonOuterIdentifier: 'bg-green-500'
+										}
+									}}
+								/>
+							</div>
+							<div>
+								<h2 className='text-xl md:text-2xl font-bold'>
+									{user.firstName} {user.lastName}
+								</h2>
+								<p className='text-sm md:text-base text-gray-200'>
+									@{user.username}
+								</p>
+								<EssentialsStatus essentialsTill={userData.essential_till} />
+							</div>
+						</div>
+					</motion.div>
+					<div className='fixed bottom-4 right-4 z-50'>
+						{isChatOpen ? (
+							<div className='bg-gray-900 rounded-lg shadow-lg p-4 mb-16 w-80'>
+								<button
+									onClick={() => setIsChatOpen(false)}
+									className='absolute top-2 right-2 text-gray-400 hover:text-white'>
+									&times;
+								</button>
+								<ChatBox userData={userData} />
+							</div>
+						) : (
+							<button
+								onClick={() => setIsChatOpen(true)}
+								className='bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg transition-all duration-300'>
+								<img
+									src='/dancerobot.gif'
+									alt='Dancing Robot'
+									className='w-10 h-10'
+								/>
+							</button>
+						)}
+					</div>
+
+					<AnimatePresence mode='wait'>
+						{isLoading ? (
+							<motion.div
+								key='loader'
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className='flex justify-center items-center h-64'>
+								<RingLoader color={'#10B981'} size={100} />
+							</motion.div>
+						) : (
+							<motion.div
+								key='content'
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className='flex flex-col  md:-mt-0 lg:flex-row gap-8 '>
+								<div className='lg:w-1/4 space-y-6 mt-0 md:mt-[4.57rem] '>
+									<motion.div
+										initial={{ opacity: 0, x: 20 }}
+										animate={{ opacity: 1, x: 0 }}
+										className='bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
+										<h3 className='text-2xl font-bold text-green-400 mb-4'>
+											{user.publicMetadata.role === 'admin'
+												? 'Admin Overview'
+												: 'Quick Stats'}
+										</h3>
+										<div className='space-y-4'>
+											{user.publicMetadata.role === 'admin' ? (
+												<>
+													<div>
+														<p className='text-gray-300'>Total Users</p>
+														<div className='flex items-end gap-2'>
+															<p className='text-3xl font-bold text-white'>
+																{totalUsers.total}
+															</p>
 														</div>
 													</div>
-												</div>
 
-												<div>
-													<p className='text-gray-300'>Total Activities</p>
-													<p className='text-3xl font-bold text-white'>
-														{totalActivities}
-													</p>
-												</div>
-
-												<div>
-													<p className='text-gray-300'>Sessions Today</p>
-													<p className='text-3xl font-bold text-white'>
-														{todaysSessions}
-													</p>
-												</div>
-											</>
-										) : (
-											<>
-												<div>
-													<p className='text-gray-300'>Total Reservations</p>
-													<p className='text-3xl font-bold text-white'>
-														{reservations.length + groupReservations.length}
-													</p>
-												</div>
-												<div>
-													<p className='text-gray-300'>Upcoming This Week</p>
-													<p className='text-3xl font-bold text-white'>
-														{upcomingThisWeek}
-													</p>
-												</div>
-											</>
-										)}
-									</div>
-								</motion.div>
-
-								{user.publicMetadata.role !== 'admin' && (
-									<motion.div
-										initial={{ opacity: 0, x: 20 }}
-										animate={{ opacity: 1, x: 0 }}
-										transition={{ delay: 0.2 }}
-										className='hidden md:block space-y-6'>
-										{' '}
-										<TokenBalance />
-										<LoyaltyCard
-											punches={userData?.punches || 0}
-											shake_token={userData?.shake_token || 0}
-											name={`${userData?.first_name} ${userData?.last_name}`}
-											createdAt={userData?.created_at}
-										/>
-									</motion.div>
-								)}
-								{user.publicMetadata.role === 'admin' && (
-									<motion.div
-										initial={{ opacity: 0, x: 20 }}
-										animate={{ opacity: 1, x: 0 }}
-										transition={{ delay: 0.2 }}
-										className=' bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500 overflow-y-auto max-h-[400px]'>
-										<h3 className='text-2xl font-bold text-green-400 mb-4'>
-											Sessions Left Today
-										</h3>
-										<ul className='space-y-4'>
-											{allSessions
-												.sort((a, b) => {
-													const now = new Date()
-													const aTime = new Date(`${a.date}T${a.startTime}`)
-													const bTime = new Date(`${b.date}T${b.startTime}`)
-													return (
-														aTime.getTime() -
-														now.getTime() -
-														(bTime.getTime() - now.getTime())
-													)
-												})
-												.map((session, index) => {
-													const now = new Date()
-													const startTime = new Date(
-														`${session.date}T${session.startTime}`
-													)
-													const endTime = new Date(
-														`${session.date}T${session.endTime}`
-													)
-													const isActive = now >= startTime && now <= endTime
-													const isStartingSoon =
-														startTime.getTime() - now.getTime() <=
-															15 * 60 * 1000 && startTime > now
-
-													return (
-														<li
-															key={index}
-															className={`text-gray-300 p-2 rounded ${
-																isActive
-																	? 'shadow-lg shadow-green-400'
-																	: isStartingSoon
-																	? 'shadow-lg shadow-yellow-700'
-																	: ''
-															}`}>
-															<div className='font-bold'>
-																{session.activityName}
+													<div>
+														<p className='text-gray-300'>Active Users</p>
+														<div className='flex items-center gap-2'>
+															<p className='text-3xl font-bold text-white'>
+																{totalUsers.active}
+															</p>
+															<div className='h-1 flex-1 bg-gray-700 rounded-full overflow-hidden'>
+																<div
+																	className='h-full bg-green-500 transition-all duration-500'
+																	style={{
+																		width: `${Math.round(
+																			(totalUsers.active / totalUsers.total) *
+																				100
+																		)}%`
+																	}}
+																/>
 															</div>
-															<div>Coach: {session.coachName}</div>
-															<div>
-																Time: {session.startTime.slice(0, 5)} -{' '}
-																{session.endTime.slice(0, 5)}
-															</div>
-															<div>Users: {session?.users?.join(', ')}</div>
-															{isActive && (
-																<div className='text-green-400 font-bold'>
-																	Active Now
-																</div>
-															)}
-															{isStartingSoon && (
-																<div className='text-yellow-400 font-bold'>
-																	Starting Soon
-																</div>
-															)}
-														</li>
-													)
-												})}
-										</ul>
-										{allSessions.length === 0 && (
-											<p className='text-green-300 text-center'>
-												No sessions left today
-											</p>
-										)}
-									</motion.div>
-								)}
-								<motion.div
-									initial={{ opacity: 0, x: 20 }}
-									animate={{ opacity: 1, x: 0 }}
-									transition={{ delay: 0.4 }}
-									className=' bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
-									<h3 className='text-2xl font-bold text-green-400 mb-4  '>
-										Quick Actions
-									</h3>
-									<div className='space-y-2'>
-										{user.publicMetadata.role !== 'admin' && (
-											<Link href='/users/bookasession'>
-												<button className='w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200'>
-													Book New Session
-												</button>
-											</Link>
-										)}
-										{user.publicMetadata.role === 'admin' && (
-											<Link href='/admin/manage-users'>
-												<button className='w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200'>
-													Go To Admin Panel
-												</button>
-											</Link>
-										)}
-									</div>
-								</motion.div>
-							</div>
-							{/* Reservations */}
+														</div>
+													</div>
 
-							<div className='lg:w-3/4 space-y-8'>
-								<div className='flex justify-between items-center flex-wrap mb-6'>
-									<h2 className='text-3xl md:text-4xl font-bold tracking-tight text-green-400'>
-										{activeTab === 'individual'
-											? 'Personal Training Reservations'
-											: 'Group Classes Reservations'}
-									</h2>
-									{user.publicMetadata.role === 'admin' && (
-										<div className='flex gap-4'>
-											<Link href='/admin/calendar-view'>
-												<button className='flex items-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
-													<FaCalendarAlt className='mr-2' /> View Calendar
-												</button>
-											</Link>
-											<motion.button
-												onClick={() => setShowBulkCalendarAdd(true)}
-												whileHover={{ scale: 1.05 }}
-												whileTap={{ scale: 0.95 }}
-												className='flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
-												<FaCalendarPlus className='mr-2' />
-												Add to Calendar
-											</motion.button>
+													<div>
+														<p className='text-gray-300'>Total Activities</p>
+														<p className='text-3xl font-bold text-white'>
+															{totalActivities}
+														</p>
+													</div>
+
+													<div>
+														<p className='text-gray-300'>Sessions Today</p>
+														<p className='text-3xl font-bold text-white'>
+															{todaysSessions}
+														</p>
+													</div>
+												</>
+											) : (
+												<>
+													<div>
+														<p className='text-gray-300'>Total Reservations</p>
+														<p className='text-3xl font-bold text-white'>
+															{reservations.length + groupReservations.length}
+														</p>
+													</div>
+													<div>
+														<p className='text-gray-300'>Upcoming This Week</p>
+														<p className='text-3xl font-bold text-white'>
+															{upcomingThisWeek}
+														</p>
+													</div>
+												</>
+											)}
 										</div>
+									</motion.div>
+
+									{user.publicMetadata.role !== 'admin' && (
+										<motion.div
+											initial={{ opacity: 0, x: 20 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{ delay: 0.2 }}
+											className='hidden md:block space-y-6'>
+											{' '}
+											<TokenBalance />
+											<LoyaltyCard
+												punches={userData?.punches || 0}
+												shake_token={userData?.shake_token || 0}
+												name={`${userData?.first_name} ${userData?.last_name}`}
+												createdAt={userData?.created_at}
+											/>
+										</motion.div>
+									)}
+									{user.publicMetadata.role === 'admin' && (
+										<motion.div
+											initial={{ opacity: 0, x: 20 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{ delay: 0.2 }}
+											className=' bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500 overflow-y-auto max-h-[400px]'>
+											<h3 className='text-2xl font-bold text-green-400 mb-4'>
+												Sessions Left Today
+											</h3>
+											<ul className='space-y-4'>
+												{allSessions
+													.sort((a, b) => {
+														const now = new Date()
+														const aTime = new Date(`${a.date}T${a.startTime}`)
+														const bTime = new Date(`${b.date}T${b.startTime}`)
+														return (
+															aTime.getTime() -
+															now.getTime() -
+															(bTime.getTime() - now.getTime())
+														)
+													})
+													.map((session, index) => {
+														const now = new Date()
+														const startTime = new Date(
+															`${session.date}T${session.startTime}`
+														)
+														const endTime = new Date(
+															`${session.date}T${session.endTime}`
+														)
+														const isActive = now >= startTime && now <= endTime
+														const isStartingSoon =
+															startTime.getTime() - now.getTime() <=
+																15 * 60 * 1000 && startTime > now
+
+														return (
+															<li
+																key={index}
+																className={`text-gray-300 p-2 rounded ${
+																	isActive
+																		? 'shadow-lg shadow-green-400'
+																		: isStartingSoon
+																		? 'shadow-lg shadow-yellow-700'
+																		: ''
+																}`}>
+																<div className='font-bold'>
+																	{session.activityName}
+																</div>
+																<div>Coach: {session.coachName}</div>
+																<div>
+																	Time: {session.startTime.slice(0, 5)} -{' '}
+																	{session.endTime.slice(0, 5)}
+																</div>
+																<div>Users: {session?.users?.join(', ')}</div>
+																{isActive && (
+																	<div className='text-green-400 font-bold'>
+																		Active Now
+																	</div>
+																)}
+																{isStartingSoon && (
+																	<div className='text-yellow-400 font-bold'>
+																		Starting Soon
+																	</div>
+																)}
+															</li>
+														)
+													})}
+											</ul>
+											{allSessions.length === 0 && (
+												<p className='text-green-300 text-center'>
+													No sessions left today
+												</p>
+											)}
+										</motion.div>
+									)}
+									<motion.div
+										initial={{ opacity: 0, x: 20 }}
+										animate={{ opacity: 1, x: 0 }}
+										transition={{ delay: 0.4 }}
+										className=' bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
+										<h3 className='text-2xl font-bold text-green-400 mb-4  '>
+											Quick Actions
+										</h3>
+										<div className='space-y-2'>
+											{user.publicMetadata.role !== 'admin' && (
+												<Link href='/users/bookasession'>
+													<button className='w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200'>
+														Book New Session
+													</button>
+												</Link>
+											)}
+											{user.publicMetadata.role === 'admin' && (
+												<Link href='/admin/manage-users'>
+													<button className='w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200'>
+														Go To Admin Panel
+													</button>
+												</Link>
+											)}
+										</div>
+									</motion.div>
+								</div>
+								{/* Reservations */}
+
+								<div className='lg:w-3/4 space-y-8'>
+									<div className='flex justify-between items-center flex-wrap mb-6'>
+										<h2 className='text-3xl md:text-4xl font-bold tracking-tight text-green-400'>
+											{activeTab === 'individual'
+												? 'Personal Training Reservations'
+												: 'Group Classes Reservations'}
+										</h2>
+										{user.publicMetadata.role === 'admin' && (
+											<div className='flex gap-4'>
+												<Link href='/admin/calendar-view'>
+													<button className='flex items-center bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
+														<FaCalendarAlt className='mr-2' /> View Calendar
+													</button>
+												</Link>
+												<motion.button
+													onClick={() => setShowBulkCalendarAdd(true)}
+													whileHover={{ scale: 1.05 }}
+													whileTap={{ scale: 0.95 }}
+													className='flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-2 lg:mt-0'>
+													<FaCalendarPlus className='mr-2' />
+													Add to Calendar
+												</motion.button>
+											</div>
+										)}
+									</div>
+
+									{user.publicMetadata.role === 'admin' ? (
+										// Admin view
+										showCalendarView ? (
+											<CalendarView
+												sessions={[
+													...adminIndividualSessions,
+													...adminGroupSessions
+												]}
+												onCancelSession={function (sessionId: any): void {
+													throw new Error('Function not implemented.')
+												}}
+											/>
+										) : (
+											<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+												{renderAdminSessions(
+													activeTab === 'individual'
+														? adminIndividualSessions
+														: adminGroupSessions
+												)}
+											</div>
+										)
+									) : (
+										// Non-admin view
+										<>
+											{(activeTab === 'individual'
+												? reservations
+												: groupReservations
+											).length === 0 ? (
+												<motion.div
+													initial={{ opacity: 0, y: 20 }}
+													animate={{ opacity: 1, y: 0 }}
+													className='bg-gray-800 rounded-xl p-8 text-center shadow-lg'>
+													<FaCalendarAlt className='text-green-500 text-5xl mb-4 mx-auto' />
+													<p className='text-xl text-gray-300'>
+														No upcoming reservations. Time to book your next
+														session!
+													</p>
+												</motion.div>
+											) : (
+												<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+													{paginatedReservations.map((reservation, index) => (
+														<motion.div
+															key={reservation.id}
+															initial={{ opacity: 0, y: 20 }}
+															animate={{ opacity: 1, y: 0 }}
+															transition={{ delay: index * 0.1 }}
+															className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-lg hover:shadow-green-500/30 transition duration-300'>
+															<div className='p-6 space-y-4'>
+																<div className='flex justify-between items-center mb-4'>
+																	<h3 className='text-xl font-bold text-green-400 truncate'>
+																		{reservation.activity.name}
+																	</h3>
+																	<span className='text-sm bg-green-600 text-white px-2 py-1 rounded-full whitespace-nowrap'>
+																		{reservation.activity.credits} Credits
+																	</span>
+																</div>
+																<div className='space-y-2 text-gray-300 text-sm'>
+																	<p className='flex items-center'>
+																		<FaCalendarAlt className='mr-2 text-green-500' />
+																		{reservation.date}
+																	</p>
+																	<p className='flex items-center'>
+																		<FaClock className='mr-2 text-green-500' />
+																		{reservation.start_time} -{' '}
+																		{reservation.end_time}
+																	</p>
+																	<p className='flex items-center'>
+																		<FaUser className='mr-2 text-green-500' />
+																		{reservation.coach.name}
+																	</p>
+																	{activeTab === 'group' && (
+																		<p className='flex items-center'>
+																			<FaUsers className='mr-2 text-green-500' />
+																			Attendance: {reservation.count}
+																		</p>
+																	)}
+																</div>
+																<div className='bg-gray-700 rounded-lg p-3 mt-4 text-xs'>
+																	<p className='text-gray-300'>
+																		<span className='font-semibold text-green-400'>
+																			Additions:
+																		</span>{' '}
+																		{reservation.additions &&
+																		reservation.additions.length > 0
+																			? reservation.additions
+																					.map(addition =>
+																						typeof addition === 'string'
+																							? addition
+																							: addition.items
+																									.map(item => item.name)
+																									.join(', ')
+																					)
+																					.join(', ')
+																			: 'No additions'}
+																	</p>
+																</div>
+																<div className='flex flex-col space-y-2 mt-4'>
+																	<div className='flex justify-center items-center'>
+																		<AddToCalendarButton
+																			name={`${reservation.activity.name} with ${reservation.coach.name}`}
+																			startDate={reservation.date}
+																			startTime={reservation.start_time}
+																			endTime={reservation.end_time}
+																			options={['Apple', 'Google']}
+																			timeZone='Asia/Beirut'
+																			buttonStyle='default'
+																			styleLight='--btn-background: #ffffff; --btn-text: #000; --btn-shadow: none;'
+																			styleDark='--btn-background: #10B981; --btn-text: #000; --btn-shadow: none;'
+																			size='3'
+																			inline
+																		/>
+																	</div>
+																	<div className='flex flex-col sm:flex-row justify-between mt-4 space-y-2 sm:space-y-0 sm:space-x-2'>
+																		<button
+																			onClick={() =>
+																				openMarketModal(reservation)
+																			}
+																			className='bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
+																			disabled={buttonLoading}>
+																			Add Items
+																		</button>
+																		<button
+																			onClick={() => {
+																				setSelectedRescheduleReservation(
+																					reservation
+																				)
+																				setRescheduleModalOpen(true)
+																			}}
+																			className='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
+																			disabled={buttonLoading}>
+																			Reschedule
+																		</button>
+																		<button
+																			onClick={() =>
+																				activeTab === 'individual'
+																					? handleCancel(reservation.id)
+																					: handleCancelGroup(reservation.id)
+																			}
+																			className='bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
+																			disabled={buttonLoading}>
+																			Cancel
+																		</button>
+																	</div>
+																</div>
+															</div>
+														</motion.div>
+													))}
+												</div>
+											)}
+										</>
 									)}
 								</div>
 
-								{user.publicMetadata.role === 'admin' ? (
-									// Admin view
-									showCalendarView ? (
-										<CalendarView
-											sessions={[
-												...adminIndividualSessions,
-												...adminGroupSessions
-											]}
-											onCancelSession={function (sessionId: any): void {
-												throw new Error('Function not implemented.')
-											}}
-										/>
-									) : (
-										<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-											{renderAdminSessions(
-												activeTab === 'individual'
-													? adminIndividualSessions
-													: adminGroupSessions
-											)}
-										</div>
-									)
-								) : (
-									// Non-admin view
-									<>
-										{(activeTab === 'individual'
-											? reservations
-											: groupReservations
-										).length === 0 ? (
-											<motion.div
-												initial={{ opacity: 0, y: 20 }}
-												animate={{ opacity: 1, y: 0 }}
-												className='bg-gray-800 rounded-xl p-8 text-center shadow-lg'>
-												<FaCalendarAlt className='text-green-500 text-5xl mb-4 mx-auto' />
-												<p className='text-xl text-gray-300'>
-													No upcoming reservations. Time to book your next
-													session!
-												</p>
-											</motion.div>
-										) : (
-											<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-												{paginatedReservations.map((reservation, index) => (
-													<motion.div
-														key={reservation.id}
-														initial={{ opacity: 0, y: 20 }}
-														animate={{ opacity: 1, y: 0 }}
-														transition={{ delay: index * 0.1 }}
-														className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-lg hover:shadow-green-500/30 transition duration-300'>
-														<div className='p-6 space-y-4'>
-															<div className='flex justify-between items-center mb-4'>
-																<h3 className='text-xl font-bold text-green-400 truncate'>
-																	{reservation.activity.name}
-																</h3>
-																<span className='text-sm bg-green-600 text-white px-2 py-1 rounded-full whitespace-nowrap'>
-																	{reservation.activity.credits} Credits
-																</span>
-															</div>
-															<div className='space-y-2 text-gray-300 text-sm'>
-																<p className='flex items-center'>
-																	<FaCalendarAlt className='mr-2 text-green-500' />
-																	{reservation.date}
-																</p>
-																<p className='flex items-center'>
-																	<FaClock className='mr-2 text-green-500' />
-																	{reservation.start_time} -{' '}
-																	{reservation.end_time}
-																</p>
-																<p className='flex items-center'>
-																	<FaUser className='mr-2 text-green-500' />
-																	{reservation.coach.name}
-																</p>
-																{activeTab === 'group' && (
-																	<p className='flex items-center'>
-																		<FaUsers className='mr-2 text-green-500' />
-																		Attendance: {reservation.count}
-																	</p>
-																)}
-															</div>
-															<div className='bg-gray-700 rounded-lg p-3 mt-4 text-xs'>
-																<p className='text-gray-300'>
-																	<span className='font-semibold text-green-400'>
-																		Additions:
-																	</span>{' '}
-																	{reservation.additions &&
-																	reservation.additions.length > 0
-																		? reservation.additions
-																				.map(addition =>
-																					typeof addition === 'string'
-																						? addition
-																						: addition.items
-																								.map(item => item.name)
-																								.join(', ')
-																				)
-																				.join(', ')
-																		: 'No additions'}
-																</p>
-															</div>
-															<div className='flex flex-col space-y-2 mt-4'>
-																<div className='flex justify-center items-center'>
-																	<AddToCalendarButton
-																		name={`${reservation.activity.name} with ${reservation.coach.name}`}
-																		startDate={reservation.date}
-																		startTime={reservation.start_time}
-																		endTime={reservation.end_time}
-																		options={['Apple', 'Google']}
-																		timeZone='Asia/Beirut'
-																		buttonStyle='default'
-																		styleLight='--btn-background: #ffffff; --btn-text: #000; --btn-shadow: none;'
-																		styleDark='--btn-background: #10B981; --btn-text: #000; --btn-shadow: none;'
-																		size='3'
-																		inline
-																	/>
-																</div>
-																<div className='flex flex-col sm:flex-row justify-between mt-4 space-y-2 sm:space-y-0 sm:space-x-2'>
-																	<button
-																		onClick={() => openMarketModal(reservation)}
-																		className='bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
-																		disabled={buttonLoading}>
-																		Add Items
-																	</button>
-																	<button
-																		onClick={() => {
-																			setSelectedRescheduleReservation(
-																				reservation
-																			)
-																			setRescheduleModalOpen(true)
-																		}}
-																		className='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
-																		disabled={buttonLoading}>
-																		Reschedule
-																	</button>
-																	<button
-																		onClick={() =>
-																			activeTab === 'individual'
-																				? handleCancel(reservation.id)
-																				: handleCancelGroup(reservation.id)
-																		}
-																		className='bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex-grow'
-																		disabled={buttonLoading}>
-																		Cancel
-																	</button>
-																</div>
-															</div>
-														</div>
-													</motion.div>
-												))}
-											</div>
-										)}
-									</>
-								)}
-							</div>
+								{/* New Sidebar */}
+							</motion.div>
+						)}
+					</AnimatePresence>
+					{totalPages > 1 && (
+						<div className='flex justify-center items-center mt-8 space-x-4'>
+							<button
+								onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+								disabled={currentPage === 1}
+								className='p-2 bg-green-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors duration-200'
+								aria-label='Previous page'>
+								<FaChevronLeft size={20} />
+							</button>
 
-							{/* New Sidebar */}
-						</motion.div>
+							<span className='px-4 py-2 bg-gray-700 text-white rounded-md text-sm font-medium'>
+								Page {currentPage} of {totalPages}
+							</span>
+
+							<button
+								onClick={() =>
+									setCurrentPage(prev => Math.min(prev + 1, totalPages))
+								}
+								disabled={currentPage === totalPages}
+								className='p-2 bg-green-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors duration-200'
+								aria-label='Next page'>
+								<FaChevronRight size={20} />
+							</button>
+						</div>
 					)}
-				</AnimatePresence>
-				{totalPages > 1 && (
-					<div className='flex justify-center items-center mt-8 space-x-4'>
-						<button
-							onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-							disabled={currentPage === 1}
-							className='p-2 bg-green-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors duration-200'
-							aria-label='Previous page'>
-							<FaChevronLeft size={20} />
-						</button>
+				</div>
 
-						<span className='px-4 py-2 bg-gray-700 text-white rounded-md text-sm font-medium'>
-							Page {currentPage} of {totalPages}
-						</span>
-
-						<button
-							onClick={() =>
-								setCurrentPage(prev => Math.min(prev + 1, totalPages))
-							}
-							disabled={currentPage === totalPages}
-							className='p-2 bg-green-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors duration-200'
-							aria-label='Next page'>
-							<FaChevronRight size={20} />
-						</button>
+				{user.publicMetadata.role === 'admin' && (
+					<div className='space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
+						<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
+							Shop Transactions
+						</h2>
+						{isLoadingTransactions ? (
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								className='flex justify-center items-center p-8'>
+								<motion.div
+									animate={{ rotate: 360 }}
+									transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+									className='w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full'
+								/>
+							</motion.div>
+						) : shopTransactions.length === 0 ? (
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								className='bg-gray-800 rounded-xl p-8 text-center'>
+								<FaShoppingCart className='text-green-500 text-5xl mb-4 mx-auto' />
+								<p className='text-xl text-gray-300'>
+									No unclaimed transactions.
+								</p>
+							</motion.div>
+						) : (
+							<div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+								{shopTransactions.map((transaction, index) => (
+									<motion.div
+										key={transaction.transaction_id}
+										initial={{ opacity: 0, y: 20 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: index * 0.1 }}
+										className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-xl hover:shadow-green-500/30 transition duration-300'>
+										<div className='p-6 space-y-4'>
+											<div className='flex justify-between items-center mb-4'>
+												<h3 className='text-2xl font-bold text-green-400'>
+													Transaction ID: {transaction.transaction_id}
+												</h3>
+												<span className='text-sm bg-green-600 text-white px-2 py-1 rounded-full'>
+													{new Date(transaction.date).toLocaleString()}
+												</span>
+											</div>
+											<div className='space-y-2 text-gray-300'>
+												<p>User: {transaction.user_name}</p>
+												<p>
+													Items:{' '}
+													{transaction.item_details.length > 0
+														? transaction.item_details
+																.map(
+																	(
+																		item: {
+																			name:
+																				| string
+																				| number
+																				| boolean
+																				| React.ReactElement<
+																						any,
+																						| string
+																						| React.JSXElementConstructor<any>
+																				  >
+																				| Iterable<React.ReactNode>
+																				| React.ReactPortal
+																				| Promise<React.AwaitedReactNode>
+																				| null
+																				| undefined
+																			quantity:
+																				| string
+																				| number
+																				| boolean
+																				| React.ReactElement<
+																						any,
+																						| string
+																						| React.JSXElementConstructor<any>
+																				  >
+																				| Iterable<React.ReactNode>
+																				| React.ReactPortal
+																				| Promise<React.AwaitedReactNode>
+																				| null
+																				| undefined
+																		},
+																		itemIndex: React.Key | null | undefined
+																	) => (
+																		<span key={itemIndex}>
+																			{item.name} (x{item.quantity})
+																		</span>
+																	)
+																)
+																.reduce(
+																	(prev: any, curr: any, index: number) =>
+																		index === 0 ? [curr] : [prev, ', ', curr],
+																	[]
+																)
+														: 'No items'}
+												</p>
+											</div>
+											<div className='flex justify-end'>
+												<button
+													onClick={() =>
+														handleClaimTransaction(transaction.transaction_id)
+													}
+													disabled={
+														claimingTransactionId === transaction.transaction_id
+													}
+													className={`flex items-center justify-center space-x-2 ${
+														claimingTransactionId === transaction.transaction_id
+															? 'bg-green-700 cursor-not-allowed'
+															: 'bg-green-500 hover:bg-green-600'
+													} text-white font-bold py-2 px-4 rounded-lg transition duration-200`}>
+													{claimingTransactionId ===
+													transaction.transaction_id ? (
+														<>
+															<motion.div
+																animate={{ rotate: 360 }}
+																transition={{
+																	duration: 1,
+																	repeat: Infinity,
+																	ease: 'linear'
+																}}
+																className='w-5 h-5 border-2 border-white border-t-transparent rounded-full'
+															/>
+															<span>Claiming...</span>
+														</>
+													) : (
+														'Claim'
+													)}
+												</button>
+											</div>
+										</div>
+									</motion.div>
+								))}
+							</div>
+						)}
 					</div>
 				)}
-			</div>
 
-			{user.publicMetadata.role === 'admin' && (
-				<div className='space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
-					<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
-						Shop Transactions
-					</h2>
-					{isLoadingTransactions ? (
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							className='flex justify-center items-center p-8'>
+				{user.publicMetadata.role === 'admin' && (
+					<div className='space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
+						<div className='flex justify-between items-center'>
+							<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
+								Users With Low Balances
+							</h2>
+							<div className='text-sm text-gray-400'>
+								* Shows users with remaining credits (1-9) or tokens (1)
+							</div>
+						</div>
+						{usersWithLowBalances.length === 0 ? (
 							<motion.div
-								animate={{ rotate: 360 }}
-								transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-								className='w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full'
-							/>
-						</motion.div>
-					) : shopTransactions.length === 0 ? (
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							className='bg-gray-800 rounded-xl p-8 text-center'>
-							<FaShoppingCart className='text-green-500 text-5xl mb-4 mx-auto' />
-							<p className='text-xl text-gray-300'>
-								No unclaimed transactions.
-							</p>
-						</motion.div>
-					) : (
-						<div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-							{shopTransactions.map((transaction, index) => (
-								<motion.div
-									key={transaction.transaction_id}
-									initial={{ opacity: 0, y: 20 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ delay: index * 0.1 }}
-									className='bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-xl hover:shadow-green-500/30 transition duration-300'>
-									<div className='p-6 space-y-4'>
-										<div className='flex justify-between items-center mb-4'>
-											<h3 className='text-2xl font-bold text-green-400'>
-												Transaction ID: {transaction.transaction_id}
-											</h3>
-											<span className='text-sm bg-green-600 text-white px-2 py-1 rounded-full'>
-												{new Date(transaction.date).toLocaleString()}
-											</span>
-										</div>
-										<div className='space-y-2 text-gray-300'>
-											<p>User: {transaction.user_name}</p>
-											<p>
-												Items:{' '}
-												{transaction.item_details.length > 0
-													? transaction.item_details
-															.map(
-																(
-																	item: {
-																		name:
-																			| string
-																			| number
-																			| boolean
-																			| React.ReactElement<
-																					any,
-																					| string
-																					| React.JSXElementConstructor<any>
-																			  >
-																			| Iterable<React.ReactNode>
-																			| React.ReactPortal
-																			| Promise<React.AwaitedReactNode>
-																			| null
-																			| undefined
-																		quantity:
-																			| string
-																			| number
-																			| boolean
-																			| React.ReactElement<
-																					any,
-																					| string
-																					| React.JSXElementConstructor<any>
-																			  >
-																			| Iterable<React.ReactNode>
-																			| React.ReactPortal
-																			| Promise<React.AwaitedReactNode>
-																			| null
-																			| undefined
-																	},
-																	itemIndex: React.Key | null | undefined
-																) => (
-																	<span key={itemIndex}>
-																		{item.name} (x{item.quantity})
-																	</span>
-																)
-															)
-															.reduce(
-																(prev: any, curr: any, index: number) =>
-																	index === 0 ? [curr] : [prev, ', ', curr],
-																[]
-															)
-													: 'No items'}
-											</p>
-										</div>
-										<div className='flex justify-end'>
-											<button
-												onClick={() =>
-													handleClaimTransaction(transaction.transaction_id)
-												}
-												disabled={
-													claimingTransactionId === transaction.transaction_id
-												}
-												className={`flex items-center justify-center space-x-2 ${
-													claimingTransactionId === transaction.transaction_id
-														? 'bg-green-700 cursor-not-allowed'
-														: 'bg-green-500 hover:bg-green-600'
-												} text-white font-bold py-2 px-4 rounded-lg transition duration-200`}>
-												{claimingTransactionId ===
-												transaction.transaction_id ? (
-													<>
-														<motion.div
-															animate={{ rotate: 360 }}
-															transition={{
-																duration: 1,
-																repeat: Infinity,
-																ease: 'linear'
-															}}
-															className='w-5 h-5 border-2 border-white border-t-transparent rounded-full'
-														/>
-														<span>Claiming...</span>
-													</>
-												) : (
-													'Claim'
-												)}
-											</button>
-										</div>
-									</div>
-								</motion.div>
-							))}
-						</div>
-					)}
-				</div>
-			)}
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								className='bg-gray-800 rounded-xl p-8 text-center'>
+								<FaUsers className='text-green-500 text-5xl mb-4 mx-auto' />
+								<p className='text-xl text-gray-300'>
+									No users currently have low balances.
+								</p>
+							</motion.div>
+						) : (
+							<div className='overflow-x-auto rounded-lg shadow'>
+								<table className='min-w-full divide-y divide-gray-700'>
+									<thead className='bg-gray-800'>
+										<tr>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Name
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Email
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Phone
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Credits
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Private Tokens
+											</th>
+											<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
+												Public Tokens
+											</th>
+										</tr>
+									</thead>
+									<tbody className='bg-gray-900 divide-y divide-gray-700'>
+										{usersWithLowBalances.map((user: any, index: any) => {
+											const hasLowCredits = user.wallet > 0 && user.wallet < 10
+											const hasLowPrivateTokens =
+												user.private_token > 0 && user.private_token < 2
+											const hasLowPublicTokens =
+												user.public_token > 0 && user.public_token < 2
 
-			{user.publicMetadata.role === 'admin' && (
-				<div className='space-y-8 mx-4 lg:ml-64 p-4 md:p-8'>
-					<div className='flex justify-between items-center'>
-						<h2 className='text-3xl md:text-4xl font-bold tracking-tight mb-6 text-green-400'>
-							Users With Low Balances
-						</h2>
-						<div className='text-sm text-gray-400'>
-							* Shows users with remaining credits (1-9) or tokens (1)
-						</div>
-					</div>
-					{usersWithLowBalances.length === 0 ? (
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							className='bg-gray-800 rounded-xl p-8 text-center'>
-							<FaUsers className='text-green-500 text-5xl mb-4 mx-auto' />
-							<p className='text-xl text-gray-300'>
-								No users currently have low balances.
-							</p>
-						</motion.div>
-					) : (
-						<div className='overflow-x-auto rounded-lg shadow'>
-							<table className='min-w-full divide-y divide-gray-700'>
-								<thead className='bg-gray-800'>
-									<tr>
-										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
-											Name
-										</th>
-										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
-											Email
-										</th>
-										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
-											Phone
-										</th>
-										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
-											Credits
-										</th>
-										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
-											Private Tokens
-										</th>
-										<th className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider'>
-											Public Tokens
-										</th>
-									</tr>
-								</thead>
-								<tbody className='bg-gray-900 divide-y divide-gray-700'>
-									{usersWithLowBalances.map((user: any, index: any) => {
-										const hasLowCredits = user.wallet > 0 && user.wallet < 10
-										const hasLowPrivateTokens =
-											user.private_token > 0 && user.private_token < 2
-										const hasLowPublicTokens =
-											user.public_token > 0 && user.public_token < 2
-
-										return (
-											<motion.tr
-												key={user.id}
-												initial={{ opacity: 0, y: 20 }}
-												animate={{ opacity: 1, y: 0 }}
-												transition={{ delay: index * 0.05 }}
-												className='hover:bg-gray-800 transition-colors duration-200'>
-												<td className='px-6 py-4 whitespace-nowrap'>
-													<div className='flex items-center'>
-														<div className='text-sm font-medium text-gray-300'>
-															{user.first_name} {user.last_name}
+											return (
+												<motion.tr
+													key={user.id}
+													initial={{ opacity: 0, y: 20 }}
+													animate={{ opacity: 1, y: 0 }}
+													transition={{ delay: index * 0.05 }}
+													className='hover:bg-gray-800 transition-colors duration-200'>
+													<td className='px-6 py-4 whitespace-nowrap'>
+														<div className='flex items-center'>
+															<div className='text-sm font-medium text-gray-300'>
+																{user.first_name} {user.last_name}
+															</div>
 														</div>
-													</div>
-												</td>
-												<td className='px-6 py-4 whitespace-nowrap'>
-													<div className='text-sm text-gray-300'>
-														{user.email}
-													</div>
-												</td>
-												<td className='px-6 py-4 whitespace-nowrap'>
-													<div className='text-sm text-gray-300'>
-														{user.phone || 'N/A'}
-													</div>
-												</td>
-												<td className='px-6 py-4 whitespace-nowrap'>
-													<div
-														className={`text-sm ${
-															hasLowCredits
-																? 'text-red-400 font-bold'
-																: 'text-gray-300'
-														}`}>
-														{user.wallet} credits
-													</div>
-												</td>
-												<td className='px-6 py-4 whitespace-nowrap'>
-													<div
-														className={`text-sm ${
-															hasLowPrivateTokens
-																? 'text-red-400 font-bold'
-																: 'text-gray-300'
-														}`}>
-														{user.private_token}
-													</div>
-												</td>
-												<td className='px-6 py-4 whitespace-nowrap'>
-													<div
-														className={`text-sm ${
-															hasLowPublicTokens
-																? 'text-red-400 font-bold'
-																: 'text-gray-300'
-														}`}>
-														{user.public_token}
-													</div>
-												</td>
-											</motion.tr>
-										)
-									})}
-								</tbody>
-							</table>
-						</div>
-					)}
-				</div>
-			)}
+													</td>
+													<td className='px-6 py-4 whitespace-nowrap'>
+														<div className='text-sm text-gray-300'>
+															{user.email}
+														</div>
+													</td>
+													<td className='px-6 py-4 whitespace-nowrap'>
+														<div className='text-sm text-gray-300'>
+															{user.phone || 'N/A'}
+														</div>
+													</td>
+													<td className='px-6 py-4 whitespace-nowrap'>
+														<div
+															className={`text-sm ${
+																hasLowCredits
+																	? 'text-red-400 font-bold'
+																	: 'text-gray-300'
+															}`}>
+															{user.wallet} credits
+														</div>
+													</td>
+													<td className='px-6 py-4 whitespace-nowrap'>
+														<div
+															className={`text-sm ${
+																hasLowPrivateTokens
+																	? 'text-red-400 font-bold'
+																	: 'text-gray-300'
+															}`}>
+															{user.private_token}
+														</div>
+													</td>
+													<td className='px-6 py-4 whitespace-nowrap'>
+														<div
+															className={`text-sm ${
+																hasLowPublicTokens
+																	? 'text-red-400 font-bold'
+																	: 'text-gray-300'
+															}`}>
+															{user.public_token}
+														</div>
+													</td>
+												</motion.tr>
+											)
+										})}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</div>
+				)}
 
-			{/* Market Modal */}
-			<Modal
-				isOpen={modalIsOpen}
-				onRequestClose={() => setModalIsOpen(false)}
-				contentLabel='Market Items'
-				className='modal rounded-3xl p-4 sm:p-6 md:p-8 mx-auto mt-10 sm:mt-20 w-11/12 md:max-w-4xl'
-				style={{
-					content: {
-						backgroundColor: 'rgba(31, 41, 55, 0.9)',
-						backdropFilter: 'blur(16px)'
-					}
-				}}
-				overlayClassName='overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center'>
-				<h2 className='text-3xl sm:text-4xl font-bold mb-6 sm:mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500'>
-					Enhance Your Session
-				</h2>
-				<div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8'>
-					{market.map(item => (
-						<motion.div
-							key={item.id}
-							className='bg-gray-700 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-green-400 hover:shadow-lg transition-all duration-300'>
-							<div className='flex flex-col h-full'>
-								{item.image && (
-									<img
-										src={item.image}
-										alt={item.name}
-										className='w-full h-32 object-cover mb-3 rounded-lg'
-									/>
-								)}
-								<div className='flex justify-between items-center text-gray-300 mb-3 sm:mb-4'>
-									<span className='font-semibold text-sm sm:text-lg'>
-										{item.name}
-									</span>
-									<span className='text-lg sm:text-xl font-bold text-green-400'>
-										{item.price} Credits
-									</span>
-								</div>
-								<motion.button
-									whileHover={{ scale: 1.05 }}
-									whileTap={{ scale: 0.95 }}
-									className={`mt-auto w-full py-2 sm:py-3 rounded-full text-white font-semibold text-sm sm:text-base transition-all duration-300 ${
-										selectedItems.find(
+				{/* Market Modal */}
+				<Modal
+					isOpen={modalIsOpen}
+					onRequestClose={() => setModalIsOpen(false)}
+					contentLabel='Market Items'
+					className='modal rounded-3xl p-4 sm:p-6 md:p-8 mx-auto mt-10 sm:mt-20 w-11/12 md:max-w-4xl'
+					style={{
+						content: {
+							backgroundColor: 'rgba(31, 41, 55, 0.9)',
+							backdropFilter: 'blur(16px)'
+						}
+					}}
+					overlayClassName='overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center'>
+					<h2 className='text-3xl sm:text-4xl font-bold mb-6 sm:mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500'>
+						Enhance Your Session
+					</h2>
+					<div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8'>
+						{market.map(item => (
+							<motion.div
+								key={item.id}
+								className='bg-gray-700 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-green-400 hover:shadow-lg transition-all duration-300'>
+								<div className='flex flex-col h-full'>
+									{item.image && (
+										<img
+											src={item.image}
+											alt={item.name}
+											className='w-full h-32 object-cover mb-3 rounded-lg'
+										/>
+									)}
+									<div className='flex justify-between items-center text-gray-300 mb-3 sm:mb-4'>
+										<span className='font-semibold text-sm sm:text-lg'>
+											{item.name}
+										</span>
+										<span className='text-lg sm:text-xl font-bold text-green-400'>
+											{item.price} Credits
+										</span>
+									</div>
+									<motion.button
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+										className={`mt-auto w-full py-2 sm:py-3 rounded-full text-white font-semibold text-sm sm:text-base transition-all duration-300 ${
+											selectedItems.find(
+												selectedItem => selectedItem.id === item.id
+											)
+												? 'bg-red-500 hover:bg-red-600'
+												: 'bg-green-500 hover:bg-green-600'
+										}`}
+										onClick={() => handleItemSelect(item)}>
+										{selectedItems.find(
 											selectedItem => selectedItem.id === item.id
 										)
-											? 'bg-red-500 hover:bg-red-600'
-											: 'bg-green-500 hover:bg-green-600'
-									}`}
-									onClick={() => handleItemSelect(item)}>
-									{selectedItems.find(
-										selectedItem => selectedItem.id === item.id
-									)
-										? 'Remove'
-										: 'Add'}
-								</motion.button>
-							</div>
-						</motion.div>
-					))}
-				</div>
-				<div className='text-right'>
-					<p className='text-xl sm:text-2xl font-bold text-green-400 mb-4 sm:mb-6'>
-						Total Price: {totalPrice} Credits
-					</p>
-					<div className='flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-6'>
-						<motion.button
-							whileHover={{
-								scale: 1.05,
-								boxShadow: '0 0 30px rgba(74, 222, 128, 0.7)'
-							}}
-							whileTap={{ scale: 0.95 }}
-							className='bg-green-500 text-white py-2 sm:py-3 px-6 sm:px-8 rounded-full text-lg sm:text-xl font-bold transition-all duration-300 hover:bg-green-600 disabled:opacity-50'
-							onClick={handlePay}
-							disabled={buttonLoading}>
-							{buttonLoading ? 'Processing...' : 'Complete Purchase'}
-						</motion.button>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className='bg-red-500 text-white py-2 sm:py-3 px-6 sm:px-8 rounded-full text-lg sm:text-xl font-bold transition-all duration-300 hover:bg-red-600'
-							onClick={() => setModalIsOpen(false)}>
-							Close
-						</motion.button>
+											? 'Remove'
+											: 'Add'}
+									</motion.button>
+								</div>
+							</motion.div>
+						))}
 					</div>
-				</div>
-			</Modal>
-			{isCancelling && <LoadingOverlay />}
-			{user.publicMetadata.role === 'admin' && (
-				<BulkCalendarAdd
-					sessions={
-						activeTab === 'individual'
-							? adminIndividualSessions
-							: adminGroupSessions
-					}
-					isVisible={showBulkCalendarAdd}
-					onClose={() => setShowBulkCalendarAdd(false)}
+					<div className='text-right'>
+						<p className='text-xl sm:text-2xl font-bold text-green-400 mb-4 sm:mb-6'>
+							Total Price: {totalPrice} Credits
+						</p>
+						<div className='flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-6'>
+							<motion.button
+								whileHover={{
+									scale: 1.05,
+									boxShadow: '0 0 30px rgba(74, 222, 128, 0.7)'
+								}}
+								whileTap={{ scale: 0.95 }}
+								className='bg-green-500 text-white py-2 sm:py-3 px-6 sm:px-8 rounded-full text-lg sm:text-xl font-bold transition-all duration-300 hover:bg-green-600 disabled:opacity-50'
+								onClick={handlePay}
+								disabled={buttonLoading}>
+								{buttonLoading ? 'Processing...' : 'Complete Purchase'}
+							</motion.button>
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className='bg-red-500 text-white py-2 sm:py-3 px-6 sm:px-8 rounded-full text-lg sm:text-xl font-bold transition-all duration-300 hover:bg-red-600'
+								onClick={() => setModalIsOpen(false)}>
+								Close
+							</motion.button>
+						</div>
+					</div>
+				</Modal>
+				{isCancelling && <LoadingOverlay />}
+				{user.publicMetadata.role === 'admin' && (
+					<BulkCalendarAdd
+						sessions={
+							activeTab === 'individual'
+								? adminIndividualSessions
+								: adminGroupSessions
+						}
+						isVisible={showBulkCalendarAdd}
+						onClose={() => setShowBulkCalendarAdd(false)}
+					/>
+				)}
+				<RescheduleModal
+					isOpen={rescheduleModalOpen}
+					onClose={() => {
+						setRescheduleModalOpen(false)
+						setSelectedRescheduleReservation(null)
+					}}
+					reservation={selectedRescheduleReservation}
+					isGroup={activeTab === 'group'}
+					onReschedule={async (newDate, newStartTime, newEndTime) => {
+						await handleReschedule(
+							selectedRescheduleReservation.id,
+							newDate,
+							newStartTime,
+							newEndTime,
+							activeTab === 'group'
+						)
+						setRescheduleModalOpen(false)
+						setSelectedRescheduleReservation(null)
+					}}
 				/>
-			)}
-			<RescheduleModal
-				isOpen={rescheduleModalOpen}
-				onClose={() => {
-					setRescheduleModalOpen(false)
-					setSelectedRescheduleReservation(null)
-				}}
-				reservation={selectedRescheduleReservation}
-				isGroup={activeTab === 'group'}
-				onReschedule={async (newDate, newStartTime, newEndTime) => {
-					await handleReschedule(
-						selectedRescheduleReservation.id,
-						newDate,
-						newStartTime,
-						newEndTime,
-						activeTab === 'group'
-					)
-					setRescheduleModalOpen(false)
-					setSelectedRescheduleReservation(null)
-				}}
-			/>
-		</div>
+			</div>
+		</EssentialsGuard>
 	)
 }

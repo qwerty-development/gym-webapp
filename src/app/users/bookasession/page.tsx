@@ -22,6 +22,9 @@ import 'react-datepicker/dist/react-datepicker.css'
 import { RotateLoader } from 'react-spinners'
 import toast from 'react-hot-toast'
 import Modal from 'react-modal'
+import EssentialsGuard from '@/app/components/users/EssentialsGuard'
+import { supabaseClient } from '../../../../utils/supabaseClient'
+import { RingLoader } from 'react-spinners'
 import {
 	FaRunning,
 	FaHeart,
@@ -87,6 +90,8 @@ export default function Example() {
 	const [highlightDates, setHighlightDates] = useState<Date[]>([])
 	const [loading, setLoading] = useState<boolean>(false)
 	const [activitiesLoading, setActivitiesLoading] = useState<boolean>(true)
+	const [userData, setUserData] = useState<any>(null)
+	const [isLoading, setIsLoading] = useState(true)
 	const [groupActivitiesLoading, setGroupActivitiesLoading] =
 		useState<boolean>(true)
 	const [coachesLoading, setCoachesLoading] = useState<boolean>(false)
@@ -94,7 +99,7 @@ export default function Example() {
 	const { user } = useUser()
 	const { refreshWalletBalance, refreshTokens } = useWallet()
 	useEffect(() => {
-		Modal.setAppElement('#__next')
+		Modal.setAppElement(document.body)
 	}, [])
 
 	const handleBookGroupSession = async () => {
@@ -555,186 +560,220 @@ export default function Example() {
 		fetchReservationCount()
 	}, [selectedActivity, selectedCoach, selectedDate])
 
+	useEffect(() => {
+		const fetchUserData = async () => {
+			if (user) {
+				setIsLoading(true)
+				const supabase = await supabaseClient()
+				const { data, error } = await supabase
+					.from('users')
+					.select('*')
+					.eq('user_id', user?.id)
+					.single()
+
+				if (!error) {
+					setUserData(data)
+				}
+				setIsLoading(false)
+			}
+		}
+
+		fetchUserData()
+	}, [user])
+	if (isLoading) {
+		return (
+			<div className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center'>
+				<RingLoader color={'#10B981'} size={60} />
+			</div>
+		)
+	}
 	return (
-		<div
-			className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800'
+		<EssentialsGuard
+			essentialsTill={userData?.essential_till}
+			user={user}
 			id='__next'>
-			<NavbarComponent />
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ duration: 0.5 }}
-				className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-				<h1 className='text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-800 mb-8 sm:mb-12 text-center'>
-					Book Your Next Session
-				</h1>
+			<div
+				className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800'
+				id='__next'>
+				<NavbarComponent />
+				<motion.div
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					transition={{ duration: 0.5 }}
+					className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
+					<h1 className='text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-800 mb-8 sm:mb-12 text-center'>
+						Book Your Next Session
+					</h1>
 
-				<FadeInSection>
-					<div className='flex justify-center items-center space-x-4 mb-12'>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all duration-300 ${
-								isPrivateTraining
-									? 'bg-green-500 text-white shadow-lg'
-									: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
-							}`}
-							onClick={() => handleToggle(true)}>
-							<RiUserLine className='inline-block mr-2' />
-							Private Training
-						</motion.button>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all duration-300 ${
-								!isPrivateTraining
-									? 'bg-green-500 text-white shadow-lg'
-									: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
-							}`}
-							onClick={() => handleToggle(false)}>
-							<RiGroupLine className='inline-block mr-2' />
-							Classes
-						</motion.button>
-					</div>
-				</FadeInSection>
+					<FadeInSection>
+						<div className='flex justify-center items-center space-x-4 mb-12'>
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all duration-300 ${
+									isPrivateTraining
+										? 'bg-green-500 text-white shadow-lg'
+										: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
+								}`}
+								onClick={() => handleToggle(true)}>
+								<RiUserLine className='inline-block mr-2' />
+								Private Training
+							</motion.button>
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold transition-all duration-300 ${
+									!isPrivateTraining
+										? 'bg-green-500 text-white shadow-lg'
+										: 'bg-gray-700 text-gray-300 hover:bg-green-300 hover:text-white'
+								}`}
+								onClick={() => handleToggle(false)}>
+								<RiGroupLine className='inline-block mr-2' />
+								Classes
+							</motion.button>
+						</div>
+					</FadeInSection>
 
-				<FadeInSection>
-					<div
-						ref={activityRef}
-						className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
-							activeSection === 'activity' ? 'bg-green-100 bg-opacity-10' : ''
-						}`}>
-						<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center'>
-							Select Your {isPrivateTraining ? 'Activity' : 'Class'}
-						</h2>
-						{activitiesLoading ? (
-							<div className='flex items-center justify-center'>
-								<RotateLoader
-									color={'#4ADE80'}
-									loading={activitiesLoading}
-									size={20}
-								/>
-							</div>
-						) : (
-							<ActivitySelection
-								activities={activities}
-								selectedActivity={selectedActivity}
-								handleActivitySelect={handleActivitySelect}
-								isPrivateTraining={isPrivateTraining}
-								activitiesGroup={activitiesGroup}
-							/>
-						)}
-					</div>
-				</FadeInSection>
-
-				{selectedActivity && (
-					<FadeInSection delay={0.1}>
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
+					<FadeInSection>
+						<div
+							ref={activityRef}
 							className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
-								activeSection === 'coach' ? 'bg-green-100 bg-opacity-10' : ''
-							}`}
-							ref={coachRef}>
+								activeSection === 'activity' ? 'bg-green-100 bg-opacity-10' : ''
+							}`}>
 							<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center'>
-								Choose Your {isPrivateTraining ? 'Coach' : 'Instructor'}
+								Select Your {isPrivateTraining ? 'Activity' : 'Class'}
 							</h2>
-							{coachesLoading ? (
+							{activitiesLoading ? (
 								<div className='flex items-center justify-center'>
 									<RotateLoader
 										color={'#4ADE80'}
-										loading={coachesLoading}
+										loading={activitiesLoading}
 										size={20}
 									/>
 								</div>
 							) : (
-								<CoachSelection
-									coaches={coaches}
-									selectedCoach={selectedCoach}
-									handleCoachSelect={handleCoachSelect}
+								<ActivitySelection
+									activities={activities}
+									selectedActivity={selectedActivity}
+									handleActivitySelect={handleActivitySelect}
+									isPrivateTraining={isPrivateTraining}
+									activitiesGroup={activitiesGroup}
 								/>
 							)}
-						</motion.div>
+						</div>
 					</FadeInSection>
-				)}
 
-				{selectedCoach && (
-					<FadeInSection delay={0.2}>
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
-								activeSection === 'date' ? 'bg-green-100 bg-opacity-10' : ''
-							}`}
-							ref={dateRef}>
-							<div className='flex flex-col lg:flex-row lg:space-x-12'>
-								<div className='lg:w-1/2 mb-8 lg:mb-0'>
-									<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center lg:text-left'>
-										Select a Date
-									</h2>
-									<DateSelection
-										selectedDate={selectedDate}
-										handleDateSelect={handleDateSelect}
-										highlightDates={highlightDates}
-									/>
-								</div>
-								{selectedDate && (
-									<div className='lg:w-1/2'>
-										<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center lg:text-left'>
-											Available Times
-										</h2>
-										<TimeSelection
-											availableTimes={availableTimes}
-											selectedTime={selectedTime}
-											handleTimeSelect={handleTimeSelect}
-											isPrivateTraining={isPrivateTraining}
-											reservationCount={reservationCount}
-											getCapacity={getCapacity}
-											groupAvailableTimes={groupAvailableTimes}
+					{selectedActivity && (
+						<FadeInSection delay={0.1}>
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
+									activeSection === 'coach' ? 'bg-green-100 bg-opacity-10' : ''
+								}`}
+								ref={coachRef}>
+								<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center'>
+									Choose Your {isPrivateTraining ? 'Coach' : 'Instructor'}
+								</h2>
+								{coachesLoading ? (
+									<div className='flex items-center justify-center'>
+										<RotateLoader
+											color={'#4ADE80'}
+											loading={coachesLoading}
+											size={20}
 										/>
 									</div>
+								) : (
+									<CoachSelection
+										coaches={coaches}
+										selectedCoach={selectedCoach}
+										handleCoachSelect={handleCoachSelect}
+									/>
 								)}
-							</div>
-						</motion.div>
-					</FadeInSection>
-				)}
+							</motion.div>
+						</FadeInSection>
+					)}
 
-				{selectedTime && (
-					<FadeInSection delay={0.3}>
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
-								activeSection === 'confirm' ? 'bg-green-100 bg-opacity-10' : ''
-							}`}
-							ref={confirmRef}>
-							<ConfirmationSection
-								selectedActivity={selectedActivity}
-								selectedCoach={selectedCoach}
-								selectedDate={selectedDate}
-								selectedTime={selectedTime}
-								handleBookSession={handleBookSession}
-								loading={loading}
-								isPrivateTraining={isPrivateTraining}
-								activities={activities}
-								activitiesGroup={activitiesGroup}
-								coaches={coaches}
-							/>
-						</motion.div>
-					</FadeInSection>
-				)}
+					{selectedCoach && (
+						<FadeInSection delay={0.2}>
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
+									activeSection === 'date' ? 'bg-green-100 bg-opacity-10' : ''
+								}`}
+								ref={dateRef}>
+								<div className='flex flex-col lg:flex-row lg:space-x-12'>
+									<div className='lg:w-1/2 mb-8 lg:mb-0'>
+										<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center lg:text-left'>
+											Select a Date
+										</h2>
+										<DateSelection
+											selectedDate={selectedDate}
+											handleDateSelect={handleDateSelect}
+											highlightDates={highlightDates}
+										/>
+									</div>
+									{selectedDate && (
+										<div className='lg:w-1/2'>
+											<h2 className='text-2xl sm:text-3xl font-bold text-green-400 mb-4 sm:mb-6 text-center lg:text-left'>
+												Available Times
+											</h2>
+											<TimeSelection
+												availableTimes={availableTimes}
+												selectedTime={selectedTime}
+												handleTimeSelect={handleTimeSelect}
+												isPrivateTraining={isPrivateTraining}
+												reservationCount={reservationCount}
+												getCapacity={getCapacity}
+												groupAvailableTimes={groupAvailableTimes}
+											/>
+										</div>
+									)}
+								</div>
+							</motion.div>
+						</FadeInSection>
+					)}
 
-				<MarketModal
-					isOpen={modalIsOpen}
-					onClose={handleCloseModal}
-					market={market}
-					selectedItems={selectedItems}
-					handleItemSelect={handleItemSelect}
-					totalPrice={totalPrice}
-					handlePay={handlePay}
-					loading={loading}
-				/>
-			</motion.div>
-		</div>
+					{selectedTime && (
+						<FadeInSection delay={0.3}>
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								className={`section bg-gray-700 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-16 transition-colors duration-300 ${
+									activeSection === 'confirm'
+										? 'bg-green-100 bg-opacity-10'
+										: ''
+								}`}
+								ref={confirmRef}>
+								<ConfirmationSection
+									selectedActivity={selectedActivity}
+									selectedCoach={selectedCoach}
+									selectedDate={selectedDate}
+									selectedTime={selectedTime}
+									handleBookSession={handleBookSession}
+									loading={loading}
+									isPrivateTraining={isPrivateTraining}
+									activities={activities}
+									activitiesGroup={activitiesGroup}
+									coaches={coaches}
+								/>
+							</motion.div>
+						</FadeInSection>
+					)}
+
+					<MarketModal
+						isOpen={modalIsOpen}
+						onClose={handleCloseModal}
+						market={market}
+						selectedItems={selectedItems}
+						handleItemSelect={handleItemSelect}
+						totalPrice={totalPrice}
+						handlePay={handlePay}
+						loading={loading}
+					/>
+				</motion.div>
+			</div>
+		</EssentialsGuard>
 	)
 }
