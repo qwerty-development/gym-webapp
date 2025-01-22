@@ -45,7 +45,7 @@ export const updateUserCredits = async (
 ) => {
 	const supabase = await supabaseClient()
 
-	// Fetch user details
+	// 1. Fetch current user data
 	const { data: userData, error: userError } = await supabase
 		.from('users')
 		.select(
@@ -59,10 +59,10 @@ export const updateUserCredits = async (
 		return { error: 'User not found' }
 	}
 
-	// Calculate the amount of credits added
+	// 2. Calculate the credit change
 	const creditsAdded = wallet - userData.wallet
 
-	// Calculate updated token values
+	// 3. Calculate updated token values by adding to existing values
 	const updatedTokens = {
 		private_token: Math.max(
 			0,
@@ -83,13 +83,13 @@ export const updateUserCredits = async (
 		shake_token: Math.max(0, userData.shake_token + tokenUpdates.shake_token)
 	}
 
-	// Handle essential_till update
+	// 4. Handle essential_till update
 	let newEssentialsTill = userData.essential_till
 	if (essentialsTill) {
 		newEssentialsTill = new Date(essentialsTill).toISOString()
 	}
 
-	// Update user's wallet, tokens, essential_till, and refill_date
+	// 5. Update user data
 	const { data, error } = await supabase
 		.from('users')
 		.update({
@@ -102,17 +102,14 @@ export const updateUserCredits = async (
 
 	if (error) {
 		console.error('Error updating user data:', error.message)
-		return {
-			error: 'Failed to update user data: ' + error.message
-		}
+		return { error: 'Failed to update user data: ' + error.message }
 	}
 
-	// Initialize transactions array
+	// 6. Initialize transactions array
 	const transactions = []
 
-	// Only add credit refill transaction if credits were actually added/removed
+	// 7. Handle credit transactions
 	if (creditsAdded !== 0) {
-		// Insert refill record
 		const { error: refillError } = await insertRefillRecord(
 			supabase,
 			userData.user_id,
@@ -130,7 +127,7 @@ export const updateUserCredits = async (
 			amount: `${creditsAdded >= 0 ? '+' : ''}${creditsAdded} credits`
 		})
 
-		// If there was a sale and credits were added, add a transaction for the free tokens
+		// Handle sale bonus
 		if (sale && sale > 0 && creditsAdded > 0) {
 			const freeTokens = Math.floor(newCredits * (sale / 100))
 			transactions.push({
@@ -142,7 +139,7 @@ export const updateUserCredits = async (
 		}
 	}
 
-	// Add separate transactions for each token update
+	// 8. Handle token transactions
 	Object.entries(tokenUpdates).forEach(([tokenType, amount]) => {
 		if (amount !== 0) {
 			const formattedTokenType = tokenType
@@ -155,14 +152,16 @@ export const updateUserCredits = async (
 				user_id: userData.user_id,
 				name: `${formattedTokenType} token update`,
 				type: 'token update',
-				amount: `${amount > 0 ? '+' : ''}${amount} ${formattedTokenType} token${
+				amount: `${
+					amount >= 0 ? '+' : ''
+				}${amount} ${formattedTokenType} token${
 					Math.abs(amount) !== 1 ? 's' : ''
 				}`
 			})
 		}
 	})
 
-	// Add transaction for essentials update if changed
+	// 9. Handle essentials transaction
 	if (newEssentialsTill !== userData.essential_till) {
 		transactions.push({
 			user_id: userData.user_id,
@@ -174,7 +173,7 @@ export const updateUserCredits = async (
 		})
 	}
 
-	// Only insert transactions if there are any
+	// 10. Record all transactions
 	if (transactions.length > 0) {
 		const { error: transactionError } = await supabase
 			.from('transactions')
@@ -185,7 +184,7 @@ export const updateUserCredits = async (
 		}
 	}
 
-	// Prepare email data
+	// 11. Send email notification
 	const emailData = {
 		user_name: userData.first_name + ' ' + userData.last_name,
 		user_email: userData.email,
@@ -197,7 +196,6 @@ export const updateUserCredits = async (
 		essentialsTill: newEssentialsTill
 	}
 
-	// Send email notification to user
 	try {
 		const responseUser = await fetch('/api/send-refill-email', {
 			method: 'POST',
@@ -207,10 +205,8 @@ export const updateUserCredits = async (
 			body: JSON.stringify(emailData)
 		})
 
-		const resultUser = await responseUser.json()
-		if (responseUser.ok) {
-			console.log('User email sent successfully')
-		} else {
+		if (!responseUser.ok) {
+			const resultUser = await responseUser.json()
 			console.error(`Failed to send user email: ${resultUser.error}`)
 		}
 	} catch (error) {
