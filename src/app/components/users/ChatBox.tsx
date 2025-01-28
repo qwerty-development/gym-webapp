@@ -1,204 +1,199 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import debounce from 'lodash.debounce'
-import { FaPaperPlane, FaTimes } from 'react-icons/fa'
+import { FaPaperPlane, FaExpandAlt, FaCompressAlt } from 'react-icons/fa'
 import { RingLoader } from 'react-spinners'
 
 type MessageType = {
-	question: string
-	answer?: string
-	loading?: boolean
-	error?: string
+  question: string
+  answer?: string
+  loading?: boolean
+  error?: string
 }
 
 type UserDataType = {
-	age: number
-	gender: string
-	height: number
-	weight: { value: number }[]
-	waist_circumference: { value: number }[]
+  age: number
+  gender: string
+  height: number
+  weight: { value: number }[]
+  waist_circumference: { value: number }[]
 }
 
 interface ChatBoxProps {
-	userData: UserDataType
+  userData: UserDataType
 }
 
 const ChatBox: React.FC<ChatBoxProps> = ({ userData }) => {
-	const [question, setQuestion] = useState('')
-	const [messages, setMessages] = useState<MessageType[]>(() => {
-		const savedMessages = localStorage.getItem('healthChatMessages')
-		return savedMessages ? JSON.parse(savedMessages) : []
-	})
-	const [loading, setLoading] = useState(false)
-	const [isVisible, setIsVisible] = useState(true)
-	const chatContainerRef = useRef<HTMLDivElement>(null)
+  const [question, setQuestion] = useState('')
+  const [messages, setMessages] = useState<MessageType[]>(() => {
+    const savedMessages = localStorage.getItem('healthChatMessages')
+    return savedMessages ? JSON.parse(savedMessages) : []
+  })
+  const [loading, setLoading] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
-	useEffect(() => {
-		localStorage.setItem('healthChatMessages', JSON.stringify(messages))
-		scrollToBottom()
-	}, [messages])
+  useEffect(() => {
+    localStorage.setItem('healthChatMessages', JSON.stringify(messages))
+    scrollToBottom()
+  }, [messages])
 
-	useEffect(() => {
-		// Load a "fact of the day" when the component mounts
-		loadFactOfTheDay()
-	}, [])
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }
 
-	const scrollToBottom = () => {
-		if (chatContainerRef.current) {
-			chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
-		}
-	}
+  const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuestion(e.target.value)
+  }
 
-	const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setQuestion(e.target.value)
-	}
+  const debouncedSubmit = debounce(async (currentQuestion: string) => {
+    setLoading(true)
+    try {
+      const response = await axios.post('/api/ask-health', {
+        question: currentQuestion,
+        userData
+      })
+      const answer = response.data.answer
+      const clearChat = response.data.clearChat
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.question === currentQuestion
+            ? { ...msg, answer, loading: false, error: undefined }
+            : msg
+        )
+      )
+      if (clearChat) {
+        setMessages([])
+      }
+    } catch (error) {
+      console.error('Error fetching the answer:', error)
+      let errorMessage = 'Error fetching the answer. Please try again later.'
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 429) {
+          errorMessage =
+            error.response.data.error ||
+            'Too many requests. Please wait a moment before trying again.'
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error. Please try again later.'
+        }
+      }
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.question === currentQuestion
+            ? { ...msg, loading: false, error: errorMessage }
+            : msg
+        )
+      )
+    } finally {
+      setLoading(false)
+    }
+  }, 1000)
 
-	const loadFactOfTheDay = async () => {
-		setLoading(true)
-		try {
-			const response = await axios.post('/api/ask-health', {
-				question: 'Give me a fact of the day',
-				userData
-			})
-			const answer = response.data.answer
-			setMessages(prevMessages => [
-				...prevMessages,
-				{
-					question: 'Fact of the day',
-					answer,
-					loading: false,
-					error: undefined
-				}
-			])
-		} catch (error) {
-			console.error('Error fetching the fact of the day:', error)
-			setMessages(prevMessages => [
-				...prevMessages,
-				{
-					question: 'Fact of the day',
-					error: 'Failed to load fact of the day. Please try again later.',
-					loading: false
-				}
-			])
-		} finally {
-			setLoading(false)
-		}
-	}
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!question.trim()) return
+    const currentQuestion = question
+    setMessages([...messages, { question: currentQuestion, loading: true }])
+    setQuestion('')
+    debouncedSubmit(currentQuestion)
+  }
 
-	const debouncedSubmit = debounce(async (currentQuestion: string) => {
-		setLoading(true)
-		try {
-			const response = await axios.post('/api/ask-health', {
-				question: currentQuestion,
-				userData
-			})
-			const answer = response.data.answer
-			const clearChat = response.data.clearChat
-			setMessages(prevMessages =>
-				prevMessages.map(msg =>
-					msg.question === currentQuestion
-						? { ...msg, answer, loading: false, error: undefined }
-						: msg
-				)
-			)
-			if (clearChat) {
-				setMessages([])
-			}
-		} catch (error) {
-			console.error('Error fetching the answer:', error)
-			let errorMessage = 'Error fetching the answer. Please try again later.'
-			if (axios.isAxiosError(error)) {
-				if (error.response?.status === 429) {
-					errorMessage =
-						error.response.data.error ||
-						'Too many requests. Please wait a moment before trying again.'
-				} else if (error.response?.status === 500) {
-					errorMessage = 'Server error. Please try again later.'
-				}
-			}
-			setMessages(prevMessages =>
-				prevMessages.map(msg =>
-					msg.question === currentQuestion
-						? { ...msg, loading: false, error: errorMessage }
-						: msg
-				)
-			)
-		} finally {
-			setLoading(false)
-		}
-	}, 1000)
+  const handleClearChat = () => {
+    setMessages([])
+    localStorage.removeItem('healthChatMessages')
+  }
 
-	const handleFormSubmit = (e: React.FormEvent) => {
-		e.preventDefault()
-		const currentQuestion = question
-		setMessages([...messages, { question: currentQuestion, loading: true }])
-		setQuestion('')
-		debouncedSubmit(currentQuestion)
-	}
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded)
+  }
 
-	const handleClearChat = () => {
-		setMessages([])
-		localStorage.removeItem('healthChatMessages')
-	}
+  return (
+    <div 
+      className={`
+        fixed bottom-4 right-4 flex flex-col bg-gray-900 rounded-lg shadow-xl border border-gray-700 
+        transition-all duration-300 ease-in-out
+        ${isExpanded ? 'w-3/4 h-3/4' : 'w-96 h-96'}
+      `}
+    >
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+        <h3 className="text-xl font-bold text-green-400 transform transition-transform duration-200 hover:scale-105">
+          Talk to Vista, your personal assistant!
+        </h3>
+        <div className="flex space-x-4">
+          <button
+            onClick={handleClearChat}
+            className="px-4 py-2 text-sm text-red-400 hover:text-red-300 transition-colors duration-200"
+          >
+            Clear Chat
+          </button>
+          <button
+            onClick={toggleExpand}
+            className="text-green-400 hover:text-green-300 transition-colors duration-200"
+          >
+            {isExpanded ? <FaCompressAlt /> : <FaExpandAlt />}
+          </button>
+        </div>
+      </div>
 
-	return isVisible ? (
-		<div className='chat-box mt-8 mb-8 border border-white p-4 rounded-lg shadow-lg text-white'>
-			<div className='header flex justify-between mb-2'>
-				<h3 className='text-2xl text-green-400 font-bold'>
-					Talk to Vista, your personal assistant!
-				</h3>
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto px-6 py-4 space-y-4 scroll-smooth"
+      >
+        {messages.map((msg, index) => (
+          <div 
+            key={index} 
+            className="space-y-2 animate-fade-in"
+          >
+            <div className="flex flex-col max-w-3/4 ml-auto transform transition-all duration-200 hover:scale-102">
+              <div className="bg-gray-700 text-white px-4 py-2 rounded-lg">
+                <p className="text-sm">{msg.question}</p>
+              </div>
+            </div>
 
-				<button
-					className='text-red-500 hover:text-red-600'
-					onClick={handleClearChat}>
-					Clear Chat
-				</button>
-			</div>
-			<hr className='text-white'></hr>
-			<div
-				className='conversation mb-4 mt-4 h-64 overflow-y-auto'
-				ref={chatContainerRef}>
-				{messages.map((msg, index) => (
-					<div key={index} className='message-container mb-2'>
-						<div className='message user-message bg-gray-600 p-2 rounded-md'>
-							<p>
-								<strong>You:</strong> {msg.question}
-							</p>
-						</div>
-						<div className='message ai-message bg-gray-800 p-2 rounded-md mt-2'>
-							{msg.loading ? (
-								<RingLoader color='#00BFFF' size={24} />
-							) : msg.error ? (
-								<p className='text-red-500'>
-									<strong>Error:</strong> {msg.error}
-								</p>
-							) : (
-								<p>
-									<strong>Vista:</strong> {msg.answer}
-								</p>
-							)}
-						</div>
-					</div>
-				))}
-			</div>
-			<form onSubmit={handleFormSubmit} className='input-container flex'>
-				<input
-					type='text'
-					value={question}
-					onChange={handleQuestionChange}
-					placeholder='Ask Vista about your health'
-					className='flex-1 p-2 rounded-l-md bg-gray-600 text-white border-none outline-none'
-					disabled={loading}
-				/>
-				<button
-					type='submit'
-					className='chat-button bg-green-500 p-2 rounded-r-md text-white hover:bg-green-600'
-					disabled={loading}>
-					<FaPaperPlane />
-				</button>
-			</form>
-		</div>
-	) : null
+            <div className="flex flex-col max-w-3/4 transform transition-all duration-200 hover:scale-102">
+              <div className="bg-gray-800 text-white px-4 py-2 rounded-lg">
+                {msg.loading ? (
+                  <div className="flex justify-center">
+                    <RingLoader color="#00BFFF" size={24} />
+                  </div>
+                ) : msg.error ? (
+                  <p className="text-red-400 text-sm">{msg.error}</p>
+                ) : (
+                  <p className="text-sm">{msg.answer}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="px-6 py-4 border-t border-gray-700">
+        <form onSubmit={handleFormSubmit} className="flex space-x-2">
+          <input
+            type="text"
+            value={question}
+            onChange={handleQuestionChange}
+            placeholder="Ask Vista about your health..."
+            className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 
+                     focus:outline-none focus:border-green-500 transition-all duration-200
+                     transform hover:scale-101"
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            disabled={loading || !question.trim()}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 
+                     disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
+                     transform hover:scale-105 active:scale-95"
+          >
+            <FaPaperPlane className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 export default ChatBox
