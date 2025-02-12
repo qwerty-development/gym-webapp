@@ -133,7 +133,7 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 				return { error: 'Invalid individual bundle type.' }
 		}
 	} else if (bundleType === 'protein') {
-		bundlePrice = proteinShakeTier.price
+		bundlePrice = parseInt(proteinShakeTier.priceMonthly)
 		tokenType = 'shake'
 		tokenAmount = parseInt(proteinShakeTier.description.split(' ')[0])
 	} else {
