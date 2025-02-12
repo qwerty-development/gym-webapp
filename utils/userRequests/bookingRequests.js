@@ -1,7 +1,5 @@
 import { supabaseClient } from '../supabaseClient'
 
-
-
 export const bookTimeSlot = async ({
 	activityId,
 	coachId,
@@ -64,16 +62,28 @@ export const bookTimeSlot = async ({
 	let bookingMethod = 'credits'
 	let newWalletBalance = userData.wallet
 	let newTokenBalance = userData.private_token
-	let transactionAmount = ''
+	let transactionRecord = null
 
-	// Special handling for Ice Bath - only accept credits
+	// Special handling for Ice Bath – only accept credits
 	if (activityData.name === 'Ice Bath') {
 		if (userData.isFree || userData.wallet >= activityData.credits) {
 			if (!userData.isFree) {
 				newWalletBalance -= activityData.credits
-				transactionAmount = `-${activityData.credits} credits`
+				transactionRecord = {
+					user_id: userId,
+					currency: 'credits',
+					amount: -activityData.credits,
+					type: 'individual_session_credit',
+					description: `Booked individual session: ${activityData.name}`
+				}
 			} else {
-				transactionAmount = '0 credits (free user)'
+				transactionRecord = {
+					user_id: userId,
+					currency: 'none',
+					amount: 0,
+					type: 'individual_session_free',
+					description: `Booked individual session (free user): ${activityData.name}`
+				}
 			}
 		} else {
 			return {
@@ -86,13 +96,31 @@ export const bookTimeSlot = async ({
 		if (userData.private_token > 0) {
 			bookingMethod = 'token'
 			newTokenBalance -= 1
-			transactionAmount = '-1 private token'
+			transactionRecord = {
+				user_id: userId,
+				currency: 'private_token',
+				amount: -1,
+				type: 'individual_session_token',
+				description: `Booked individual session: ${activityData.name}`
+			}
 		} else if (userData.isFree || userData.wallet >= activityData.credits) {
 			if (!userData.isFree) {
 				newWalletBalance -= activityData.credits
-				transactionAmount = `-${activityData.credits} credits`
+				transactionRecord = {
+					user_id: userId,
+					currency: 'credits',
+					amount: -activityData.credits,
+					type: 'individual_session_credit',
+					description: `Booked individual session: ${activityData.name}`
+				}
 			} else {
-				transactionAmount = '0 credits (free user)'
+				transactionRecord = {
+					user_id: userId,
+					currency: 'none',
+					amount: 0,
+					type: 'individual_session_free',
+					description: `Booked individual session (free user): ${activityData.name}`
+				}
 			}
 		} else {
 			return { error: 'Not enough credits or tokens to book the session.' }
@@ -136,21 +164,17 @@ export const bookTimeSlot = async ({
 		return { error: updateError.message }
 	}
 
-	// Add transaction record
+	// Record the booking transaction in new_transactions table
 	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert({
-			user_id: userId,
-			name: `Booked individual session: ${activityData.name}`,
-			type: 'individual session',
-			amount: transactionAmount
-		})
+		.from('new_transactions')
+		.insert(transactionRecord)
 
 	if (transactionError) {
 		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return here as the booking was successful
+		// Proceed even if logging fails
 	}
 
+	// Fetch coach data for email notifications
 	const { data: coachData, error: coachError } = await supabase
 		.from('coaches')
 		.select('*')
@@ -162,7 +186,7 @@ export const bookTimeSlot = async ({
 		return { error: coachError?.message || 'Coach not found.' }
 	}
 
-	// Prepare email data
+	// Prepare email data (unchanged)
 	const emailData = {
 		user_name: userData.first_name + ' ' + userData.last_name,
 		user_email: userData.email,
@@ -183,7 +207,7 @@ export const bookTimeSlot = async ({
 		booking_method: bookingMethod
 	}
 
-	// Send email notification to admin
+	// Send email notifications to admin and user (unchanged)
 	try {
 		const responseAdmin = await fetch('/api/send-admin-email', {
 			method: 'POST',
@@ -192,7 +216,6 @@ export const bookTimeSlot = async ({
 			},
 			body: JSON.stringify(emailData)
 		})
-
 		const resultAdmin = await responseAdmin.json()
 		if (responseAdmin.ok) {
 			console.log('Admin email sent successfully')
@@ -203,7 +226,6 @@ export const bookTimeSlot = async ({
 		console.error('Error sending admin email:', error)
 	}
 
-	// Send email notification to user
 	try {
 		const responseUser = await fetch('/api/send-user-email', {
 			method: 'POST',
@@ -212,7 +234,6 @@ export const bookTimeSlot = async ({
 			},
 			body: JSON.stringify(emailData)
 		})
-
 		const resultUser = await responseUser.json()
 		if (responseUser.ok) {
 			console.log('User email sent successfully')
@@ -282,7 +303,7 @@ export const bookTimeSlotGroup = async ({
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Fetch activity details including capacity, credits required, and semi-private status
+	// Fetch activity details (including capacity, credits, and semi-private flag)
 	const { data: activityData, error: activityError } = await supabase
 		.from('activities')
 		.select('*')
@@ -298,36 +319,65 @@ export const bookTimeSlotGroup = async ({
 	let newWalletBalance = userData.wallet
 	let newPublicTokenBalance = userData.public_token
 	let newSemiPrivateTokenBalance = userData.semiPrivate_token
-	let transactionAmount = ''
+	let transactionRecord = null
 
+	// Determine booking method and update balances accordingly:
 	if (activityData.semi_private && userData.semiPrivate_token > 0) {
 		bookingMethod = 'semiPrivateToken'
 		newSemiPrivateTokenBalance -= 1
-		transactionAmount = '-1 semi-private token'
+		transactionRecord = {
+			user_id: userId,
+			currency: 'semi_private_token',
+			amount: -1,
+			type: 'semi_session_token',
+			description: `Booked semi-private class session: ${activityData.name}`
+		}
 	} else if (!activityData.semi_private && userData.public_token > 0) {
 		bookingMethod = 'publicToken'
 		newPublicTokenBalance -= 1
-		transactionAmount = '-1 public token'
+		transactionRecord = {
+			user_id: userId,
+			currency: 'public_token',
+			amount: -1,
+			type: 'group_session_token',
+			description: `Booked public class session: ${activityData.name}`
+		}
 	} else if (userData.isFree || userData.wallet >= activityData.credits) {
 		if (!userData.isFree) {
 			newWalletBalance -= activityData.credits
-			transactionAmount = `-${activityData.credits} credits`
+			transactionRecord = {
+				user_id: userId,
+				currency: 'credits',
+				amount: -activityData.credits,
+				type: 'group_session_credit',
+				description: `Booked ${
+					activityData.semi_private ? 'semi-private' : 'public'
+				} class session: ${activityData.name}`
+			}
 		} else {
-			transactionAmount = '0 credits (free user)'
+			transactionRecord = {
+				user_id: userId,
+				currency: 'none',
+				amount: 0,
+				type: 'group_session_free',
+				description: `Booked ${
+					activityData.semi_private ? 'semi-private' : 'public'
+				} class session (free user): ${activityData.name}`
+			}
 		}
 	} else {
 		return { error: 'Not enough credits or tokens to book the session.' }
 	}
 
 	let newCount = 1
-	let user_id = [userId]
+	let user_ids = [userId]
 	let isBooked = false
 	let slotId
 	let booked_with_token = []
 
 	if (existingSlot) {
 		newCount = existingSlot.count + 1
-		user_id = existingSlot.user_id
+		user_ids = existingSlot.user_id
 			? [...existingSlot.user_id, userId]
 			: [userId]
 		isBooked = newCount === activityData.capacity
@@ -345,10 +395,10 @@ export const bookTimeSlotGroup = async ({
 		date: date,
 		start_time: startTime,
 		end_time: endTime,
-		user_id,
+		user_id: user_ids,
 		count: newCount,
 		booked: isBooked,
-		booked_with_token
+		booked_with_token: booked_with_token
 	}
 
 	let timeSlotData, timeSlotError
@@ -365,8 +415,7 @@ export const bookTimeSlotGroup = async ({
 			.from('group_time_slots')
 			.insert(upsertData)
 			.single())
-
-		// Ensure no duplicates by deleting any older entries
+		// Remove any duplicate entries
 		await supabase
 			.from('group_time_slots')
 			.delete()
@@ -384,7 +433,7 @@ export const bookTimeSlotGroup = async ({
 	}
 	await deleteConflictingTimeSlots(supabase, coachId, date, startTime, endTime)
 
-	// Update user's account (wallet or tokens)
+	// Update user's account (wallet/tokens)
 	const { error: updateError } = await supabase
 		.from('users')
 		.update({
@@ -399,23 +448,17 @@ export const bookTimeSlotGroup = async ({
 		return { error: updateError.message }
 	}
 
-	// Add transaction record
+	// Record the booking transaction in new_transactions table
 	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert({
-			user_id: userId,
-			name: `Booked ${
-				activityData.semi_private ? 'semi-private' : 'public'
-			} class session: ${activityData.name}`,
-			type: 'class session',
-			amount: transactionAmount
-		})
+		.from('new_transactions')
+		.insert(transactionRecord)
 
 	if (transactionError) {
 		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return here as the booking was successful
+		// Continue even if logging fails
 	}
 
+	// Fetch coach data for email notifications
 	const { data: coachData, error: coachError } = await supabase
 		.from('coaches')
 		.select('*')
@@ -427,7 +470,7 @@ export const bookTimeSlotGroup = async ({
 		return { error: coachError?.message || 'Coach not found.' }
 	}
 
-	// Prepare email data
+	// Prepare email data (unchanged)
 	const emailData = {
 		user_name: userData.first_name + ' ' + userData.last_name,
 		user_email: userData.email,
@@ -450,6 +493,7 @@ export const bookTimeSlotGroup = async ({
 		is_semi_private: activityData.semi_private
 	}
 
+	// Send email notifications to admin and user (unchanged)
 	try {
 		const responseAdmin = await fetch('/api/send-admin-email', {
 			method: 'POST',
@@ -458,7 +502,6 @@ export const bookTimeSlotGroup = async ({
 			},
 			body: JSON.stringify(emailData)
 		})
-
 		const resultAdmin = await responseAdmin.json()
 		if (responseAdmin.ok) {
 			console.log('Admin email sent successfully')
@@ -469,7 +512,6 @@ export const bookTimeSlotGroup = async ({
 		console.error('Error sending admin email:', error)
 	}
 
-	// Send email notification to user
 	try {
 		const responseUser = await fetch('/api/send-user-email', {
 			method: 'POST',
@@ -478,7 +520,6 @@ export const bookTimeSlotGroup = async ({
 			},
 			body: JSON.stringify(emailData)
 		})
-
 		const resultUser = await responseUser.json()
 		if (responseUser.ok) {
 			console.log('User email sent successfully')
@@ -488,9 +529,6 @@ export const bookTimeSlotGroup = async ({
 	} catch (error) {
 		console.error('Error sending user email:', error)
 	}
-
-	// Send email notifications (admin and user)
-	// ... (keep the existing email sending logic)
 
 	return {
 		data: timeSlotData,

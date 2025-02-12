@@ -1,11 +1,14 @@
-import React from 'react'
-import { Line } from 'react-chartjs-2'
+'use client'
+import React, { useState } from 'react'
+import { Line, Bar, Pie } from 'react-chartjs-2'
 import {
 	Chart as ChartJS,
 	CategoryScale,
 	LinearScale,
 	PointElement,
 	LineElement,
+	BarElement,
+	ArcElement,
 	Title,
 	Tooltip,
 	Legend
@@ -16,62 +19,112 @@ ChartJS.register(
 	LinearScale,
 	PointElement,
 	LineElement,
+	BarElement,
+	ArcElement,
 	Title,
 	Tooltip,
 	Legend
 )
 
-interface TransactionChartProps {
+interface MagicalTransactionChartProps {
 	chartData: any
-	chartLoading: boolean
+	barData: any
+	pieData: any
+	loading: boolean
 }
 
-const TransactionChart: React.FC<TransactionChartProps> = ({
+const MagicalTransactionChart: React.FC<MagicalTransactionChartProps> = ({
 	chartData,
-	chartLoading
+	barData,
+	pieData,
+	loading
 }) => {
+	const [activeTab, setActiveTab] = useState<'line' | 'bar' | 'pie'>('line')
+
+	if (loading) {
+		return (
+			<div className='flex justify-center items-center h-64'>
+				<div className='animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green-500'></div>
+			</div>
+		)
+	}
+
 	return (
 		<div className='bg-gray-800 rounded-xl p-6 shadow-lg mb-8'>
-			<h2 className='text-2xl font-semibold mb-4'>Transaction Trend</h2>
-			{chartLoading ? (
-				<div className='flex justify-center items-center h-64'>
-					<div className='animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green-500'></div>
-				</div>
-			) : chartData ? (
-				<Line
-					data={chartData}
-					options={{
-						responsive: true,
-						plugins: {
-							legend: {
-								position: 'top' as const
+			<h2 className='text-2xl font-semibold mb-4'>
+				Transaction Visualizations
+			</h2>
+			<div className='flex space-x-4 mb-4'>
+				<button
+					onClick={() => setActiveTab('line')}
+					className={`px-4 py-2 rounded-md ${
+						activeTab === 'line' ? 'bg-green-600' : 'bg-gray-700'
+					} text-white`}>
+					Daily Trend
+				</button>
+				<button
+					onClick={() => setActiveTab('bar')}
+					className={`px-4 py-2 rounded-md ${
+						activeTab === 'bar' ? 'bg-green-600' : 'bg-gray-700'
+					} text-white`}>
+					Avg by Currency
+				</button>
+				<button
+					onClick={() => setActiveTab('pie')}
+					className={`px-4 py-2 rounded-md ${
+						activeTab === 'pie' ? 'bg-green-600' : 'bg-gray-700'
+					} text-white`}>
+					Type Breakdown
+				</button>
+			</div>
+			<div>
+				{activeTab === 'line' && chartData ? (
+					<Line
+						data={chartData}
+						options={{
+							responsive: true,
+							plugins: {
+								legend: { position: 'top' },
+								title: { display: true, text: 'Daily Transaction Trend' }
 							},
-							title: {
-								display: true,
-								text: 'Transaction Trend'
+							scales: {
+								x: { title: { display: true, text: 'Date' } },
+								y: { title: { display: true, text: 'Amount' } }
 							}
-						},
-						scales: {
-							x: {
-								title: {
-									display: true,
-									text: 'Date'
-								}
+						}}
+					/>
+				) : activeTab === 'bar' && barData ? (
+					<Bar
+						data={barData}
+						options={{
+							responsive: true,
+							plugins: {
+								legend: { position: 'top' },
+								title: { display: true, text: 'Average Amount per Currency' }
 							},
-							y: {
-								title: {
-									display: true,
-									text: 'Amount'
-								}
+							scales: {
+								x: { title: { display: true, text: 'Currency' } },
+								y: { title: { display: true, text: 'Avg Amount' } }
 							}
-						}
-					}}
-				/>
-			) : (
-				<p>No data available for the selected filters.</p>
-			)}
+						}}
+					/>
+				) : activeTab === 'pie' && pieData ? (
+					<Pie
+						data={pieData}
+						options={{
+							responsive: true,
+							plugins: {
+								legend: { position: 'bottom' },
+								title: { display: true, text: 'Transaction Type Breakdown' }
+							}
+						}}
+					/>
+				) : (
+					<p>No chart data available.</p>
+				)}
+			</div>
 		</div>
 	)
 }
 
-export default TransactionChart
+export default MagicalTransactionChart

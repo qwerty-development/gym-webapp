@@ -21,19 +21,6 @@ export const fetchUsers = async searchQuery => {
 	console.log(data)
 	return data
 }
-async function insertRefillRecord(supabase, userId, amount) {
-	const { data, error } = await supabase.from('credit_refill').insert({
-		user_id: userId,
-		amount: amount
-	})
-
-	if (error) {
-		console.error('Error inserting refill record:', error.message)
-		return { error: 'Failed to insert refill record: ' + error.message }
-	}
-
-	return { data }
-}
 
 export const updateUserCredits = async (
 	userId,
@@ -59,7 +46,7 @@ export const updateUserCredits = async (
 		return { error: 'User not found' }
 	}
 
-	// 2. Calculate the credit change
+	// 2. Calculate the credit change (new wallet minus old wallet)
 	const creditsAdded = wallet - userData.wallet
 
 	// 3. Calculate updated token values by adding to existing values
@@ -83,7 +70,7 @@ export const updateUserCredits = async (
 		shake_token: Math.max(0, userData.shake_token + tokenUpdates.shake_token)
 	}
 
-	// 4. Handle essential_till update - MODIFIED
+	// 4. Handle essential_till update
 	let newEssentialsTill = userData.essential_till
 	const hasEssentialsChanged =
 		essentialsTill && essentialsTill !== userData.essential_till
@@ -91,14 +78,12 @@ export const updateUserCredits = async (
 		newEssentialsTill = new Date(essentialsTill).toISOString()
 	}
 
-	// 5. Prepare update fields - MODIFIED
+	// 5. Prepare update fields for user record
 	const updateFields = {
 		wallet,
 		...updatedTokens,
 		refill_date: new Date().toISOString()
 	}
-
-	// Only include essential_till if it has changed
 	if (hasEssentialsChanged) {
 		updateFields.essential_till = newEssentialsTill
 	}
@@ -108,86 +93,80 @@ export const updateUserCredits = async (
 		.from('users')
 		.update(updateFields)
 		.eq('id', userId)
-
 	if (error) {
 		console.error('Error updating user data:', error.message)
 		return { error: 'Failed to update user data: ' + error.message }
 	}
 
-	// 7. Initialize transactions array
+	// 7. Build transaction records array for new_transactions
 	const transactions = []
 
-	// 8. Handle credit transactions
+	// 8. Record credit change: if positive then credit_refill; if negative then credit_deduction.
 	if (creditsAdded !== 0) {
-		const { error: refillError } = await insertRefillRecord(
-			supabase,
-			userData.user_id,
-			newCredits
-		)
-
-		if (refillError) {
-			console.error('Error inserting refill record:', refillError.message)
-		}
-
 		transactions.push({
 			user_id: userData.user_id,
-			name: 'Credit refill',
-			type: 'credit refill',
-			amount: `${creditsAdded >= 0 ? '+' : ''}${creditsAdded} credits`
+			currency: 'credits',
+			amount: newCredits, // positive for refill, negative for deduction
+			type: creditsAdded > 0 ? 'credit_refill' : 'credit_deduction',
+			description: `User wallet updated by ${creditsAdded} credits`
 		})
 
-		// Handle sale bonus
+		// Handle sale bonus: record additional free credits if applicable.
 		if (sale && sale > 0 && creditsAdded > 0) {
 			const freeCredits = Math.floor(newCredits * (sale / 100))
 			transactions.push({
 				user_id: userData.user_id,
-				name: 'Free credits from credit refill sale',
-				type: 'free credits',
-				amount: `+${freeCredits} credits`
+				currency: 'credits',
+				amount: freeCredits, // bonus credits are added
+				type: 'credit_sale',
+				description: `Free credits from credit refill sale: +${freeCredits} credits`
 			})
 		}
 	}
 
-	// 9. Handle token transactions
-	Object.entries(tokenUpdates).forEach(([tokenType, amount]) => {
+	// 9. Record token updates – using a custom type "token_update" (ensure your ENUM includes it)
+	Object.entries(tokenUpdates).forEach(([tokenKey, amount]) => {
 		if (amount !== 0) {
-			const formattedTokenType = tokenType
-				.replace('_token', '')
-				.split('_')
-				.map(word => word.charAt(0).toUpperCase() + word.slice(1))
-				.join(' ')
-
+			// Map token key to correct currency. For example, 'semiPrivate_token' becomes 'semi_private_token'
+			let currency = tokenKey
+			if (tokenKey === 'semiPrivate_token') {
+				currency = 'semi_private_token'
+			}
+			if (tokenKey === 'workoutDay_token') {
+				// Optionally map workoutDay_token to an appropriate currency – here we map to 'private_token'
+				currency = 'private_token'
+			}
 			transactions.push({
 				user_id: userData.user_id,
-				name: `${formattedTokenType} token update`,
-				type: 'token update',
-				amount: `${
-					amount >= 0 ? '+' : ''
-				}${amount} ${formattedTokenType} token${
-					Math.abs(amount) !== 1 ? 's' : ''
-				}`
+				currency,
+				amount, // positive if tokens are added; negative if deducted
+				type: 'token_update', // custom type – add to your ENUM if needed
+				description: `${tokenKey
+					.replace('_token', '')
+					.replace(/([A-Z])/g, ' $1')
+					.trim()} token update: ${amount >= 0 ? '+' : ''}${amount}`
 			})
 		}
 	})
 
-	// 10. Handle essentials transaction - MODIFIED
+	// 10. Record essentials membership update as a separate transaction.
 	if (hasEssentialsChanged) {
 		transactions.push({
 			user_id: userData.user_id,
-			name: 'Essentials membership update',
-			type: 'essentials update',
-			amount: `Essentials till ${new Date(
+			currency: 'none',
+			amount: 0,
+			type: 'essentials_update', // custom type – ensure it's added to your ENUM
+			description: `Essentials membership updated: till ${new Date(
 				newEssentialsTill
 			).toLocaleDateString()}`
 		})
 	}
 
-	// 11. Record all transactions
+	// 11. Insert all transactions into new_transactions table
 	if (transactions.length > 0) {
 		const { error: transactionError } = await supabase
-			.from('transactions')
+			.from('new_transactions')
 			.insert(transactions)
-
 		if (transactionError) {
 			console.error('Error recording transactions:', transactionError.message)
 		}
@@ -204,16 +183,12 @@ export const updateUserCredits = async (
 		tokenUpdates,
 		essentialsTill: hasEssentialsChanged ? newEssentialsTill : undefined
 	}
-
 	try {
 		const responseUser = await fetch('/api/send-refill-email', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(emailData)
 		})
-
 		if (!responseUser.ok) {
 			const resultUser = await responseUser.json()
 			console.error(`Failed to send user email: ${resultUser.error}`)
@@ -232,33 +207,17 @@ export const updateUserisFree = async (userId, isFree) => {
 		.update({ isFree })
 		.eq('id', userId)
 
-	return { data, error } // Return an object containing both data and error
-}
-
-export const updateUserCreditsCancellation = async (userId, totalRefund) => {
-	const supabase = await supabaseClient()
-	const userResponse = await supabase
-		.from('users')
-		.select('wallet')
-		.eq('user_id', userId)
-		.single()
-
-	if (userResponse.data) {
-		const newWalletBalance = userResponse.data.wallet + totalRefund
-		const { data, error } = await supabase
-			.from('users')
-			.update({ wallet: newWalletBalance })
-			.eq('user_id', userId)
-
-		if (error) {
-			console.error('Error updating user credits:', error.message)
-			return { success: false, error: error.message }
-		}
-		return { success: true, data }
-	} else {
-		console.error('User not found or failed to fetch user data')
-		return { success: false, error: 'User not found' }
+	if (data) {
+		supabase.from('new_transactions').insert({
+			user_id: userId,
+			currency: 'credits',
+			amount: 0,
+			type: `${isFree ? 'free_user' : 'free_user_cancel'}`,
+			description: `Free membership updated: ${isFree ? 'Enabled' : 'Disabled'}`
+		})
 	}
+
+	return { data, error }
 }
 
 export const fetchTotalUsers = async () => {

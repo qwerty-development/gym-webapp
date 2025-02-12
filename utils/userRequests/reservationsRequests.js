@@ -76,11 +76,6 @@ export const fetchReservationsGroup = async userId => {
 	return data.map(reservation => reservation)
 }
 
-// utils/requests.js
-
-// Function to cancel a reservation
-// Function to cancel a reservation
-// Function to cancel a reservation
 export const cancelReservation = async (
 	reservationId,
 	userId,
@@ -132,6 +127,7 @@ export const cancelReservation = async (
 		let punchesToDeduct = 0
 		let shakeTokenPenalty = 0
 
+		// Fetch activity data
 		const { data: activityData, error: activityError } = await supabase
 			.from('activities')
 			.select('credits, name')
@@ -147,6 +143,7 @@ export const cancelReservation = async (
 		}
 
 		// Determine refund type based on how the session was booked
+		// If booked with token, refund 1 private token; if not free, refund credits.
 		if (reservationData.booked_with_token) {
 			tokenRefund = 1
 		} else if (!userData.isFree) {
@@ -184,22 +181,18 @@ export const cancelReservation = async (
 		)
 		totalCreditRefund += otherItemsTotalPrice
 
-		// Handle protein items
+		// Handle protein items: refund shake tokens and calculate punch adjustments
 		const proteinItemsCount = proteinItems.length
 		if (proteinItemsCount > 0) {
-			// Return shake tokens instead of credits
 			shakeTokenRefund = proteinItemsCount
-
-			// Handle punch card adjustments
 			if (userData.punches > 0) {
 				punchesToDeduct = proteinItemsCount
 				const newPunchCount = userData.punches - punchesToDeduct
-
-				// Check if user benefited from loyalty reward
+				// If loyalty reward was achieved, apply penalty
 				if (
 					Math.floor(userData.punches / 10) > Math.floor(newPunchCount / 10)
 				) {
-					shakeTokenPenalty = 2 // Deduct 2 tokens as penalty
+					shakeTokenPenalty = 2
 				}
 			}
 		}
@@ -219,7 +212,7 @@ export const cancelReservation = async (
 			throw new Error(`Error canceling reservation: ${updateError.message}`)
 		}
 
-		// Update item quantities
+		// Update market item quantities (return each refunded item)
 		for (const item of additionsData) {
 			const { data, error: quantityError } = await supabase
 				.from('market')
@@ -234,13 +227,15 @@ export const cancelReservation = async (
 
 			const newQuantity = (data.quantity || 0) + 1
 
-			const { error: updateError } = await supabase
+			const { error: updateQtyError } = await supabase
 				.from('market')
 				.update({ quantity: newQuantity })
 				.eq('id', item.id)
 
-			if (updateError) {
-				throw new Error(`Error updating item quantity: ${updateError.message}`)
+			if (updateQtyError) {
+				throw new Error(
+					`Error updating item quantity: ${updateQtyError.message}`
+				)
 			}
 		}
 
@@ -266,68 +261,93 @@ export const cancelReservation = async (
 			throw new Error(`Error updating user data: ${userUpdateError.message}`)
 		}
 
-		// Record transactions
-		const transactions = []
+		// Prepare new transaction records using the new system
 
 		// Session cancellation transaction
-		transactions.push({
-			user_id: userId,
-			name: `Cancelled individual session: ${activityData.name}`,
-			type: 'individual session',
-			amount: reservationData.booked_with_token
-				? '+1 private token'
-				: `+${activityData.credits} credits`
-		})
+		let sessionTx
+		if (reservationData.booked_with_token) {
+			sessionTx = {
+				user_id,
+				currency: 'private_token',
+				amount: 1, // refund 1 token
+				type: 'individual_cancel_token',
+				description: `Cancelled individual session: ${activityData.name}`
+			}
+		} else if (!userData.isFree) {
+			sessionTx = {
+				user_id,
+				currency: 'credits',
+				amount: activityData.credits,
+				type: 'individual_cancel_credit',
+				description: `Cancelled individual session: ${activityData.name}`
+			}
+		} else {
+			sessionTx = {
+				user_id,
+				currency: 'none',
+				amount: 0,
+				type: 'individual_cancel_free',
+				description: `Cancelled individual session (free user): ${activityData.name}`
+			}
+		}
 
-		// Regular items refund transaction
+		// Build an array of transactions
+		const transactions = [sessionTx]
+
+		// Regular items refund transaction (for non-protein additions)
 		if (otherItemsTotalPrice > 0) {
 			transactions.push({
-				user_id: userId,
-				name: `Refunded items for cancelled session: ${activityData.name}`,
-				type: 'market transaction',
-				amount: `+${otherItemsTotalPrice} credits`
+				user_id,
+				currency: 'credits',
+				amount: otherItemsTotalPrice,
+				type: 'market_refund',
+				description: `Refunded items for cancelled session: ${activityData.name}`
 			})
 		}
 
-		// Protein items refund transaction
+		// Protein items refund transaction (shake tokens refund)
 		if (shakeTokenRefund > 0) {
 			transactions.push({
-				user_id: userId,
-				name: `Returned shake tokens for cancelled protein items`,
-				type: 'market transaction',
-				amount: `+${shakeTokenRefund} shake tokens`
+				user_id,
+				currency: 'shake_token',
+				amount: shakeTokenRefund,
+				type: 'shake_token_refund',
+				description: 'Returned shake tokens for cancelled protein items'
 			})
 		}
 
 		// Punch deduction transaction
 		if (punchesToDeduct > 0) {
 			transactions.push({
-				user_id: userId,
-				name: `Deducted punches from cancelled protein items`,
-				type: 'punch card adjustment',
-				amount: `-${punchesToDeduct} punches`
+				user_id,
+				currency: 'punches',
+				amount: -punchesToDeduct,
+				type: 'punch_remove',
+				description: 'Deducted punches from cancelled protein items'
 			})
 		}
 
 		// Token penalty transaction
 		if (shakeTokenPenalty > 0) {
 			transactions.push({
-				user_id: userId,
-				name: 'Token penalty for cancelled loyalty reward',
-				type: 'punch card penalty',
-				amount: '-2 shake tokens'
+				user_id,
+				currency: 'shake_token',
+				amount: -shakeTokenPenalty,
+				type: 'loyalty_penalty',
+				description: 'Token penalty for cancelled loyalty reward'
 			})
 		}
 
+		// Insert all cancellation-related transactions into new_transactions
 		const { error: transactionError } = await supabase
-			.from('transactions')
+			.from('new_transactions')
 			.insert(transactions)
 
 		if (transactionError) {
 			console.error('Error recording transactions:', transactionError.message)
 		}
 
-		// Fetch coach data for email
+		// Fetch coach data for email notifications
 		const { data: coachData, error: coachError } = await supabase
 			.from('coaches')
 			.select('*')
@@ -338,7 +358,6 @@ export const cancelReservation = async (
 			throw new Error(`Error fetching coach data: ${coachError.message}`)
 		}
 
-		// Prepare email data
 		const emailData = {
 			user_name: userData.first_name + ' ' + userData.last_name,
 			user_email: userData.email,
@@ -348,19 +367,18 @@ export const cancelReservation = async (
 			end_time: reservationData.end_time,
 			coach_name: coachData.name,
 			coach_email: coachData.email,
-			refund_type: reservationData.booked_with_token ? 'token' : 'credits',
-			refund_amount: reservationData.booked_with_token ? 1 : totalCreditRefund,
-			protein_items_refund:
-				shakeTokenRefund > 0
-					? {
-							tokens: shakeTokenRefund,
-							penalty: shakeTokenPenalty,
-							punches_deducted: punchesToDeduct
-					  }
-					: null
+			refund_details: {
+				credits: totalCreditRefund > 0 ? totalCreditRefund : null,
+				class_token: reservationData.booked_with_token ? 'private' : null,
+				shake_tokens:
+					shakeTokenRefund > 0
+						? { returned: shakeTokenRefund, penalty: shakeTokenPenalty }
+						: null,
+				punches_deducted: punchesToDeduct
+			}
 		}
 
-		// Send emails
+		// Send email notifications
 		await Promise.all([
 			fetch('/api/send-cancel-admin', {
 				method: 'POST',
@@ -379,12 +397,15 @@ export const cancelReservation = async (
 			prevReservations.filter(reservation => reservation.id !== reservationId)
 		)
 
+		// Return success message
+		const message =
+			shakeTokenPenalty > 0
+				? `Reservation cancelled. ${shakeTokenRefund} shake tokens returned. 2 tokens deducted as loyalty reward penalty.`
+				: `Reservation cancelled successfully.`
+
 		return {
 			success: true,
-			message:
-				shakeTokenPenalty > 0
-					? `Reservation cancelled. ${shakeTokenRefund} shake tokens returned. 2 tokens deducted as loyalty reward penalty.`
-					: `Reservation cancelled successfully.`
+			message
 		}
 	} catch (error) {
 		console.error('Cancel reservation error:', error)
@@ -403,11 +424,11 @@ export const cancelReservationGroup = async (
 	const supabase = await supabaseClient()
 
 	try {
-		// Fetch the reservation details
+		// Fetch the group reservation details
 		const { data: reservationData, error: reservationError } = await supabase
 			.from('group_time_slots')
 			.select(
-				'activity_id, user_id, booked, coach_id, date, start_time, end_time, additions, booked_with_token'
+				'activity_id, user_id, booked, coach_id, date, start_time, end_time, additions, booked_with_token, capacity'
 			)
 			.eq('id', reservationId)
 			.single()
@@ -451,7 +472,7 @@ export const cancelReservationGroup = async (
 		// Fetch activity data
 		const { data: activityData, error: activityError } = await supabase
 			.from('activities')
-			.select('credits, name, semi_private')
+			.select('credits, name, semi_private, capacity')
 			.eq('id', reservationData.activity_id)
 			.single()
 
@@ -463,19 +484,72 @@ export const cancelReservationGroup = async (
 			)
 		}
 
-		// Handle class token refund
+		// Build the session cancellation transaction record
 		const bookedWithToken = reservationData.booked_with_token.includes(userId)
+		let sessionTx = null
 		if (bookedWithToken) {
 			if (activityData.semi_private) {
+				sessionTx = {
+					user_id,
+					currency: 'semi_private_token',
+					amount: 1, // refund 1 semi-private token
+					type: 'semi_cancel_token',
+					description: `Cancelled semi-private class session: ${activityData.name}`
+				}
 				newSemiPrivateTokenBalance += 1
 			} else {
+				sessionTx = {
+					user_id,
+					currency: 'public_token',
+					amount: 1, // refund 1 public token
+					type: 'group_cancel_token',
+					description: `Cancelled public class session: ${activityData.name}`
+				}
 				newPublicTokenBalance += 1
 			}
-		} else if (!userData.isFree) {
-			totalRefund += activityData.credits
+		} else {
+			// Not booked with token: refund credits or mark free cancellation
+			if (userData.isFree) {
+				if (activityData.semi_private) {
+					sessionTx = {
+						user_id,
+						currency: 'none',
+						amount: 0,
+						type: 'semi_cancel_free',
+						description: `Cancelled semi-private class session (free user): ${activityData.name}`
+					}
+				} else {
+					sessionTx = {
+						user_id,
+						currency: 'none',
+						amount: 0,
+						type: 'group_cancel_free',
+						description: `Cancelled public class session (free user): ${activityData.name}`
+					}
+				}
+			} else {
+				if (activityData.semi_private) {
+					sessionTx = {
+						user_id,
+						currency: 'credits',
+						amount: activityData.credits,
+						type: 'semi_cancel_credit',
+						description: `Cancelled semi-private class session: ${activityData.name}`
+					}
+				} else {
+					sessionTx = {
+						user_id,
+						currency: 'credits',
+						amount: activityData.credits,
+						type: 'group_cancel_credit',
+						description: `Cancelled public class session: ${activityData.name}`
+					}
+				}
+				totalRefund += activityData.credits
+			}
 		}
 
-		// Handle additions and protein items
+		// Process additions: filter out those for this user
 		const userAdditions = reservationData.additions.filter(
 			addition => addition.user_id === userId
 		)
@@ -483,7 +557,6 @@ export const cancelReservationGroup = async (
 		// Separate protein items from other additions
 		const proteinItems = []
 		const otherItems = []
-
 		userAdditions.forEach(addition => {
 			addition.items.forEach(item => {
 				if (
@@ -497,37 +570,31 @@ export const cancelReservationGroup = async (
 			})
 		})
 
-		// Calculate refunds for non-protein items
+		// Refund for non-protein items
 		const otherItemsTotalPrice = otherItems.reduce(
 			(total, item) => total + item.price,
 			0
 		)
 		totalRefund += otherItemsTotalPrice
 
-		// Handle protein items
+		// Handle protein items: refund shake tokens and adjust punch count
 		const proteinItemsCount = proteinItems.length
 		if (proteinItemsCount > 0) {
-			// Return shake tokens instead of credits
 			shakeTokenRefund = proteinItemsCount
-
-			// Handle punch card adjustments
 			if (userData.punches > 0) {
 				punchesToDeduct = proteinItemsCount
 				const newPunchCount = userData.punches - punchesToDeduct
-
-				// Check if user benefited from loyalty reward
 				if (
 					Math.floor(userData.punches / 10) > Math.floor(newPunchCount / 10)
 				) {
-					shakeTokenPenalty = 2 // Deduct 2 tokens as penalty
+					shakeTokenPenalty = 2
 				}
 			}
 		}
-
 		newShakeTokenBalance =
 			userData.shake_token + shakeTokenRefund - shakeTokenPenalty
 
-		// Update group time slot data
+		// Update group time slot data: remove the cancelling user from user lists
 		const updatedAdditions = reservationData.additions.filter(
 			addition => addition.user_id !== userId
 		)
@@ -553,7 +620,7 @@ export const cancelReservationGroup = async (
 			throw new Error(`Error canceling reservation: ${updateError.message}`)
 		}
 
-		// Update market item quantities
+		// Update market item quantities for each addition in userAdditions
 		for (const addition of userAdditions) {
 			for (const item of addition.items) {
 				const { data, error: quantityError } = await supabase
@@ -561,9 +628,7 @@ export const cancelReservationGroup = async (
 					.select('quantity')
 					.eq('id', item.id)
 					.single()
-
 				if (quantityError) continue
-
 				const newQuantity = (data.quantity || 0) + 1
 				await supabase
 					.from('market')
@@ -575,7 +640,6 @@ export const cancelReservationGroup = async (
 		// Update user balances
 		const newWalletBalance = userData.wallet + totalRefund
 		const newPunchCount = Math.max(0, userData.punches - punchesToDeduct)
-
 		const { error: userUpdateError } = await supabase
 			.from('users')
 			.update({
@@ -586,96 +650,77 @@ export const cancelReservationGroup = async (
 				punches: newPunchCount
 			})
 			.eq('user_id', userId)
-
 		if (userUpdateError) {
 			throw new Error(`Error updating user data: ${userUpdateError.message}`)
 		}
 
-		// Record transactions
-		const transactions = []
+		// Prepare transaction records array. Start with the session cancellation record.
+		const transactions = [sessionTx]
 
-		// Class session cancellation
-		if (bookedWithToken) {
-			transactions.push({
-				user_id: userId,
-				name: `Cancelled ${
-					activityData.semi_private ? 'semi-private' : 'public'
-				} class session: ${activityData.name}`,
-				type: 'class session',
-				amount: activityData.semi_private
-					? '+1 semi-private token'
-					: '+1 public token'
-			})
-		} else if (totalRefund > 0) {
-			transactions.push({
-				user_id: userId,
-				name: `Cancelled ${
-					activityData.semi_private ? 'semi-private' : 'public'
-				} class session: ${activityData.name}`,
-				type: 'class session',
-				amount: `+${activityData.credits} credits`
-			})
-		}
-
-		// Regular items refund
+		// Refund for non-protein additions (market refund)
 		if (otherItemsTotalPrice > 0) {
 			transactions.push({
-				user_id: userId,
-				name: `Refunded items for cancelled class session`,
-				type: 'market transaction',
-				amount: `+${otherItemsTotalPrice} credits`
+				user_id,
+				currency: 'credits',
+				amount: otherItemsTotalPrice,
+				type: 'market_refund',
+				description: `Refunded items for cancelled class session: ${activityData.name}`
 			})
 		}
 
-		// Protein items handling
+		// Refund for protein items (shake token refund)
 		if (shakeTokenRefund > 0) {
 			transactions.push({
-				user_id: userId,
-				name: `Returned shake tokens for cancelled protein items`,
-				type: 'market transaction',
-				amount: `+${shakeTokenRefund} shake tokens`
+				user_id,
+				currency: 'shake_token',
+				amount: shakeTokenRefund,
+				type: 'shake_token_refund',
+				description: 'Returned shake tokens for cancelled protein items'
 			})
 		}
 
+		// Punch deduction transaction
 		if (punchesToDeduct > 0) {
 			transactions.push({
-				user_id: userId,
-				name: `Deducted punches from cancelled protein items`,
-				type: 'punch card adjustment',
-				amount: `-${punchesToDeduct} punches`
+				user_id,
+				currency: 'punches',
+				amount: -punchesToDeduct,
+				type: 'punch_remove',
+				description: 'Deducted punches from cancelled protein items'
 			})
 		}
 
+		// Token penalty transaction
 		if (shakeTokenPenalty > 0) {
 			transactions.push({
-				user_id: userId,
-				name: 'Token penalty for cancelled loyalty reward',
-				type: 'punch card penalty',
-				amount: '-2 shake tokens'
+				user_id,
+				currency: 'shake_token',
+				amount: -shakeTokenPenalty,
+				type: 'loyalty_penalty',
+				description: 'Token penalty for cancelled loyalty reward'
 			})
 		}
 
+		// Insert all cancellation transactions into new_transactions table
 		const { error: transactionError } = await supabase
-			.from('transactions')
+			.from('new_transactions')
 			.insert(transactions)
-
 		if (transactionError) {
 			console.error('Error recording transactions:', transactionError.message)
 		}
 
-		// Handle email notifications
+		// Fetch coach data for email notifications
 		const { data: coachData, error: coachError } = await supabase
 			.from('coaches')
 			.select('*')
 			.eq('id', reservationData.coach_id)
 			.single()
-
 		if (coachError) {
 			throw new Error(`Error fetching coach data: ${coachError.message}`)
 		}
 
 		const emailData = {
-			user_name: userData.first_name + ' ' + userData.last_name,
+			user_name: `${userData.first_name} ${userData.last_name}`,
 			user_email: userData.email,
 			activity_name: activityData.name,
 			activity_date: reservationData.date,
@@ -687,21 +732,18 @@ export const cancelReservationGroup = async (
 				credits: totalRefund > 0 ? totalRefund : null,
 				class_token: bookedWithToken
 					? activityData.semi_private
-						? 'semi-private'
+						? 'semi_private'
 						: 'public'
 					: null,
 				shake_tokens:
 					shakeTokenRefund > 0
-						? {
-								returned: shakeTokenRefund,
-								penalty: shakeTokenPenalty
-						  }
+						? { returned: shakeTokenRefund, penalty: shakeTokenPenalty }
 						: null,
 				punches_deducted: punchesToDeduct
 			}
 		}
 
-		// Send emails
+		// Send cancellation emails to admin and user
 		await Promise.all([
 			fetch('/api/send-cancel-admin', {
 				method: 'POST',
@@ -715,11 +757,12 @@ export const cancelReservationGroup = async (
 			})
 		])
 
+		// Update reservations state
 		setReservations(prevReservations =>
 			prevReservations.filter(reservation => reservation.id !== reservationId)
 		)
 
-		// Create success message
+		// Compose success message
 		let message = 'Group reservation cancelled successfully.'
 		if (shakeTokenPenalty > 0) {
 			message = `Group reservation cancelled. ${shakeTokenRefund} shake tokens returned. 2 tokens deducted as loyalty reward penalty.`
@@ -732,10 +775,10 @@ export const cancelReservationGroup = async (
 			message
 		}
 	} catch (error) {
-		console.error('Cancel reservation error:', error)
+		console.error('Error cancelling reservation:', error)
 		return {
 			success: false,
-			error: error.message
+			error: error.message || 'Failed to cancel group reservation'
 		}
 	}
 }

@@ -3,7 +3,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa'
 
-interface TransactionTableProps {
+interface MagicalTransactionTableProps {
 	transactions: any[]
 	sortField: string
 	sortOrder: 'asc' | 'desc'
@@ -11,7 +11,7 @@ interface TransactionTableProps {
 	getTransactionColor: (type: string) => string
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({
+const MagicalTransactionTable: React.FC<MagicalTransactionTableProps> = ({
 	transactions,
 	sortField,
 	sortOrder,
@@ -26,9 +26,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 						<tr>
 							{[
 								{ key: 'created_at', label: 'Date' },
-								{ key: 'name', label: 'Description' },
+								{ key: 'description', label: 'Description' },
 								{ key: 'type', label: 'Type' },
 								{ key: 'amount', label: 'Amount' },
+								{ key: 'currency', label: 'Currency' },
 								{ key: 'user', label: 'User' }
 							].map(column => (
 								<th
@@ -66,10 +67,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 									<td className='py-4 px-6 whitespace-nowrap'>
 										{new Date(transaction.created_at).toLocaleDateString()}
 									</td>
-									<td className='py-4 px-6'>{transaction.name}</td>
+									<td className='py-4 px-6'>{transaction.description}</td>
 									<td className='py-4 px-6'>
 										<span
-											className={`inline-block px-2 py-1 rounded-lg text-xs font-medium break-words ${getTransactionColor(
+											className={`inline-block px-2 py-1 rounded-lg text-xs font-medium ${getTransactionColor(
 												transaction.type
 											)}`}>
 											{transaction.type}
@@ -78,12 +79,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 									<td className='py-4 px-6 whitespace-nowrap'>
 										<span
 											className={
-												transaction.amount.startsWith('+')
+												transaction.amount >= 0
 													? 'text-green-400'
 													: 'text-red-400'
 											}>
 											{transaction.amount}
 										</span>
+									</td>
+									<td className='py-4 px-6 whitespace-nowrap'>
+										{transaction.currency}
 									</td>
 									<td className='py-4 px-6 whitespace-nowrap'>
 										{transaction.users.first_name} {transaction.users.last_name}
@@ -98,4 +102,4 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 	)
 }
 
-export default TransactionTable
+export default MagicalTransactionTable

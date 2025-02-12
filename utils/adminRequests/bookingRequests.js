@@ -40,16 +40,28 @@ export const bookTimeSlotForClient = async ({
 	let bookingMethod = 'credits'
 	let newWalletBalance = userData.wallet
 	let newTokenBalance = userData.private_token
-	let transactionAmount = ''
+	let transactionRecord = null
 
-	// Special handling for Ice Bath - only accept credits
+	// Special handling for Ice Bath – only accept credits
 	if (activityData.name === 'Ice Bath') {
 		if (userData.isFree || userData.wallet >= activityData.credits) {
 			if (!userData.isFree) {
 				newWalletBalance -= activityData.credits
-				transactionAmount = `-${activityData.credits} credits`
+				transactionRecord = {
+					user_id: userId,
+					currency: 'credits',
+					amount: -activityData.credits,
+					type: 'individual_session_credit',
+					description: `Booked individual session: ${activityData.name}`
+				}
 			} else {
-				transactionAmount = '0 credits (free user)'
+				transactionRecord = {
+					user_id: userId,
+					currency: 'none',
+					amount: 0,
+					type: 'individual_session_free',
+					description: `Booked individual session (free user): ${activityData.name}`
+				}
 			}
 		} else {
 			return {
@@ -62,13 +74,31 @@ export const bookTimeSlotForClient = async ({
 		if (userData.private_token > 0) {
 			bookingMethod = 'token'
 			newTokenBalance -= 1
-			transactionAmount = '-1 private token'
+			transactionRecord = {
+				user_id: userId,
+				currency: 'private_token',
+				amount: -1,
+				type: 'individual_session_token',
+				description: `Booked individual session: ${activityData.name}`
+			}
 		} else if (userData.isFree || userData.wallet >= activityData.credits) {
 			if (!userData.isFree) {
 				newWalletBalance -= activityData.credits
-				transactionAmount = `-${activityData.credits} credits`
+				transactionRecord = {
+					user_id: userId,
+					currency: 'credits',
+					amount: -activityData.credits,
+					type: 'individual_session_credit',
+					description: `Booked individual session: ${activityData.name}`
+				}
 			} else {
-				transactionAmount = '0 credits (free user)'
+				transactionRecord = {
+					user_id: userId,
+					currency: 'none',
+					amount: 0,
+					type: 'individual_session_free',
+					description: `Booked individual session (free user): ${activityData.name}`
+				}
 			}
 		} else {
 			return { error: 'Not enough credits or tokens' }
@@ -112,22 +142,18 @@ export const bookTimeSlotForClient = async ({
 		return { error: bookingError.message }
 	}
 	await deleteConflictingTimeSlots(supabase, coachId, date, startTime, endTime)
-	// Add transaction record
+
+	// Record the booking transaction in new_transactions
 	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert({
-			user_id: userId,
-			name: `Booked individual session: ${activityData.name}`,
-			type: 'individual session',
-			amount: transactionAmount
-		})
+		.from('new_transactions')
+		.insert(transactionRecord)
 
 	if (transactionError) {
 		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return here as the booking was successful
+		// Proceed even if logging fails
 	}
 
-	// Fetch coach name
+	// Fetch coach data
 	const { data: coachData, error: coachError } = await supabase
 		.from('coaches')
 		.select('*')
@@ -164,9 +190,7 @@ export const bookTimeSlotForClient = async ({
 	try {
 		const responseUser = await fetch('/api/send-user-email', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(emailData)
 		})
 
@@ -231,22 +255,50 @@ export const bookTimeSlotForClientGroup = async ({
 	let newWalletBalance = userData.wallet
 	let newPublicTokenBalance = userData.public_token
 	let newSemiPrivateTokenBalance = userData.semiPrivate_token
-	let transactionAmount = ''
+	let transactionRecord = null
 
 	if (activityData.semi_private && userData.semiPrivate_token > 0) {
 		bookingMethod = 'semiPrivateToken'
 		newSemiPrivateTokenBalance -= 1
-		transactionAmount = '-1 semi-private token'
+		transactionRecord = {
+			user_id: userId,
+			currency: 'semi_private_token',
+			amount: -1,
+			type: 'semi_session_token',
+			description: `Booked semi-private class session: ${activityData.name}`
+		}
 	} else if (!activityData.semi_private && userData.public_token > 0) {
 		bookingMethod = 'publicToken'
 		newPublicTokenBalance -= 1
-		transactionAmount = '-1 public token'
+		transactionRecord = {
+			user_id: userId,
+			currency: 'public_token',
+			amount: -1,
+			type: 'group_session_token',
+			description: `Booked public class session: ${activityData.name}`
+		}
 	} else if (userData.isFree || userData.wallet >= activityData.credits) {
 		if (!userData.isFree) {
 			newWalletBalance -= activityData.credits
-			transactionAmount = `-${activityData.credits} credits`
+			transactionRecord = {
+				user_id: userId,
+				currency: 'credits',
+				amount: -activityData.credits,
+				type: 'group_session_credit',
+				description: `Booked ${
+					activityData.semi_private ? 'semi-private' : 'public'
+				} class session: ${activityData.name}`
+			}
 		} else {
-			transactionAmount = '0 credits (free user)'
+			transactionRecord = {
+				user_id: userId,
+				currency: 'none',
+				amount: 0,
+				type: 'group_session_free',
+				description: `Booked ${
+					activityData.semi_private ? 'semi-private' : 'public'
+				} class session (free user): ${activityData.name}`
+			}
 		}
 	} else {
 		return { error: 'Not enough credits or tokens to book the session.' }
@@ -285,14 +337,14 @@ export const bookTimeSlotForClientGroup = async ({
 
 	// Proceed with booking the time slot
 	let newCount = 1
-	let user_id = [userId]
+	let user_ids = [userId]
 	let isBooked = false
 	let slotId
 	let booked_with_token = existingSlot?.booked_with_token || []
 
 	if (existingSlot) {
 		newCount = existingSlot.count + 1
-		user_id = existingSlot.user_id
+		user_ids = existingSlot.user_id
 			? [...existingSlot.user_id, userId]
 			: [userId]
 		isBooked = newCount === activityData.capacity
@@ -309,10 +361,10 @@ export const bookTimeSlotForClientGroup = async ({
 		date: date,
 		start_time: startTime,
 		end_time: endTime,
-		user_id,
+		user_id: user_ids,
 		count: newCount,
 		booked: isBooked,
-		booked_with_token
+		booked_with_token: booked_with_token
 	}
 
 	let timeSlotData, timeSlotError
@@ -329,8 +381,7 @@ export const bookTimeSlotForClientGroup = async ({
 			.from('group_time_slots')
 			.insert(upsertData)
 			.single())
-
-		// Ensure no duplicates by deleting any older entries
+		// Remove any duplicate entries
 		await supabase
 			.from('group_time_slots')
 			.delete()
@@ -355,6 +406,7 @@ export const bookTimeSlotForClientGroup = async ({
 			endTime
 		)
 	}
+
 	// Update user's account (wallet, public tokens, or semi-private tokens)
 	const { error: updateError } = await supabase
 		.from('users')
@@ -370,24 +422,17 @@ export const bookTimeSlotForClientGroup = async ({
 		return { error: updateError.message }
 	}
 
-	// Add transaction record
+	// Record the booking transaction in new_transactions
 	const { error: transactionError } = await supabase
-		.from('transactions')
-		.insert({
-			user_id: userId,
-			name: `Booked ${
-				activityData.semi_private ? 'semi-private' : 'public'
-			} class session: ${activityData.name}`,
-			type: 'class session',
-			amount: transactionAmount
-		})
+		.from('new_transactions')
+		.insert(transactionRecord)
 
 	if (transactionError) {
 		console.error('Error recording transaction:', transactionError.message)
-		// Note: We don't return here as the booking was successful
+		// Continue even if logging fails
 	}
 
-	// Fetch coach name
+	// Fetch coach data
 	const { data: coachData, error: coachError } = await supabase
 		.from('coaches')
 		.select('*')
@@ -428,12 +473,9 @@ export const bookTimeSlotForClientGroup = async ({
 	try {
 		const responseUser = await fetch('/api/send-user-email', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(emailData)
 		})
-
 		const resultUser = await responseUser.json()
 		if (responseUser.ok) {
 			console.log('User email sent successfully')

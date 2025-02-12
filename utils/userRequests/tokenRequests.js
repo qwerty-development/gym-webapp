@@ -54,36 +54,40 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 			return { error: updateError.message }
 		}
 
-		//Vista Finale bundle purchase transaction records
+		// Insert transactions into new_transactions table
 		const transactionRecords = [
 			{
 				user_id: userId,
-				name: 'Purchased Vista Finale bundle',
-				type: 'bundle purchase',
-				amount: `-${vistaFinaleBundle.price} credits`
+				currency: 'credits',
+				amount: -vistaFinaleBundle.price,
+				type: 'bundle_vista',
+				description: 'Purchased Vista Finale bundle'
 			},
 			{
 				user_id: userId,
-				name: 'Received Private Training tokens',
-				type: 'bundle purchase',
-				amount: `+${vistaFinaleBundle.tokens.private_token} private tokens`
+				currency: 'private_token',
+				amount: vistaFinaleBundle.tokens.private_token,
+				type: 'bundle_vista',
+				description: 'Received Private Training tokens from Vista Finale bundle'
 			},
 			{
 				user_id: userId,
-				name: 'Received Class tokens',
-				type: 'bundle purchase',
-				amount: `+${vistaFinaleBundle.tokens.public_token} public tokens`
+				currency: 'public_token',
+				amount: vistaFinaleBundle.tokens.public_token,
+				type: 'bundle_vista',
+				description: 'Received Class tokens from Vista Finale bundle'
 			},
 			{
 				user_id: userId,
-				name: 'Received Shake tokens',
-				type: 'bundle purchase',
-				amount: `+${vistaFinaleBundle.tokens.shake_token} shake tokens`
+				currency: 'shake_token',
+				amount: vistaFinaleBundle.tokens.shake_token,
+				type: 'bundle_vista',
+				description: 'Received Shake tokens from Vista Finale bundle'
 			}
 		]
 
 		const { error: transactionError } = await supabase
-			.from('transactions')
+			.from('new_transactions')
 			.insert(transactionRecords)
 
 		if (transactionError) {
@@ -101,16 +105,17 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		}
 	}
 
-	// Handle other bundles
-	let bundlePrice, tokenType, tokenAmount
+	// Handle other bundles: classes, individual, protein
+	let bundlePrice, tokenType, tokenAmount, transactionType
 	if (bundleType === 'classes') {
 		const bundle = classestiers.find(tier => tier.name === bundleName)
 		if (!bundle) {
 			return { error: 'Invalid bundle name for classes.' }
 		}
 		bundlePrice = parseInt(bundle.priceMonthly)
-		tokenType = 'public'
+		tokenType = 'public' // maps to public_token
 		tokenAmount = parseInt(bundle.description.split(' ')[0])
+		transactionType = 'bundle_class'
 	} else if (bundleType === 'individual') {
 		const bundle = individualtiers.find(tier => tier.name === bundleName)
 		if (!bundle) {
@@ -120,13 +125,17 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		tokenAmount = parseInt(bundle.description.split(' ')[0])
 		switch (bundleName) {
 			case 'Workout of the day':
-				tokenType = 'workoutDay'
+				// Map workoutDay to private token for this example
+				tokenType = 'private'
+				transactionType = 'bundle_workout'
 				break
 			case 'Private training':
 				tokenType = 'private'
+				transactionType = 'bundle_private'
 				break
 			case 'Semi-Private':
 				tokenType = 'semiPrivate'
+				transactionType = 'bundle_semi'
 				break
 			default:
 				return { error: 'Invalid individual bundle type.' }
@@ -135,28 +144,26 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		bundlePrice = parseInt(proteinShakeTier.priceMonthly)
 		tokenType = 'shake'
 		tokenAmount = parseInt(proteinShakeTier.description.split(' ')[0])
+		transactionType = 'bundle_shake'
 	} else {
 		return { error: 'Invalid bundle type.' }
 	}
 
-	// Check if user has enough credits
 	if (userData.wallet < bundlePrice) {
 		return { error: 'Not enough credits to purchase the bundle.' }
 	}
 
-	// Update balances
 	const newWalletBalance = userData.wallet - bundlePrice
-	const newTokenBalance = userData[`${tokenType}_token`] + tokenAmount
+	const tokenColumn = `${tokenType}_token`
+	const newTokenBalance = userData[tokenColumn] + tokenAmount
 
-	// Update user data
-	const updateFields = {
-		wallet: newWalletBalance,
-		[`${tokenType}_token`]: newTokenBalance
-	}
-
+	// Update user data with new wallet and token balances
 	const { error: updateError } = await supabase
 		.from('users')
-		.update(updateFields)
+		.update({
+			wallet: newWalletBalance,
+			[tokenColumn]: newTokenBalance
+		})
 		.eq('user_id', userId)
 
 	if (updateError) {
@@ -164,24 +171,35 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		return { error: updateError.message }
 	}
 
-	// Record transactions for bundle purchase
+	// Insert transactions for non-finale bundle purchase
 	const transactionRecords = [
 		{
 			user_id: userId,
-			name: `Purchased ${bundleName} bundle`,
-			type: 'bundle purchase',
-			amount: `-${bundlePrice} credits`
+			currency: 'credits',
+			amount: -bundlePrice,
+			type: transactionType,
+			description: `Purchased ${bundleName} bundle`
 		},
 		{
 			user_id: userId,
-			name: `Received tokens for ${bundleName} bundle`,
-			type: 'bundle purchase',
-			amount: `+${tokenAmount} ${tokenType} token${tokenAmount}`
+			currency:
+				tokenType === 'public'
+					? 'public_token'
+					: tokenType === 'private'
+					? 'private_token'
+					: tokenType === 'semiPrivate'
+					? 'semi_private_token'
+					: tokenType === 'shake'
+					? 'shake_token'
+					: null,
+			amount: tokenAmount,
+			type: transactionType,
+			description: `Received tokens for ${bundleName} bundle`
 		}
 	]
 
 	const { error: transactionError } = await supabase
-		.from('transactions')
+		.from('new_transactions')
 		.insert(transactionRecords)
 
 	if (transactionError) {
@@ -191,14 +209,14 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 	return {
 		data: {
 			newWalletBalance,
-			[`${tokenType}_token`]: newTokenBalance
+			[tokenColumn]: newTokenBalance
 		},
 		message: 'Bundle purchased successfully.'
 	}
 }
 
 export const purchaseEssentialsBundle = async userId => {
-	const supabase = supabaseClient()
+	const supabase = await supabaseClient()
 	const bundlePrice = 30
 
 	// Fetch user's current data
@@ -213,32 +231,27 @@ export const purchaseEssentialsBundle = async userId => {
 		return { error: userError?.message || 'User not found.' }
 	}
 
-	// Check if the user has enough credits
 	if (userData.wallet < bundlePrice) {
 		return { error: 'Not enough credits to purchase the Essentials bundle.' }
 	}
 
-	// Calculate new wallet balance
 	const newWalletBalance = userData.wallet - bundlePrice
 
 	// Calculate new essential_till date
 	const currentDate = new Date()
 	let newEssentialsTill
-
 	if (
 		userData.essential_till &&
 		new Date(userData.essential_till) > currentDate
 	) {
-		// If essential_till is in the future, add one month to it
 		newEssentialsTill = new Date(userData.essential_till)
 		newEssentialsTill.setMonth(newEssentialsTill.getMonth() + 1)
 	} else {
-		// If essential_till is in the past or null, set it to one month from now
 		newEssentialsTill = new Date(currentDate)
 		newEssentialsTill.setMonth(newEssentialsTill.getMonth() + 1)
 	}
 
-	// Update user data
+	// Update user data with new wallet balance and essential_till date
 	const { error: updateError } = await supabase
 		.from('users')
 		.update({
@@ -252,19 +265,19 @@ export const purchaseEssentialsBundle = async userId => {
 		return { error: updateError.message }
 	}
 
-	// Insert bundle purchase record
+	// Insert transaction for Essentials bundle purchase
 	const { error: transactionError } = await supabase
-		.from('transactions')
+		.from('new_transactions')
 		.insert({
 			user_id: userId,
-			name: 'Purchased Essentials bundle',
-			type: 'bundle purchase',
-			amount: `-${bundlePrice} credits`
+			currency: 'credits',
+			amount: -bundlePrice,
+			type: 'bundle_essential',
+			description: 'Purchased Essentials bundle'
 		})
 
 	if (transactionError) {
 		console.error('Error recording transaction:', transactionError.message)
-		// Note: We're not returning here to ensure the purchase is still considered successful
 	}
 
 	return {
