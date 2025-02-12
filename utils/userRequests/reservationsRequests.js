@@ -283,7 +283,7 @@ export const cancelReservation = async (
 		if (otherItemsTotalPrice > 0) {
 			transactions.push({
 				user_id: userId,
-				name: `Refunded regular items for cancelled session: ${activityData.name}`,
+				name: `Refunded items for cancelled session: ${activityData.name}`,
 				type: 'market transaction',
 				amount: `+${otherItemsTotalPrice} credits`
 			})
@@ -621,7 +621,7 @@ export const cancelReservationGroup = async (
 		if (otherItemsTotalPrice > 0) {
 			transactions.push({
 				user_id: userId,
-				name: `Refunded regular items for cancelled class session`,
+				name: `Refunded items for cancelled class session`,
 				type: 'market transaction',
 				amount: `+${otherItemsTotalPrice} credits`
 			})

@@ -1,5 +1,7 @@
 import { supabaseClient } from '../supabaseClient'
 
+
+
 export const fetchMarket = async () => {
 	const supabase = await supabaseClient()
 	const { data, error } = await supabase

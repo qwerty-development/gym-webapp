@@ -1,5 +1,7 @@
 import { supabaseClient } from '../supabaseClient'
 
+
+
 export const bookTimeSlot = async ({
 	activityId,
 	coachId,

@@ -83,21 +83,30 @@ export const updateUserCredits = async (
 		shake_token: Math.max(0, userData.shake_token + tokenUpdates.shake_token)
 	}
 
-	// 4. Handle essential_till update
+	// 4. Handle essential_till update - MODIFIED
 	let newEssentialsTill = userData.essential_till
-	if (essentialsTill) {
+	const hasEssentialsChanged =
+		essentialsTill && essentialsTill !== userData.essential_till
+	if (hasEssentialsChanged) {
 		newEssentialsTill = new Date(essentialsTill).toISOString()
 	}
 
-	// 5. Update user data
+	// 5. Prepare update fields - MODIFIED
+	const updateFields = {
+		wallet,
+		...updatedTokens,
+		refill_date: new Date().toISOString()
+	}
+
+	// Only include essential_till if it has changed
+	if (hasEssentialsChanged) {
+		updateFields.essential_till = newEssentialsTill
+	}
+
+	// 6. Update user data
 	const { data, error } = await supabase
 		.from('users')
-		.update({
-			wallet,
-			...updatedTokens,
-			essential_till: newEssentialsTill,
-			refill_date: new Date().toISOString()
-		})
+		.update(updateFields)
 		.eq('id', userId)
 
 	if (error) {
@@ -105,10 +114,10 @@ export const updateUserCredits = async (
 		return { error: 'Failed to update user data: ' + error.message }
 	}
 
-	// 6. Initialize transactions array
+	// 7. Initialize transactions array
 	const transactions = []
 
-	// 7. Handle credit transactions
+	// 8. Handle credit transactions
 	if (creditsAdded !== 0) {
 		const { error: refillError } = await insertRefillRecord(
 			supabase,
@@ -129,17 +138,17 @@ export const updateUserCredits = async (
 
 		// Handle sale bonus
 		if (sale && sale > 0 && creditsAdded > 0) {
-			const freeTokens = Math.floor(newCredits * (sale / 100))
+			const freeCredits = Math.floor(newCredits * (sale / 100))
 			transactions.push({
 				user_id: userData.user_id,
-				name: 'Free tokens from credit refill sale',
-				type: 'credit refill',
-				amount: `+${freeTokens} tokens`
+				name: 'Free credits from credit refill sale',
+				type: 'free credits',
+				amount: `+${freeCredits} credits`
 			})
 		}
 	}
 
-	// 8. Handle token transactions
+	// 9. Handle token transactions
 	Object.entries(tokenUpdates).forEach(([tokenType, amount]) => {
 		if (amount !== 0) {
 			const formattedTokenType = tokenType
@@ -161,8 +170,8 @@ export const updateUserCredits = async (
 		}
 	})
 
-	// 9. Handle essentials transaction
-	if (newEssentialsTill !== userData.essential_till) {
+	// 10. Handle essentials transaction - MODIFIED
+	if (hasEssentialsChanged) {
 		transactions.push({
 			user_id: userData.user_id,
 			name: 'Essentials membership update',
@@ -173,7 +182,7 @@ export const updateUserCredits = async (
 		})
 	}
 
-	// 10. Record all transactions
+	// 11. Record all transactions
 	if (transactions.length > 0) {
 		const { error: transactionError } = await supabase
 			.from('transactions')
@@ -184,7 +193,7 @@ export const updateUserCredits = async (
 		}
 	}
 
-	// 11. Send email notification
+	// 12. Send email notification
 	const emailData = {
 		user_name: userData.first_name + ' ' + userData.last_name,
 		user_email: userData.email,
@@ -193,7 +202,7 @@ export const updateUserCredits = async (
 		sale,
 		newCredits,
 		tokenUpdates,
-		essentialsTill: newEssentialsTill
+		essentialsTill: hasEssentialsChanged ? newEssentialsTill : undefined
 	}
 
 	try {

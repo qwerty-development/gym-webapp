@@ -296,40 +296,51 @@ const ModifyCreditsComponent = () => {
 			creditChange = creditChange * (1 + sale / 100)
 			const updatedCredits = (selectedUser.wallet || 0) + creditChange
 
+			// Check if essentials date has actually changed
+			const hasEssentialsChanged =
+				essentialsTill !== selectedUser.essential_till
+
+			// Only include essential_till in the update if it has changed
+			const updateFields = {
+				wallet: updatedCredits,
+				private_token: Math.max(
+					0,
+					selectedUser.private_token + tokenUpdates.private_token
+				),
+				semiPrivate_token: Math.max(
+					0,
+					selectedUser.semiPrivate_token + tokenUpdates.semiPrivate_token
+				),
+				public_token: Math.max(
+					0,
+					selectedUser.public_token + tokenUpdates.public_token
+				),
+				workoutDay_token: Math.max(
+					0,
+					selectedUser.workoutDay_token + tokenUpdates.workoutDay_token
+				),
+				shake_token: Math.max(
+					0,
+					selectedUser.shake_token + tokenUpdates.shake_token
+				),
+				...(hasEssentialsChanged && {
+					essential_till: essentialsTill || selectedUser.essential_till
+				})
+			}
+
 			const { error } = await updateUserCredits(
 				selectedUserId,
 				updatedCredits,
 				sale,
 				newCredits,
 				tokenUpdates,
-				essentialsTill
+				hasEssentialsChanged ? essentialsTill : undefined // Only pass essentialsTill if changed
 			)
 
 			if (!error) {
 				const updatedUser = {
 					...selectedUser,
-					wallet: updatedCredits,
-					private_token: Math.max(
-						0,
-						selectedUser.private_token + tokenUpdates.private_token
-					),
-					semiPrivate_token: Math.max(
-						0,
-						selectedUser.semiPrivate_token + tokenUpdates.semiPrivate_token
-					),
-					public_token: Math.max(
-						0,
-						selectedUser.public_token + tokenUpdates.public_token
-					),
-					workoutDay_token: Math.max(
-						0,
-						selectedUser.workoutDay_token + tokenUpdates.workoutDay_token
-					),
-					shake_token: Math.max(
-						0,
-						selectedUser.shake_token + tokenUpdates.shake_token
-					),
-					essential_till: essentialsTill || selectedUser.essential_till
+					...updateFields
 				}
 
 				updateUsersState(updatedUser)

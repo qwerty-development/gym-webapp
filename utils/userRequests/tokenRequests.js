@@ -2,7 +2,6 @@ import { supabaseClient } from '../supabaseClient'
 import {
 	vistaFinaleBundle,
 	classestiers,
-	essentialsTier,
 	individualtiers,
 	proteinShakeTier
 } from '../bundles'
@@ -55,7 +54,7 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 			return { error: updateError.message }
 		}
 
-		// Record transactions
+		//Vista Finale bundle purchase transaction records
 		const transactionRecords = [
 			{
 				user_id: userId,
@@ -165,7 +164,7 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 		return { error: updateError.message }
 	}
 
-	// Record transactions
+	// Record transactions for bundle purchase
 	const transactionRecords = [
 		{
 			user_id: userId,
@@ -177,7 +176,7 @@ export const purchaseBundle = async ({ userId, bundleType, bundleName }) => {
 			user_id: userId,
 			name: `Received tokens for ${bundleName} bundle`,
 			type: 'bundle purchase',
-			amount: `+${tokenAmount} ${tokenType} token${tokenAmount > 1 ? 's' : ''}`
+			amount: `+${tokenAmount} ${tokenType} token${tokenAmount}`
 		}
 	]
 
