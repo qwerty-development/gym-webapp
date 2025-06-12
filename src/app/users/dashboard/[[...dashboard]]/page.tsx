@@ -977,7 +977,7 @@ export default function Dashboard() {
 			))
 		)
 	}
-
+	console.log(userData)
 	return (
 		<EssentialsGuard essentialsTill={userData?.essential_till} user={user}>
 			<div className='min-h-screen bg-gray-700 text-white font-sans'>
