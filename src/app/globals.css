@@ -666,3 +666,69 @@ body {
 .rbc-time-view .rbc-event-content {
   -webkit-line-clamp: 3;
 }
+
+/* --- Calendar Usability Enhancements --- */
+.rbc-time-slot {
+  min-height: 70px !important;
+  height: 70px !important;
+}
+.rbc-timeslot-group {
+  border-bottom: 1.5px solid #4b5563 !important; /* lighter gray */
+}
+.rbc-time-gutter, .rbc-time-header-gutter {
+  font-size: 1.2rem !important;
+  font-weight: bold !important;
+  color: #e5e7eb !important; /* gray-200 */
+  background: #232623 !important;
+  letter-spacing: 0.5px;
+}
+.rbc-time-view {
+  background: #232623 !important;
+}
+.rbc-day-bg {
+  background: #232623 !important;
+}
+.rbc-event {
+  min-height: 50px !important;
+  margin-bottom: 8px !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  font-size: 1rem !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  line-height: 1.3;
+  display: flex;
+  align-items: flex-start;
+}
+.rbc-event-content {
+  white-space: normal !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  font-size: 1rem !important;
+}
+.rbc-time-header-content, .rbc-time-content > * + * > * {
+  border-left: 1px solid #374151 !important; /* lighter grid lines */
+}
+.rbc-header {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: #a5b89a !important;
+  background: #232623 !important;
+  border-bottom: 2px solid #374151 !important;
+}
+.rbc-today {
+  background: rgba(76, 111, 70, 0.13) !important;
+}
+@media (max-width: 900px) {
+  .rbc-time-slot {
+    min-height: 50px !important;
+    height: 50px !important;
+  }
+  .rbc-event {
+    font-size: 0.95rem !important;
+    padding: 6px 6px !important;
+  }
+}
+/* --- End Calendar Usability Enhancements --- */

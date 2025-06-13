@@ -302,6 +302,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 							? 'bg-green-800 bg-opacity-30 border-l-4 border-green-500'
 							: ''
 					})}
+					min={new Date(1970, 1, 1, 6, 0, 0)}
+					max={new Date(1970, 1, 1, 22, 0, 0)}
 				/>
 			</div>
 			<AnimatePresence>
