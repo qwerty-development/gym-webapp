@@ -56,6 +56,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	const [date, setDate] = useState(new Date())
 	const [selectedCoach, setSelectedCoach] = useState<string | null>(null)
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+	const [sessionTypeFilter, setSessionTypeFilter] = useState<'all' | 'private' | 'group'>('all')
 
 	const coachColors = useMemo(() => {
 		const uniqueCoaches = Array.from(new Set(sessions.map(s => s.coaches.name)))
@@ -95,9 +96,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		setEvents(calendarEvents)
 	}, [sessions])
 
-	const filteredEvents = selectedCoach
-		? events.filter(event => event.coach === selectedCoach)
-		: events
+	const filteredEvents = events.filter(event => {
+		if (selectedCoach && event.coach !== selectedCoach) return false;
+		if (sessionTypeFilter === 'private' && event.isGroup) return false;
+		if (sessionTypeFilter === 'group' && !event.isGroup) return false;
+		return true;
+	})
 
 	const eventStyleGetter = useCallback(
 		(event: CalendarEvent, start: Date, end: Date, isSelected: boolean) => {
@@ -256,6 +260,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 								{coach}
 							</option>
 						))}
+					</select>
+					<select
+						value={sessionTypeFilter}
+						onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
+						className='bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg'>
+						<option value='all'>All Sessions</option>
+						<option value='private'>Private Sessions</option>
+						<option value='group'>Group Sessions</option>
 					</select>
 				</div>
 			</div>
