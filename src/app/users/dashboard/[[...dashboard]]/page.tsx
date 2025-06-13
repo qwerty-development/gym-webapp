@@ -921,41 +921,15 @@ export default function Dashboard() {
 						<div className='bg-gray-700 rounded-lg p-3 mt-4'>
 							<p className='text-sm text-gray-300'>
 								<span className='font-semibold text-green-400'>Additions:</span>{' '}
-								{session.additions && session.additions.length > 0 ? (
-									activeTab === 'group' ? (
-										<ul className='space-y-1'>
-											{session.additions.map(
-												(addition: any, addIndex: number) => (
-													<li key={addIndex}>
-														<span className='font-bold text-yellow-300'>
-															{session?.users?.find(
-																(user: any) => user.user_id === addition.user_id
-															)?.first_name || 'Unknown'}
-														</span>
-														<span className='text-gray-300'>: </span>
-														<span className='text-green-300'>
-															{addition.items
-																.map((item: any) => item.name)
-																.join(', ')}
-														</span>
-													</li>
-												)
-											)}
-										</ul>
-									) : (
-										session.additions
+								{session.additions && session.additions.length > 0
+									? session.additions
 											.map((addition: any) =>
 												typeof addition === 'string'
 													? addition
-													: addition.items
-															.map((item: any) => item.name)
-															.join(', ')
+													: (addition.items as any[]).map((item: any) => item.name).join(', ')
 											)
 											.join(', ')
-									)
-								) : (
-									'No additions'
-								)}
+									: 'No additions'}
 							</p>
 						</div>
 						{activeTab === 'group' && (
@@ -1123,9 +1097,27 @@ export default function Dashboard() {
 										animate={{ opacity: 1, x: 0 }}
 										className='bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
 										<h3 className='text-2xl font-bold text-green-400 mb-4'>
-											{user.publicMetadata.role === 'admin'
-												? 'Admin Overview'
-												: 'Quick Stats'}
+											Book a Session
+										</h3>
+										<div className='space-y-4'>
+											<Link href='/users/bookasession'>
+												<button className='w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2'>
+													<FaCalendarPlus className='text-xl' />
+													<span>Book New Session</span>
+												</button>
+											</Link>
+											<p className='text-sm text-gray-400 text-center'>
+												Book your next training session or join a group class
+											</p>
+										</div>
+									</motion.div>
+
+									<motion.div
+										initial={{ opacity: 0, x: 20 }}
+										animate={{ opacity: 1, x: 0 }}
+										className='bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-green-500'>
+										<h3 className='text-2xl font-bold text-green-400 mb-4'>
+											Quick Stats
 										</h3>
 										<div className='space-y-4'>
 											{user.publicMetadata.role === 'admin' ? (
@@ -1197,8 +1189,7 @@ export default function Dashboard() {
 											initial={{ opacity: 0, x: 20 }}
 											animate={{ opacity: 1, x: 0 }}
 											transition={{ delay: 0.2 }}
-											className='hidden md:block space-y-6'>
-											{' '}
+											className='space-y-6'>
 											<TokenBalance />
 											<LoyaltyCard
 												punches={userData?.punches || 0}
@@ -1418,15 +1409,12 @@ export default function Dashboard() {
 																		<span className='font-semibold text-green-400'>
 																			Additions:
 																		</span>{' '}
-																		{reservation.additions &&
-																		reservation.additions.length > 0
+																		{reservation.additions && reservation.additions.length > 0
 																			? reservation.additions
-																					.map(addition =>
+																					.map((addition: any) =>
 																						typeof addition === 'string'
 																							? addition
-																							: addition.items
-																									.map(item => item.name)
-																									.join(', ')
+																							: (addition.items as any[]).map((item: any) => item.name).join(', ')
 																					)
 																					.join(', ')
 																			: 'No additions'}
