@@ -11,7 +11,8 @@ import {
 	FaFilter,
 	FaSortAmountDown,
 	FaSortAmountUp,
-	FaFileExport
+	FaFileExport,
+	FaSort
 } from 'react-icons/fa'
 import { fetchUsers } from '../../../../utils/adminRequests'
 import { fetchCoaches } from '../../../../utils/adminRequests'
@@ -48,13 +49,26 @@ const CompletedSessions = () => {
 	const [startDate, endDate] = dateRange
 	const [summary, setSummary] = useState<any>(null)
 	const [selectedSession, setSelectedSession] = useState<any>(null)
+	const [summaries, setSummaries] = useState<any[]>([])
+	
+	// New state for summary table sorting
+	const [summarySortBy, setSummarySortBy] = useState<string | null>(null)
+	const [summarySortOrder, setSummarySortOrder] = useState<'asc' | 'desc'>('asc')
+	const [sortedSummaries, setSortedSummaries] = useState<any[]>([])
 
+	// Initial data fetching
 	useEffect(() => {
-		fetchUsersList()
-		fetchCoachesList()
-		fetchActivitiesList()
+		const initializeData = async () => {
+			await Promise.all([
+				fetchUsersList(),
+				fetchCoachesList(),
+				fetchActivitiesList()
+			])
+		}
+		initializeData()
 	}, [])
 
+	// Effect for fetching sessions when user is selected
 	useEffect(() => {
 		if (selectedUser) {
 			fetchCompletedSessions()
@@ -71,57 +85,173 @@ const CompletedSessions = () => {
 		selectedActivity
 	])
 
+	// Effect for fetching all users data when no user is selected and users are loaded
+	useEffect(() => {
+		if (!selectedUser && users.length > 0) {
+			fetchAllUsersCompletedSessions()
+		}
+	}, [
+		selectedUser,
+		users.length,
+		currentPage,
+		sortBy,
+		sortOrder,
+		filter,
+		startDate,
+		endDate,
+		selectedCoach,
+		selectedActivity
+	])
+
+	// Effect for sorting summaries when summaries or sort criteria change
+	useEffect(() => {
+		if (summaries.length > 0) {
+			const sorted = [...summaries].sort((a, b) => {
+				if (!summarySortBy) return 0
+
+				let aValue, bValue
+
+				switch (summarySortBy) {
+					case 'user':
+						aValue = a.user.toLowerCase()
+						bValue = b.user.toLowerCase()
+						break
+					case 'totalSessions':
+						aValue = a.totalSessions
+						bValue = b.totalSessions
+						break
+					case 'totalPrivateSessions':
+						aValue = a.totalPrivateSessions
+						bValue = b.totalPrivateSessions
+						break
+					case 'totalGroupSessions':
+						aValue = a.totalGroupSessions
+						bValue = b.totalGroupSessions
+						break
+					default:
+						return 0
+				}
+
+				if (typeof aValue === 'string') {
+					return summarySortOrder === 'asc' 
+						? aValue.localeCompare(bValue)
+						: bValue.localeCompare(aValue)
+				} else {
+					return summarySortOrder === 'asc' 
+						? aValue - bValue
+						: bValue - aValue
+				}
+			})
+			setSortedSummaries(sorted)
+		} else {
+			setSortedSummaries(summaries)
+		}
+	}, [summaries, summarySortBy, summarySortOrder])
+
 	const fetchUsersList = async () => {
-		const fetchedUsers = await fetchUsers()
-		setUsers(
-			fetchedUsers.map(user => ({
-				value: user.user_id,
-				label: `${user.first_name} ${user.last_name}`
-			}))
-		)
+		try {
+			const fetchedUsers = await fetchUsers()
+			setUsers(
+				fetchedUsers.map(user => ({
+					value: user.user_id,
+					label: `${user.first_name} ${user.last_name}`
+				}))
+			)
+		} catch (error) {
+			console.error('Error fetching users:', error)
+		}
 	}
 
 	const fetchCoachesList = async () => {
-		const fetchedCoaches = await fetchCoaches()
-		setCoaches(
-			fetchedCoaches.map(coach => ({
-				value: coach.id.toString(),
-				label: coach.name
-			}))
-		)
+		try {
+			const fetchedCoaches = await fetchCoaches()
+			setCoaches(
+				fetchedCoaches.map(coach => ({
+					value: coach.id.toString(),
+					label: coach.name
+				}))
+			)
+		} catch (error) {
+			console.error('Error fetching coaches:', error)
+		}
 	}
 
 	const fetchActivitiesList = async () => {
-		const fetchedActivities = await fetchActivities()
-		setActivities(
-			fetchedActivities.map(activity => ({
-				value: activity.id.toString(),
-				label: activity.name
-			}))
-		)
+		try {
+			const fetchedActivities = await fetchActivities()
+			setActivities(
+				fetchedActivities.map(activity => ({
+					value: activity.id.toString(),
+					label: activity.name
+				}))
+			)
+		} catch (error) {
+			console.error('Error fetching activities:', error)
+		}
 	}
 
 	const fetchCompletedSessions = async () => {
+		if (!selectedUser) return
+		
 		setLoading(true)
-		const response = await fetch(
-			`/api/completed-sessions?userId=${
-				selectedUser!.value
-			}&page=${currentPage}&sortBy=${sortBy}&sortOrder=${sortOrder}&filter=${filter}&startDate=${
-				startDate?.toISOString().split('T')[0] || ''
-			}&endDate=${endDate?.toISOString().split('T')[0] || ''}&activityId=${
-				selectedActivity?.value || ''
-			}&coachId=${selectedCoach?.value || ''}`
-		)
-		const data = await response.json()
-		setSessions(data.sessions)
-		setTotalPages(data.totalPages)
-		setSummary(data.summary)
-		setLoading(false)
+		try {
+			const response = await fetch(
+				`/api/completed-sessions?userId=${
+					selectedUser.value
+				}&page=${currentPage}&sortBy=${sortBy}&sortOrder=${sortOrder}&filter=${filter}&startDate=${
+					startDate?.toISOString().split('T')[0] || ''
+				}&endDate=${endDate?.toISOString().split('T')[0] || ''}&activityId=${
+					selectedActivity?.value || ''
+				}&coachId=${selectedCoach?.value || ''}`
+			)
+			const data = await response.json()
+			setSessions(data.sessions)
+			setTotalPages(data.totalPages)
+			setSummary(data.summary)
+		} catch (error) {
+			console.error('Error fetching completed sessions:', error)
+		} finally {
+			setLoading(false)
+		}
+	}
+
+	const fetchAllUsersCompletedSessions = async () => {
+		if (users.length === 0) return
+		
+		setLoading(true)
+		setSummaries([]) // Clear previous summaries
+		try {
+			const summariesPromises = users.map(async (user) => {
+				const response = await fetch(
+					`/api/completed-sessions?userId=${
+						user.value
+					}&page=${currentPage}&sortBy=${sortBy}&sortOrder=${sortOrder}&filter=${filter}&startDate=${
+						startDate?.toISOString().split('T')[0] || ''
+					}&endDate=${endDate?.toISOString().split('T')[0] || ''}&activityId=${
+						selectedActivity?.value || ''
+					}&coachId=${selectedCoach?.value || ''}`
+				)
+				const data = await response.json()
+				return { ...data.summary, user: user.label }
+			})
+
+			const results = await Promise.all(summariesPromises)
+			setSummaries(results)
+		} catch (error) {
+			console.error('Error fetching user summaries:', error)
+		} finally {
+			setLoading(false)
+		}
 	}
 
 	const handleUserChange = (selectedOption: any) => {
 		setSelectedUser(selectedOption)
 		setCurrentPage(1)
+		// Clear individual user data when switching
+		if (!selectedOption) {
+			setSessions([])
+			setSummary(null)
+		}
 	}
 
 	const handleCoachChange = (selectedOption: any) => {
@@ -145,12 +275,42 @@ const CompletedSessions = () => {
 		}
 	}
 
+	// New function to handle summary table sorting
+	const handleSummarySort = (field: string) => {
+		if (summarySortBy === field) {
+			// Cycle through: asc -> desc -> null (default)
+			if (summarySortOrder === 'asc') {
+				setSummarySortOrder('desc')
+			} else if (summarySortOrder === 'desc') {
+				setSummarySortBy(null)
+				setSummarySortOrder('asc')
+			}
+		} else {
+			setSummarySortBy(field)
+			setSummarySortOrder('asc')
+		}
+	}
+
+	// Function to render sort icon for summary table
+	const renderSummarySort = (field: string) => {
+		if (summarySortBy !== field) {
+			return <FaSort className='ml-1 text-gray-400' />
+		}
+		return summarySortOrder === 'asc' ? (
+			<FaSortAmountUp className='ml-1 text-green-400' />
+		) : (
+			<FaSortAmountDown className='ml-1 text-green-400' />
+		)
+	}
+
 	const handleFilterChange = (e: { target: { value: any } }) => {
 		setFilter(e.target.value)
 		setCurrentPage(1)
 	}
 
 	const exportToCSV = () => {
+		if (!selectedUser || sessions.length === 0) return
+		
 		const headers = [
 			'Date',
 			'Activity',
@@ -182,8 +342,9 @@ const CompletedSessions = () => {
 		].join('\n')
 
 		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-		saveAs(blob, `completed_sessions_${selectedUser!.label}.csv`)
+		saveAs(blob, `completed_sessions_${selectedUser.label}.csv`)
 	}
+	
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white'>
@@ -197,7 +358,7 @@ const CompletedSessions = () => {
 					<SearchableSelect
 						options={users}
 						value={selectedUser}
-						onChange={setSelectedUser}
+						onChange={handleUserChange}
 						placeholder='Select a user'
 					/>
 				</div>
@@ -227,7 +388,7 @@ const CompletedSessions = () => {
 										<SearchableSelect
 											options={coaches}
 											value={selectedCoach}
-											onChange={setSelectedCoach}
+											onChange={handleCoachChange}
 											placeholder='Select a coach'
 										/>
 									</div>
@@ -237,7 +398,7 @@ const CompletedSessions = () => {
 										<SearchableSelect
 											options={activities}
 											value={selectedActivity}
-											onChange={setSelectedActivity}
+											onChange={handleActivityChange}
 											placeholder='Select an activity'
 										/>
 									</div>
@@ -459,6 +620,81 @@ const CompletedSessions = () => {
 							</button>
 						</div>
 					</>
+				)}
+
+				{(!selectedUser || selectedUser===null) && (
+					<div className='mb-8'>
+						<h2 className='text-2xl font-bold mb-4'>All Users Summary</h2>
+						{loading ? (
+							<div className='flex justify-center items-center h-64'>
+								<div className='animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green-500'></div>
+							</div>
+						) : (
+							<div className='overflow-x-auto'>
+								<table className='min-w-full bg-gray-800 rounded-lg overflow-hidden'>
+									<thead className='bg-gray-700'>
+										<tr>
+											<th 
+												className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors duration-200'
+												onClick={() => handleSummarySort('user')}>
+												<div className='flex items-center select-none'>
+													User Name
+													{renderSummarySort('user')}
+												</div>
+											</th>
+											<th 
+												className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors duration-200'
+												onClick={() => handleSummarySort('totalSessions')}>
+												<div className='flex items-center select-none'>
+													Total Sessions
+													{renderSummarySort('totalSessions')}
+												</div>
+											</th>
+											<th 
+												className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors duration-200'
+												onClick={() => handleSummarySort('totalPrivateSessions')}>
+												<div className='flex items-center select-none'>
+													Private Sessions
+													{renderSummarySort('totalPrivateSessions')}
+												</div>
+											</th>
+											<th 
+												className='px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600 transition-colors duration-200'
+												onClick={() => handleSummarySort('totalGroupSessions')}>
+												<div className='flex items-center select-none'>
+													Group Sessions
+													{renderSummarySort('totalGroupSessions')}
+												</div>
+											</th>
+										</tr>
+									</thead>
+									<tbody className='divide-y divide-gray-700'>
+										{sortedSummaries.map((summary, index) => (
+											<motion.tr 
+												key={index} 
+												className='hover:bg-gray-700 transition-colors duration-200'
+												initial={{ opacity: 0, y: 10 }}
+												animate={{ opacity: 1, y: 0 }}
+												transition={{ delay: index * 0.05 }}>
+												<td className='px-6 py-4 whitespace-nowrap font-medium'>
+													{summary.user}
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap text-green-500 font-semibold'>
+													{summary.totalSessions}
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap text-blue-500 font-semibold'>
+													{summary.totalPrivateSessions}
+												</td>
+												<td className='px-6 py-4 whitespace-nowrap text-purple-500 font-semibold'>
+													{summary.totalGroupSessions}
+												</td>
+											</motion.tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</div>
 				)}
 
 				{selectedSession && (

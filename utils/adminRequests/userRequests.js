@@ -18,7 +18,6 @@ export const fetchUsers = async searchQuery => {
 		return []
 	}
 
-	console.log(data)
 	return data
 }
 async function insertRefillRecord(supabase, userId, amount) {
