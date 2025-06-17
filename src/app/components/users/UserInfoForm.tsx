@@ -72,7 +72,8 @@ const UserInfoForm: React.FC<UserInfoFormProps> = ({ userData, onUpdate }) => {
 		activity_level: userData.activity_level || '',
 		waist_circumference: userData.waist_circumference
 			? userData.waist_circumference[userData.waist_circumference.length - 1]
-					?.value
+					?.value 
+					
 			: '',
 		new_goal: ''
 	})
