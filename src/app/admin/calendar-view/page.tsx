@@ -172,11 +172,13 @@ const CalendarViewPage = () => {
 							<RingLoader color='#10B981' size={48} />
 						</div>
 					) : (
-						<div className='w-full'>
-							<CalendarView
-								sessions={[...adminIndividualSessions, ...adminGroupSessions]}
-								onCancelSession={handleCancelSession}
-							/>
+						<div className='w-full overflow-x-auto'>
+							<div className='min-w-[400px] sm:min-w-0'>
+								<CalendarView
+									sessions={[...adminIndividualSessions, ...adminGroupSessions]}
+									onCancelSession={handleCancelSession}
+								/>
+							</div>
 						</div>
 					)}
 				</motion.div>
