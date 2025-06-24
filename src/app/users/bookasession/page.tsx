@@ -133,12 +133,28 @@ export default function Example() {
 		const fetchInitialData = async () => {
 			setActivitiesLoading(true) // Set loading to true while fetching
 			const activitiesData = await fetchAllActivities()
-			setActivities(activitiesData)
+			// Filter activities to only those with at least one available coach
+			const filteredActivities = []
+			for (const activity of activitiesData) {
+				const coaches = await fetchCoaches(activity.id)
+				if (coaches && coaches.length > 0) {
+					filteredActivities.push(activity)
+				}
+			}
+			setActivities(filteredActivities)
 			setActivitiesLoading(false) // Set loading to false after fetching
 
 			setGroupActivitiesLoading(true) // Set loading to true while fetching
 			const groupActivitiesData = await fetchAllActivitiesGroup()
-			setActivitiesGroup(groupActivitiesData)
+			// Filter group activities to only those with at least one available coach
+			const filteredGroupActivities = []
+			for (const activity of groupActivitiesData) {
+				const coaches = await fetchCoachesGroup(activity.id)
+				if (coaches && coaches.length > 0) {
+					filteredGroupActivities.push(activity)
+				}
+			}
+			setActivitiesGroup(filteredGroupActivities)
 			setGroupActivitiesLoading(false) // Set loading to false after fetching
 
 			const marketData = await fetchMarket()
