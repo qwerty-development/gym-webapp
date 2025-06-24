@@ -280,40 +280,71 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5 }}
-			className='bg-gray-800 rounded-xl p-3 sm:p-6 shadow-lg'>
+			className='bg-gray-800 rounded-xl p-3 sm:p-6 shadow-lg w-full max-w-full overflow-hidden'>
 			
 			{/* Header and Filters */}
-			<div className={`mb-6 flex ${isMobile ? 'flex-col space-y-4' : 'flex-row justify-between items-center'}`}>
-				<h3 className={`${isMobile ? 'text-2xl text-center' : 'text-3xl sm:text-4xl'} font-bold text-green-400`}>
-					Calendar View
-				</h3>
-				<div className={`flex ${isMobile ? 'flex-col space-y-3' : 'items-center space-x-4'}`}>
+			<div className="mb-4 sm:mb-6">
+				<div className={`flex ${isMobile ? 'flex-col space-y-3' : 'flex-row justify-between items-center mb-4'}`}>
+					<h3 className={`${isMobile ? 'text-xl text-center' : 'text-3xl sm:text-4xl'} font-bold text-green-400`}>
+						Calendar View
+					</h3>
 					{!isMobile && <FaFilter className='text-green-400 text-xl' />}
-					<select
-						value={selectedCoach || ''}
-						onChange={e => setSelectedCoach(e.target.value || null)}
-						className={`bg-gray-700 text-white rounded-full p-2 sm:p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${isMobile ? 'text-sm w-full' : 'text-lg'}`}>
-						<option value=''>All Coaches</option>
-						{Object.keys(coachColors).map(coach => (
-							<option key={coach} value={coach}>
-								{coach}
-							</option>
-						))}
-					</select>
-					<select
-						value={sessionTypeFilter}
-						onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
-						className={`bg-gray-700 text-white rounded-full p-2 sm:p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${isMobile ? 'text-sm w-full' : 'text-lg'}`}>
-						<option value='all'>All Sessions</option>
-						<option value='private'>Private Sessions</option>
-						<option value='group'>Group Sessions</option>
-					</select>
 				</div>
+				
+				{/* Mobile Filters */}
+				{isMobile && (
+					<div className="grid grid-cols-1 gap-3 w-full">
+						<select
+							value={selectedCoach || ''}
+							onChange={e => setSelectedCoach(e.target.value || null)}
+							className="bg-gray-700 text-white rounded-lg p-3 border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm w-full">
+							<option value=''>All Coaches</option>
+							{Object.keys(coachColors).map(coach => (
+								<option key={coach} value={coach}>
+									{coach}
+								</option>
+							))}
+						</select>
+						<select
+							value={sessionTypeFilter}
+							onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
+							className="bg-gray-700 text-white rounded-lg p-3 border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm w-full">
+							<option value='all'>All Sessions</option>
+							<option value='private'>Private Sessions</option>
+							<option value='group'>Group Sessions</option>
+						</select>
+					</div>
+				)}
+				
+				{/* Desktop Filters */}
+				{!isMobile && (
+					<div className="flex items-center space-x-4 justify-end">
+						<select
+							value={selectedCoach || ''}
+							onChange={e => setSelectedCoach(e.target.value || null)}
+							className="bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg">
+							<option value=''>All Coaches</option>
+							{Object.keys(coachColors).map(coach => (
+								<option key={coach} value={coach}>
+									{coach}
+								</option>
+							))}
+						</select>
+						<select
+							value={sessionTypeFilter}
+							onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
+							className="bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg">
+							<option value='all'>All Sessions</option>
+							<option value='private'>Private Sessions</option>
+							<option value='group'>Group Sessions</option>
+						</select>
+					</div>
+				)}
 			</div>
 
 			{/* Calendar Container */}
 			<div
-				className='overflow-hidden rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'
+				className='w-full overflow-hidden rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'
 				style={calendarStyle}>
 				<style jsx global>{`
 					/* Mobile Calendar Styles */
