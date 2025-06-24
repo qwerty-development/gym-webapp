@@ -44,6 +44,235 @@ interface CalendarViewProps {
 	onCancelSession: (sessionId: number, isGroup: boolean) => void
 }
 
+// Placeholder components for mobile views
+const MobileAgendaView = ({ events, onEventClick }: any) => {
+	if (!events || events.length === 0) {
+		return (
+			<div className="p-6 text-center text-gray-400">No sessions for this day.</div>
+		)
+	}
+	// Group events by hour
+	const grouped = events.reduce((acc: any, event: any) => {
+		const hour = new Date(event.start).getHours()
+		if (!acc[hour]) acc[hour] = []
+		acc[hour].push(event)
+		return acc
+	}, {})
+	const sortedHours = Object.keys(grouped).sort((a, b) => Number(a) - Number(b))
+	return (
+		<div className="bg-gray-900 min-h-screen pb-24 w-full overflow-x-hidden">
+			{/* Sticky Date Header */}
+			<div className="sticky top-0 z-20 bg-gray-900 py-3 px-4 border-b border-green-500 flex items-center justify-between">
+				<span className="text-lg font-bold text-green-400">
+					{events[0] ? new Date(events[0].start).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) : ''}
+				</span>
+			</div>
+			<div className="divide-y divide-gray-800 w-full">
+				{sortedHours.map(hour => (
+					<div key={hour} className="py-2 w-full">
+						<div className="text-xs text-gray-400 mb-2 pl-1">{hour.padStart(2, '0')}:00</div>
+						<div className="flex flex-col gap-3 w-full">
+							{grouped[hour].map((event: any) => (
+								<div
+									key={event.id}
+									className="rounded-xl shadow-md p-4 flex flex-col gap-1 cursor-pointer w-full box-border"
+									style={{ background: event.bgColor || '#10B981', color: '#fff' }}
+									onClick={() => onEventClick(event)}
+								>
+									<div className="flex items-center justify-between w-full">
+										<span className="font-semibold text-base">
+											{event.title}
+										</span>
+										<span className="text-xs bg-black bg-opacity-20 rounded px-2 py-0.5">
+											{new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+										</span>
+									</div>
+									<div className="flex items-center gap-2 mt-1">
+										<span className="text-xs font-medium">
+											Coach: {event.coach}
+										</span>
+										<span className="text-xs font-medium">
+											{event.isGroup ? 'Group' : 'Individual'}
+										</span>
+									</div>
+									<div className="text-xs opacity-80 mt-1 truncate">
+										{event.clients}
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	)
+}
+const MobileWeekView = ({ events, onEventClick }: any) => {
+	const [selectedDay, setSelectedDay] = useState(() => {
+		// Default to today if there are events today, else first event day
+		const today = new Date()
+		const todayEvents = events.filter((e: any) => {
+			const d = new Date(e.start)
+			return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+		})
+		if (todayEvents.length > 0) return today
+		if (events.length > 0) return new Date(events[0].start)
+		return today
+	})
+
+	// Get all days in this week that have events
+	const startOfWeek = (date: Date) => {
+		const d = new Date(date)
+		d.setDate(d.getDate() - d.getDay())
+		d.setHours(0,0,0,0)
+		return d
+	}
+	const endOfWeek = (date: Date) => {
+		const d = new Date(date)
+		d.setDate(d.getDate() + (6 - d.getDay()))
+		d.setHours(23,59,59,999)
+		return d
+	}
+	const weekStart = startOfWeek(selectedDay)
+	const weekEnd = endOfWeek(selectedDay)
+	const days = []
+	for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+		days.push(new Date(d))
+	}
+
+	// Group events by day
+	const eventsByDay: Record<string, any[]> = {}
+	events.forEach((event: any) => {
+		const d = new Date(event.start)
+		const key = d.toISOString().slice(0, 10)
+		if (!eventsByDay[key]) eventsByDay[key] = []
+		eventsByDay[key].push(event)
+	})
+
+	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
+	const agendaEvents = eventsByDay[selectedDayKey] || []
+
+	return (
+		<div className="bg-gray-900 min-h-screen pb-24">
+			{/* Horizontal scrollable week strip */}
+			<div className="sticky top-0 z-20 bg-gray-900 py-2 px-2 border-b border-green-500 flex overflow-x-auto gap-2">
+				{days.map((day, idx) => {
+					const key = day.toISOString().slice(0, 10)
+					const isSelected = key === selectedDayKey
+					const hasEvents = (eventsByDay[key] || []).length > 0
+					return (
+						<button
+							key={key}
+							onClick={() => setSelectedDay(new Date(day))}
+							className={`flex flex-col items-center px-3 py-2 rounded-lg border transition-all duration-150 ${isSelected ? 'bg-green-500 text-white border-green-500' : 'bg-gray-800 text-green-400 border-gray-700'} ${hasEvents ? 'font-bold' : 'font-normal'}`}
+							style={{ minWidth: 56 }}
+						>
+							<span className="text-xs">{day.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+							<span className="text-lg">{day.getDate()}</span>
+							{hasEvents && <span className="w-2 h-2 rounded-full mt-1" style={{ background: (eventsByDay[key] && eventsByDay[key][0].bgColor) || '#10B981' }}></span>}
+						</button>
+					)
+				})}
+			</div>
+			{/* Agenda for selected day */}
+			<MobileAgendaView events={agendaEvents} onEventClick={onEventClick} />
+		</div>
+	)
+}
+const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any) => {
+	// Get the first day of the month
+	const monthStart = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), 1)
+	const monthEnd = new Date(selectedDay.getFullYear(), selectedDay.getMonth() + 1, 0)
+	const startDayOfWeek = monthStart.getDay()
+	const daysInMonth = monthEnd.getDate()
+
+	// Build the grid: pad with previous month's days if needed
+	const days: Date[] = []
+	for (let i = 0; i < startDayOfWeek; i++) {
+		days.push(new Date(monthStart.getFullYear(), monthStart.getMonth(), 1 - (startDayOfWeek - i)))
+	}
+	for (let i = 1; i <= daysInMonth; i++) {
+		days.push(new Date(monthStart.getFullYear(), monthStart.getMonth(), i))
+	}
+	while (days.length % 7 !== 0) {
+		days.push(new Date(monthEnd.getFullYear(), monthEnd.getMonth(), monthEnd.getDate() + (days.length % 7) + 1 - (days.length % 7)))
+	}
+
+	// Group events by day
+	const eventsByDay: Record<string, any[]> = {}
+	events.forEach((event: any) => {
+		const d = new Date(event.start)
+		const key = d.toISOString().slice(0, 10)
+		if (!eventsByDay[key]) eventsByDay[key] = []
+		eventsByDay[key].push(event)
+	})
+
+	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
+	const agendaEvents = eventsByDay[selectedDayKey] || []
+
+	return (
+		<div className="bg-gray-900 min-h-screen pb-24">
+			{/* Month grid */}
+			<div className="sticky top-0 z-20 bg-gray-900 py-2 px-2 border-b border-green-500">
+				<div className="flex items-center justify-between mb-2">
+					<button
+						onClick={() => onDaySelect(new Date(selectedDay.getFullYear(), selectedDay.getMonth() - 1, 1))}
+						className="text-green-400 px-2 py-1 rounded hover:bg-gray-800"
+					>
+						&lt;
+					</button>
+					<span className="text-lg font-bold text-green-400">
+						{selectedDay.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+					</span>
+					<button
+						onClick={() => onDaySelect(new Date(selectedDay.getFullYear(), selectedDay.getMonth() + 1, 1))}
+						className="text-green-400 px-2 py-1 rounded hover:bg-gray-800"
+					>
+						&gt;
+					</button>
+				</div>
+				<div className="grid grid-cols-7 gap-1 text-xs text-center text-green-300 mb-1">
+					{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+						<div key={d}>{d}</div>
+					))}
+				</div>
+				<div className="grid grid-cols-7 gap-1">
+					{days.map((day, idx) => {
+						const key = day.toISOString().slice(0, 10)
+						const isCurrentMonth = day.getMonth() === selectedDay.getMonth()
+						const isSelected = key === selectedDayKey
+						const hasEvents = (eventsByDay[key] || []).length > 0
+						return (
+							<button
+								key={key + idx}
+								onClick={() => onDaySelect(new Date(day))}
+								className={`flex flex-col items-center justify-center aspect-square rounded-lg border transition-all duration-150 ${isSelected ? 'bg-green-500 text-white border-green-500' : isCurrentMonth ? 'bg-gray-800 text-green-400 border-gray-700' : 'bg-gray-800 text-gray-500 border-gray-800'} ${hasEvents ? 'font-bold' : 'font-normal'}`}
+								style={{ minHeight: 44 }}
+							>
+								<span className="text-sm">{day.getDate()}</span>
+								<div className="flex flex-wrap gap-0.5 mt-0.5 justify-center">
+									{(eventsByDay[key] || []).slice(0, 3).map((event: any, i: number) => (
+										<span
+											key={event.id + '-' + i}
+											className="w-2 h-2 rounded-full"
+											style={{ background: event.bgColor || '#10B981' }}
+										></span>
+									))}
+									{(eventsByDay[key] || []).length > 3 && (
+										<span className="text-[10px] text-green-300 ml-0.5">+{(eventsByDay[key] || []).length - 3}</span>
+									)}
+								</div>
+							</button>
+						)
+					})}
+				</div>
+			</div>
+			{/* Agenda for selected day */}
+			<MobileAgendaView events={agendaEvents} onEventClick={onEventClick} />
+		</div>
+	)
+}
+
 const CalendarView: React.FC<CalendarViewProps> = ({
 	sessions,
 	onCancelSession
@@ -60,6 +289,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
 	const [sessionTypeFilter, setSessionTypeFilter] = useState<'all' | 'private' | 'group'>('all')
 	const [isMobile, setIsMobile] = useState(false)
+	const [mobileSelectedDay, setMobileSelectedDay] = useState(new Date())
 
 	// Check if mobile
 	useEffect(() => {
@@ -287,6 +517,57 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		}
 	}, [selectedEvent])
 
+	// Mobile event click handler
+	const handleMobileEventClick = (event: any) => {
+		setSelectedEvent(event)
+	}
+
+	// Mobile view selector
+	const mobileViewSelector = isMobile ? (
+		<div className="sticky top-0 z-30 bg-gray-900 px-2 py-2 flex justify-start gap-2 border-b border-green-500">
+			{[Views.DAY, Views.WEEK, Views.MONTH].map(v => (
+				<button
+					key={v}
+					onClick={() => setView(v)}
+					className={`px-4 py-2 rounded-full font-semibold transition-all duration-150 text-sm ${view === v ? 'bg-green-500 text-white' : 'bg-gray-800 text-green-400'}`}
+				>
+					{v.charAt(0) + v.slice(1).toLowerCase()}
+				</button>
+			))}
+		</div>
+	) : null
+
+	// Decide which view to render on mobile
+	if (isMobile) {
+		return (
+			<div className="bg-gray-900 min-h-screen">
+				{mobileViewSelector}
+				{view === Views.DAY && (
+					<MobileAgendaView
+						events={filteredEvents.filter(e =>
+							moment(e.start).isSame(mobileSelectedDay, 'day')
+						)}
+						onEventClick={handleMobileEventClick}
+					/>
+				)}
+				{view === Views.WEEK && (
+					<MobileWeekView
+						events={filteredEvents}
+						onEventClick={handleMobileEventClick}
+					/>
+				)}
+				{view === Views.MONTH && (
+					<MobileMonthView
+						events={filteredEvents}
+						onEventClick={handleMobileEventClick}
+						onDaySelect={setMobileSelectedDay}
+						selectedDay={mobileSelectedDay}
+					/>
+				)}
+			</div>
+		)
+	}
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
@@ -356,53 +637,96 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
 			{/* Calendar Container */}
 			<div
-				className='w-full overflow-x-hidden rounded-lg shadow-inner bg-gray-700 p-1 sm:p-4'
+				className={`w-full overflow-x-hidden rounded-lg shadow-inner bg-gray-700 p-1 sm:p-4 ${isMobile ? 'mobile-calendar-container' : ''}`}
 				style={calendarStyle}>
 				<style jsx global>{`
 					/* Mobile Calendar Styles */
 					@media (max-width: 768px) {
 						.rbc-calendar {
 							font-size: 11px;
+							width: 100vw !important;
+							max-width: 100vw !important;
+							margin: 0 !important;
+							padding: 0 !important;
+							overflow-x: hidden !important;
 						}
-						.rbc-header {
-							padding: 2px 1px;
-							font-size: 10px;
-							font-weight: 600;
+						.rbc-time-view, .rbc-month-view, .rbc-day-view, .rbc-week-view {
+							width: 100vw !important;
+							max-width: 100vw !important;
+							margin: 0 !important;
+							padding: 0 !important;
 						}
-						.rbc-time-header-content {
-							font-size: 9px;
-						}
-						.rbc-time-slot {
-							font-size: 9px;
-							min-height: 18px;
-						}
-						.rbc-timeslot-group {
-							min-height: 30px;
+						.rbc-header, .rbc-time-header, .rbc-time-header-content {
+							width: 100% !important;
+							max-width: 100vw !important;
+							box-sizing: border-box;
+							position: sticky;
+							top: 0;
+							z-index: 10;
+							background: #374151;
+							border-bottom: 1px solid #10B981;
 						}
 						.rbc-time-content {
 							min-height: 250px;
+							max-width: 100vw !important;
+							overflow-x: hidden !important;
 						}
-						.rbc-day-slot .rbc-event {
-							margin: 1px 1px;
-						}
+						.rbc-day-slot .rbc-event,
 						.rbc-week-view .rbc-event,
-						.rbc-day-view .rbc-event {
-							padding: 1px 2px;
-							font-size: 9px;
-							line-height: 1.1;
-						}
+						.rbc-day-view .rbc-event,
 						.rbc-month-view .rbc-event {
-							font-size: 8px;
-							padding: 1px 2px;
-						}
-						.rbc-time-header {
-							flex-direction: column;
-						}
-						.rbc-time-header-content {
-							border-left: none;
+							border-radius: 12px !important;
+							box-shadow: 0 2px 8px rgba(16,185,129,0.10) !important;
+							padding: 8px 6px !important;
+							margin: 4px 0 !important;
+							font-size: 12px !important;
+							display: flex;
+							align-items: center;
+							min-height: 36px !important;
+							cursor: pointer;
+							transition: box-shadow 0.2s;
 						}
 						.rbc-event-content {
 							white-space: normal !important;
+							font-size: 12px !important;
+							font-weight: 600;
+							display: flex;
+							align-items: center;
+							gap: 6px;
+						}
+						.rbc-event:active, .rbc-event:focus {
+							box-shadow: 0 4px 16px rgba(16,185,129,0.25) !important;
+						}
+						.rbc-day-bg {
+							margin-bottom: 6px;
+						}
+						.mobile-calendar-container {
+							height: 70vh !important;
+							max-height: 70vh !important;
+							overflow-y: auto !important;
+							box-shadow: 0 8px 16px -8px rgba(0,0,0,0.2) inset;
+							position: relative;
+							width: 100vw !important;
+							max-width: 100vw !important;
+							left: 50%;
+							transform: translateX(-50%);
+						}
+						.mobile-calendar-container::after {
+							content: '';
+							display: block;
+							position: absolute;
+							bottom: 0;
+							left: 0;
+							width: 100%;
+							height: 18px;
+							background: linear-gradient(to bottom, rgba(55,65,81,0), rgba(55,65,81,0.95));
+							pointer-events: none;
+						}
+						/* Larger tap targets for navigation */
+						.bg-gray-700, .bg-green-500 {
+							min-width: 44px;
+							min-height: 44px;
+							font-size: 16px;
 						}
 					}
 					
@@ -492,6 +816,24 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					max={new Date(1970, 1, 1, 22, 0, 0)}
 				/>
 			</div>
+
+			{/* Floating Today Button for Mobile */}
+			{isMobile && (
+				<button
+					onClick={() => setDate(new Date())}
+					className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg p-4 flex items-center justify-center transition-all duration-300"
+					style={{ boxShadow: '0 4px 16px rgba(16,185,129,0.3)' }}
+					aria-label="Go to Today"
+				>
+					<FaCalendarAlt size={22} />
+				</button>
+			)}
+			{/* Scroll Down Indicator for Mobile */}
+			{isMobile && (
+				<div className="absolute left-1/2 transform -translate-x-1/2 bottom-2 z-40 pointer-events-none animate-bounce">
+					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+				</div>
+			)}
 
 			{/* Event Details Modal */}
 			<AnimatePresence>
