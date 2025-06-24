@@ -9,7 +9,9 @@ import {
 	FaTimes,
 	FaClock,
 	FaCalendarAlt,
-	FaDumbbell
+	FaDumbbell,
+	FaChevronLeft,
+	FaChevronRight
 } from 'react-icons/fa'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -48,7 +50,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
 	const [events, setEvents] = useState<CalendarEvent[]>([])
 	const [view, setView] = useState<View>(() => {
-		if (typeof window !== 'undefined' && window.innerWidth < 640) {
+		if (typeof window !== 'undefined' && window.innerWidth < 768) {
 			return Views.DAY
 		}
 		return Views.WEEK
@@ -57,6 +59,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	const [selectedCoach, setSelectedCoach] = useState<string | null>(null)
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
 	const [sessionTypeFilter, setSessionTypeFilter] = useState<'all' | 'private' | 'group'>('all')
+	const [isMobile, setIsMobile] = useState(false)
+
+	// Check if mobile
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768)
+		}
+		checkMobile()
+		window.addEventListener('resize', checkMobile)
+		return () => window.removeEventListener('resize', checkMobile)
+	}, [])
 
 	const coachColors = useMemo(() => {
 		const uniqueCoaches = Array.from(new Set(sessions.map(s => s.coaches.name)))
@@ -108,42 +121,56 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 			const style: React.CSSProperties = {
 				backgroundColor: coachColors[event.coach],
 				color: 'white',
-				borderRadius: '8px',
-				border: 'solid',
-				padding: '4px',
-				fontSize: view === Views.MONTH ? '0.8rem' : '1rem',
-				fontWeight: 'bold',
-				boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+				borderRadius: isMobile ? '4px' : '8px',
+				border: 'none',
+				padding: isMobile ? '2px 4px' : '4px 8px',
+				fontSize: isMobile ? '10px' : '12px',
+				fontWeight: '600',
+				boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
 				display: 'flex',
 				flexDirection: 'column',
 				alignItems: 'stretch',
 				justifyContent: 'flex-start',
 				height: '100%',
-				minHeight: view === Views.MONTH ? '60px' : '80px',
-				transition: 'all 0.3s ease',
+				minHeight: isMobile ? '30px' : '40px',
+				transition: 'all 0.2s',
 				cursor: 'pointer',
-				overflow: 'hidden'
+				overflow: 'hidden',
+				lineHeight: isMobile ? '1.2' : '1.3',
 			}
-
 			return { style }
 		},
-		[coachColors, view]
+		[coachColors, isMobile]
 	)
 
 	const CustomEvent: React.FC<{ event: CalendarEvent; view: View }> = ({
 		event,
 		view
 	}) => {
+		const displayText = isMobile ? 
+			`${event.title.substring(0, 12)}${event.title.length > 12 ? '...' : ''}` : 
+			event.title
+		
+		const coachText = isMobile ? 
+			event.coach.split(' ')[0] : 
+			event.coach
+
 		return (
 			<div
-				className={`h-full flex flex-col justify-between p-2 ${
-					view === Views.MONTH ? 'text-sm' : 'text-base'
-				}`}
+				className="h-full flex flex-col justify-start text-left"
 				onClick={() => setSelectedEvent(event)}
-				title={`Activity: ${event.title}\nCoach: ${event.coach}\nClients: ${event.clients}`}>
-				<div className='font-bold truncate'>{event.title}</div>
-				<div className='truncate'>{event.coach}</div>
-				<div className='truncate'>{event.clients}</div>
+				title={`${event.title} - ${event.coach} - ${event.clients}`}>
+				<div className="font-semibold leading-tight truncate mb-0.5">
+					{displayText}
+				</div>
+				<div className="text-xs opacity-90 truncate">
+					{coachText}
+				</div>
+				{!isMobile && (
+					<div className="text-xs opacity-75 truncate mt-0.5">
+						{event.clients.length > 20 ? `${event.clients.substring(0, 20)}...` : event.clients}
+					</div>
+				)}
 			</div>
 		)
 	}
@@ -155,6 +182,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
 		const label = () => {
 			const date = moment(toolbarProps.date)
+			if (isMobile) {
+				return (
+					<span className='text-lg font-bold text-green-400'>
+						{date.format('MMM YYYY')}
+					</span>
+				)
+			}
 			return (
 				<span className='text-xl sm:text-2xl font-bold text-green-400'>
 					{date.format('MMMM')} {date.format('YYYY')}
@@ -163,45 +197,44 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		}
 
 		return (
-			<div className='flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 bg-gray-800 p-6 rounded-xl shadow-lg'>
-				<div className='flex space-x-4 mb-4 sm:mb-0'>
-					<button
-						onClick={goToBack}
-						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
-						&lt;
-					</button>
-					<button
-						onClick={goToNext}
-						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
-						&gt;
-					</button>
-					<button
-						onClick={goToCurrent}
-						className='bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
-						Today
-					</button>
+			<div className={`flex ${isMobile ? 'flex-col space-y-3' : 'flex-row justify-between items-center'} mb-4 bg-gray-800 p-3 sm:p-6 rounded-xl shadow-lg`}>
+				{/* Navigation and Date */}
+				<div className={`flex ${isMobile ? 'justify-between items-center w-full' : 'space-x-4'}`}>
+					<div className="flex space-x-2">
+						<button
+							onClick={goToBack}
+							className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-sm'>
+							<FaChevronLeft />
+						</button>
+						<button
+							onClick={goToNext}
+							className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-sm'>
+							<FaChevronRight />
+						</button>
+						<button
+							onClick={goToCurrent}
+							className='bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm'>
+							Today
+						</button>
+					</div>
+					<div className='text-white'>{label()}</div>
 				</div>
-				<div className='text-white mb-4 sm:mb-0'>{label()}</div>
-				<div className='flex space-x-4'>
+				
+				{/* View Buttons */}
+				<div className={`flex ${isMobile ? 'justify-center w-full' : 'space-x-2 sm:space-x-4'} space-x-2`}>
 					<button
 						onClick={() => toolbarProps.onView(Views.MONTH)}
-						className={`${
-							toolbarProps.view === Views.MONTH ? 'bg-green-500' : 'bg-gray-700'
-						} hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg`}>
+						className={`${toolbarProps.view === Views.MONTH ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
 						Month
 					</button>
 					<button
 						onClick={() => toolbarProps.onView(Views.WEEK)}
-						className={`${
-							toolbarProps.view === Views.WEEK ? 'bg-green-500' : 'bg-gray-700'
-						} hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg`}>
+						className={`${toolbarProps.view === Views.WEEK ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
 						Week
 					</button>
 					<button
 						onClick={() => toolbarProps.onView(Views.DAY)}
-						className={`${
-							toolbarProps.view === Views.DAY ? 'bg-green-500' : 'bg-gray-700'
-						} hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg`}>
+						className={`${toolbarProps.view === Views.DAY ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
 						Day
 					</button>
 				</div>
@@ -209,12 +242,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		)
 	}
 
-	const calendarStyle = useMemo(
-		() => ({
-			height: view === Views.MONTH ? '1000px' : '1400px'
-		}),
-		[view]
-	)
+	const calendarStyle = useMemo(() => {
+		if (isMobile) {
+			return {
+				height: view === Views.MONTH ? '600px' : view === Views.WEEK ? '500px' : '400px'
+			}
+		}
+		return {
+			height: view === Views.MONTH ? '800px' : '1000px'
+		}
+	}, [view, isMobile])
 
 	const handleSelectSlot = (slotInfo: {
 		start: Date
@@ -243,37 +280,159 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5 }}
-			className='bg-gray-800 rounded-xl p-6 sm:p-8 shadow-lg'>
-			<div className='mb-8 flex flex-col sm:flex-row justify-between items-center flex-wrap'>
-				<h3 className='text-3xl sm:text-4xl font-bold text-green-400 mb-4 sm:mb-0'>
-					Calendar View
-				</h3>
-				<div className='flex items-center space-x-4'>
-					<FaFilter className='text-green-400 text-xl' />
-					<select
-						value={selectedCoach || ''}
-						onChange={e => setSelectedCoach(e.target.value || null)}
-						className='bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg'>
-						<option value=''>All Coaches</option>
-						{Object.keys(coachColors).map(coach => (
-							<option key={coach} value={coach}>
-								{coach}
-							</option>
-						))}
-					</select>
-					<select
-						value={sessionTypeFilter}
-						onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
-						className='bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg'>
-						<option value='all'>All Sessions</option>
-						<option value='private'>Private Sessions</option>
-						<option value='group'>Group Sessions</option>
-					</select>
+			className='bg-gray-800 rounded-xl p-3 sm:p-6 shadow-lg w-full max-w-full overflow-hidden'>
+			
+			{/* Header and Filters */}
+			<div className="mb-4 sm:mb-6">
+				<div className={`flex ${isMobile ? 'flex-col space-y-3' : 'flex-row justify-between items-center mb-4'}`}>
+					<h3 className={`${isMobile ? 'text-xl text-center' : 'text-3xl sm:text-4xl'} font-bold text-green-400`}>
+						Calendar View
+					</h3>
+					{!isMobile && <FaFilter className='text-green-400 text-xl' />}
 				</div>
+				
+				{/* Mobile Filters */}
+				{isMobile && (
+					<div className="grid grid-cols-1 gap-3 w-full">
+						<select
+							value={selectedCoach || ''}
+							onChange={e => setSelectedCoach(e.target.value || null)}
+							className="bg-gray-700 text-white rounded-lg p-3 border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm w-full">
+							<option value=''>All Coaches</option>
+							{Object.keys(coachColors).map(coach => (
+								<option key={coach} value={coach}>
+									{coach}
+								</option>
+							))}
+						</select>
+						<select
+							value={sessionTypeFilter}
+							onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
+							className="bg-gray-700 text-white rounded-lg p-3 border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm w-full">
+							<option value='all'>All Sessions</option>
+							<option value='private'>Private Sessions</option>
+							<option value='group'>Group Sessions</option>
+						</select>
+					</div>
+				)}
+				
+				{/* Desktop Filters */}
+				{!isMobile && (
+					<div className="flex items-center space-x-4 justify-end">
+						<select
+							value={selectedCoach || ''}
+							onChange={e => setSelectedCoach(e.target.value || null)}
+							className="bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg">
+							<option value=''>All Coaches</option>
+							{Object.keys(coachColors).map(coach => (
+								<option key={coach} value={coach}>
+									{coach}
+								</option>
+							))}
+						</select>
+						<select
+							value={sessionTypeFilter}
+							onChange={e => setSessionTypeFilter(e.target.value as 'all' | 'private' | 'group')}
+							className="bg-gray-700 text-white rounded-full p-3 border-2 border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg">
+							<option value='all'>All Sessions</option>
+							<option value='private'>Private Sessions</option>
+							<option value='group'>Group Sessions</option>
+						</select>
+					</div>
+				)}
 			</div>
+
+			{/* Calendar Container */}
 			<div
-				className='overflow-auto rounded-lg shadow-inner bg-gray-700 p-4 sm:p-6'
+				className='w-full overflow-hidden rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'
 				style={calendarStyle}>
+				<style jsx global>{`
+					/* Mobile Calendar Styles */
+					@media (max-width: 768px) {
+						.rbc-calendar {
+							font-size: 12px;
+						}
+						.rbc-header {
+							padding: 4px 2px;
+							font-size: 11px;
+							font-weight: 600;
+						}
+						.rbc-time-header-content {
+							font-size: 10px;
+						}
+						.rbc-time-slot {
+							font-size: 10px;
+							min-height: 25px;
+						}
+						.rbc-timeslot-group {
+							min-height: 50px;
+						}
+						.rbc-time-content {
+							min-height: 400px;
+						}
+						.rbc-day-slot .rbc-event {
+							margin: 1px 2px;
+						}
+						.rbc-week-view .rbc-event,
+						.rbc-day-view .rbc-event {
+							padding: 2px 4px;
+							font-size: 10px;
+							line-height: 1.2;
+						}
+						.rbc-month-view .rbc-event {
+							font-size: 9px;
+							padding: 1px 3px;
+						}
+						.rbc-time-header {
+							flex-direction: column;
+						}
+						.rbc-time-header-content {
+							border-left: none;
+						}
+					}
+					
+					/* General Calendar Styling */
+					.rbc-calendar {
+						background: #374151;
+						color: white;
+						border: none;
+					}
+					.rbc-header {
+						background: #4B5563;
+						color: #10B981;
+						border: none;
+						padding: 8px;
+						font-weight: bold;
+					}
+					.rbc-today {
+						background: rgba(16, 185, 129, 0.1);
+					}
+					.rbc-off-range-bg {
+						background: #1F2937;
+					}
+					.rbc-time-header-content,
+					.rbc-time-content {
+						border-left: 1px solid #4B5563;
+					}
+					.rbc-time-slot {
+						border-top: 1px solid #4B5563;
+						color: #9CA3AF;
+					}
+					.rbc-current-time-indicator {
+						background-color: #10B981;
+						height: 2px;
+					}
+					.rbc-day-slot .rbc-event {
+						border: none;
+					}
+					.rbc-month-view .rbc-date-cell {
+						padding: 4px;
+					}
+					.rbc-month-view .rbc-date-cell.rbc-off-range {
+						color: #6B7280;
+					}
+				`}</style>
+				
 				<Calendar
 					localizer={localizer}
 					events={filteredEvents}
@@ -290,7 +449,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					}}
 					formats={{
 						timeGutterFormat: ((date: Date, culture: string, localizer: any) =>
-							localizer.format(date, 'HH:mm', culture)) as any,
+							localizer.format(date, isMobile ? 'HH:mm' : 'HH:mm', culture)) as any,
 						eventTimeRangeFormat: ((
 							{ start, end }: { start: Date; end: Date },
 							culture: string,
@@ -307,7 +466,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					onSelectSlot={handleSelectSlot}
 					step={30}
 					timeslots={2}
-					defaultView={Views.WEEK}
+					defaultView={isMobile ? Views.DAY : Views.WEEK}
 					views={[Views.MONTH, Views.WEEK, Views.DAY]}
 					dayPropGetter={(date: Date) => ({
 						className: moment(date).isSame(moment(), 'day')
@@ -318,6 +477,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					max={new Date(1970, 1, 1, 22, 0, 0)}
 				/>
 			</div>
+
+			{/* Event Details Modal */}
 			<AnimatePresence>
 				{selectedEvent && (
 					<motion.div
@@ -332,56 +493,58 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 							animate={{ scale: 1 }}
 							exit={{ scale: 0.9 }}
 							transition={{ duration: 0.2 }}
-							className='bg-gray-800 rounded-xl p-6 sm:p-8 max-w-lg w-full shadow-lg border-2 border-green-500'
+							className={`bg-gray-800 rounded-xl p-4 sm:p-6 ${isMobile ? 'w-full max-w-sm' : 'max-w-lg w-full'} shadow-lg border-2 border-green-500 max-h-[90vh] overflow-y-auto`}
 							onClick={e => e.stopPropagation()}>
-							<div className='flex justify-between items-center mb-6'>
-								<h3 className='text-2xl sm:text-3xl font-bold text-green-400'>
+							<div className='flex justify-between items-center mb-4 sm:mb-6'>
+								<h3 className={`${isMobile ? 'text-xl' : 'text-2xl sm:text-3xl'} font-bold text-green-400`}>
 									{selectedEvent.title}
 								</h3>
 								<button
 									onClick={() => setSelectedEvent(null)}
 									className='text-gray-400 hover:text-white transition-colors duration-200'>
-									<FaTimes size={28} />
+									<FaTimes size={isMobile ? 20 : 28} />
 								</button>
 							</div>
-							<div className='space-y-6 text-white'>
-								<p className='flex items-center text-base sm:text-lg'>
-									<FaUser className='mr-3 text-green-400' size={20} />{' '}
-									<strong>Coach:</strong> {selectedEvent.coach}
+							<div className={`space-y-4 sm:space-y-6 text-white text-sm sm:text-base`}>
+								<p className='flex items-center'>
+									<FaUser className='mr-3 text-green-400' size={16} />{' '}
+									<strong>Coach:</strong> <span className="ml-2">{selectedEvent.coach}</span>
 								</p>
-								<p className='flex items-center text-base sm:text-lg'>
-									<FaCalendarAlt className='mr-3 text-green-400' size={20} />{' '}
+								<p className='flex items-center'>
+									<FaCalendarAlt className='mr-3 text-green-400' size={16} />{' '}
 									<strong>Date:</strong>{' '}
-									{moment(selectedEvent.start).format('MMMM D, YYYY')}
+									<span className="ml-2">{moment(selectedEvent.start).format('MMMM D, YYYY')}</span>
 								</p>
-								<p className='flex items-center text-base sm:text-lg'>
-									<FaClock className='mr-3 text-green-400' size={20} />{' '}
+								<p className='flex items-center'>
+									<FaClock className='mr-3 text-green-400' size={16} />{' '}
 									<strong>Time:</strong>{' '}
-									{moment(selectedEvent.start).format('HH:mm')} -{' '}
-									{moment(selectedEvent.end).format('HH:mm')}
+									<span className="ml-2">
+										{moment(selectedEvent.start).format('HH:mm')} -{' '}
+										{moment(selectedEvent.end).format('HH:mm')}
+									</span>
 								</p>
-								<p className='flex items-center text-base sm:text-lg'>
+								<p className='flex items-center'>
 									{selectedEvent.isGroup ? (
-										<FaUsers className='mr-3 text-green-400' size={20} />
+										<FaUsers className='mr-3 text-green-400' size={16} />
 									) : (
-										<FaUser className='mr-3 text-green-400' size={20} />
+										<FaUser className='mr-3 text-green-400' size={16} />
 									)}
 									<strong>Type:</strong>{' '}
-									{selectedEvent.isGroup ? 'Group' : 'Individual'}
+									<span className="ml-2">{selectedEvent.isGroup ? 'Group' : 'Individual'}</span>
 								</p>
-								<p className='flex items-center text-base sm:text-lg'>
-									<FaDumbbell className='mr-3 text-green-400' size={20} />{' '}
-									<strong>Activity:</strong> {selectedEvent.activity}{' '}
+								<p className='flex items-center'>
+									<FaDumbbell className='mr-3 text-green-400' size={16} />{' '}
+									<strong>Activity:</strong> <span className="ml-2">{selectedEvent.activity}</span>
 								</p>
-								<p className='flex items-start text-base sm:text-lg'>
-									<FaUsers className='mr-3 text-green-400 mt-1' size={20} />{' '}
+								<p className='flex items-start'>
+									<FaUsers className='mr-3 text-green-400 mt-1' size={16} />{' '}
 									<div>
 										<strong>Clients:</strong>
-										<div className='ml-2 mt-1'>{selectedEvent.clients}</div>
+										<div className='ml-2 mt-1 break-words'>{selectedEvent.clients}</div>
 									</div>
 								</p>
 							</div>
-							<div className='flex justify-end mt-6 space-x-4'>
+							<div className={`flex ${isMobile ? 'flex-col space-y-3' : 'justify-end space-x-4'} mt-4 sm:mt-6`}>
 								<motion.button
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
@@ -389,14 +552,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 										onCancelSession(selectedEvent.id, selectedEvent.isGroup)
 										setSelectedEvent(null)
 									}}
-									className='px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200'>
+									className={`${isMobile ? 'w-full' : ''} px-4 sm:px-6 py-2 sm:py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200 text-sm sm:text-base`}>
 									Cancel Session
 								</motion.button>
 								<motion.button
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
 									onClick={() => setSelectedEvent(null)}
-									className='px-6 py-3 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors duration-200'>
+									className={`${isMobile ? 'w-full' : ''} px-4 sm:px-6 py-2 sm:py-3 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm sm:text-base`}>
 									Close
 								</motion.button>
 							</div>
