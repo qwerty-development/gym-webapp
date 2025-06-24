@@ -138,30 +138,32 @@ const CalendarViewPage = () => {
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800'>
 			<AdminNavbarComponent />
-			<div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
+			<div className='max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 sm:py-12'>
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5 }}>
-					<div className='flex justify-between items-center mb-8'>
-						<h1 className='text-3xl font-bold text-green-400'>Calendar View</h1>
+					<div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4'>
+						<h1 className='text-2xl sm:text-3xl font-bold text-green-400'>Calendar View</h1>
 						<button
 							onClick={fetchSessions}
 							disabled={isLoading || isCancelling}
-							className='px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+							className='w-full sm:w-auto px-6 py-3 text-base sm:text-lg bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95'>
 							Refresh Sessions
 						</button>
 					</div>
 
 					{isLoading ? (
-						<div className='flex justify-center items-center h-64'>
-							<RingLoader color='#10B981' size={60} />
+						<div className='flex justify-center items-center min-h-[200px] sm:h-64'>
+							<RingLoader color='#10B981' size={48} />
 						</div>
 					) : (
-						<CalendarView
-							sessions={[...adminIndividualSessions, ...adminGroupSessions]}
-							onCancelSession={handleCancelSession}
-						/>
+						<div className='overflow-x-auto rounded-lg shadow-inner'>
+							<CalendarView
+								sessions={[...adminIndividualSessions, ...adminGroupSessions]}
+								onCancelSession={handleCancelSession}
+							/>
+						</div>
 					)}
 				</motion.div>
 			</div>
