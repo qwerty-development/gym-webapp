@@ -108,26 +108,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 			const style: React.CSSProperties = {
 				backgroundColor: coachColors[event.coach],
 				color: 'white',
-				borderRadius: '8px',
+				borderRadius: '0.5rem',
 				border: 'solid',
-				padding: '4px',
-				fontSize: view === Views.MONTH ? '0.8rem' : '1rem',
+				padding: '0.25rem',
+				fontSize: '0.85rem',
 				fontWeight: 'bold',
-				boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+				boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
 				display: 'flex',
 				flexDirection: 'column',
 				alignItems: 'stretch',
 				justifyContent: 'flex-start',
 				height: '100%',
-				minHeight: view === Views.MONTH ? '60px' : '80px',
-				transition: 'all 0.3s ease',
+				minHeight: '2.5rem',
+				transition: 'all 0.2s',
 				cursor: 'pointer',
-				overflow: 'hidden'
+				overflow: 'hidden',
 			}
-
 			return { style }
 		},
-		[coachColors, view]
+		[coachColors]
 	)
 
 	const CustomEvent: React.FC<{ event: CalendarEvent; view: View }> = ({
@@ -136,9 +135,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	}) => {
 		return (
 			<div
-				className={`h-full flex flex-col justify-between p-2 ${
-					view === Views.MONTH ? 'text-sm' : 'text-base'
-				}`}
+				className={`h-full flex flex-col justify-between px-1 py-0.5 sm:px-2 sm:py-1 text-xs sm:text-sm leading-tight truncate`}
 				onClick={() => setSelectedEvent(event)}
 				title={`Activity: ${event.title}\nCoach: ${event.coach}\nClients: ${event.clients}`}>
 				<div className='font-bold truncate'>{event.title}</div>
@@ -163,46 +160,35 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		}
 
 		return (
-			<div className='flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 bg-gray-800 p-6 rounded-xl shadow-lg'>
-				<div className='flex space-x-4 mb-4 sm:mb-0'>
+			<div className='flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-8 bg-gray-800 p-2 sm:p-6 rounded-xl shadow-lg gap-2 sm:gap-0'>
+				<div className='flex space-x-2 sm:space-x-4 mb-2 sm:mb-0'>
 					<button
 						onClick={goToBack}
-						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
+						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-6 rounded-full transition-all duration-300 text-xs sm:text-base'>
 						&lt;
 					</button>
 					<button
 						onClick={goToNext}
-						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
+						className='bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-6 rounded-full transition-all duration-300 text-xs sm:text-base'>
 						&gt;
 					</button>
 					<button
 						onClick={goToCurrent}
-						className='bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg'>
+						className='bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-6 rounded-full transition-all duration-300 text-xs sm:text-base'>
 						Today
 					</button>
 				</div>
-				<div className='text-white mb-4 sm:mb-0'>{label()}</div>
-				<div className='flex space-x-4'>
+				<div className='text-white mb-2 sm:mb-0 text-base sm:text-xl'>{label()}</div>
+				<div className='flex space-x-2 sm:space-x-4'>
 					<button
 						onClick={() => toolbarProps.onView(Views.MONTH)}
-						className={`${
-							toolbarProps.view === Views.MONTH ? 'bg-green-500' : 'bg-gray-700'
-						} hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg`}>
+						className={`${toolbarProps.view === Views.MONTH ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-6 rounded-full transition-all duration-300 text-xs sm:text-base`}>
 						Month
 					</button>
 					<button
 						onClick={() => toolbarProps.onView(Views.WEEK)}
-						className={`${
-							toolbarProps.view === Views.WEEK ? 'bg-green-500' : 'bg-gray-700'
-						} hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg`}>
+						className={`${toolbarProps.view === Views.WEEK ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-6 rounded-full transition-all duration-300 text-xs sm:text-base`}>
 						Week
-					</button>
-					<button
-						onClick={() => toolbarProps.onView(Views.DAY)}
-						className={`${
-							toolbarProps.view === Views.DAY ? 'bg-green-500' : 'bg-gray-700'
-						} hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg`}>
-						Day
 					</button>
 				</div>
 			</div>
