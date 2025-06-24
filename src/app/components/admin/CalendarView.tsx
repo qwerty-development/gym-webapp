@@ -219,25 +219,37 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					</div>
 					<div className='text-white'>{label()}</div>
 				</div>
-				
-				{/* View Buttons */}
-				<div className={`flex ${isMobile ? 'justify-center w-full' : 'space-x-2 sm:space-x-4'} space-x-2`}>
-					<button
-						onClick={() => toolbarProps.onView(Views.MONTH)}
-						className={`${toolbarProps.view === Views.MONTH ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
-						Month
-					</button>
-					<button
-						onClick={() => toolbarProps.onView(Views.WEEK)}
-						className={`${toolbarProps.view === Views.WEEK ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
-						Week
-					</button>
-					<button
-						onClick={() => toolbarProps.onView(Views.DAY)}
-						className={`${toolbarProps.view === Views.DAY ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
-						Day
-					</button>
-				</div>
+				{/* View Selection */}
+				{isMobile ? (
+					<div className="w-full mt-2">
+						<select
+							value={toolbarProps.view}
+							onChange={e => toolbarProps.onView(e.target.value)}
+							className="w-full bg-gray-700 text-white rounded-lg p-2 border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+							<option value={Views.MONTH}>Month</option>
+							<option value={Views.WEEK}>Week</option>
+							<option value={Views.DAY}>Day</option>
+						</select>
+					</div>
+				) : (
+					<div className={`flex ${isMobile ? 'justify-center w-full' : 'space-x-2 sm:space-x-4'} space-x-2`}>
+						<button
+							onClick={() => toolbarProps.onView(Views.MONTH)}
+							className={`${toolbarProps.view === Views.MONTH ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
+							Month
+						</button>
+						<button
+							onClick={() => toolbarProps.onView(Views.WEEK)}
+							className={`${toolbarProps.view === Views.WEEK ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
+							Week
+						</button>
+						<button
+							onClick={() => toolbarProps.onView(Views.DAY)}
+							className={`${toolbarProps.view === Views.DAY ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-600 text-white font-bold py-2 px-3 sm:py-3 sm:px-4 rounded-full transition-all duration-300 text-xs sm:text-sm`}>
+							Day
+						</button>
+					</div>
+				)}
 			</div>
 		)
 	}
@@ -344,50 +356,53 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
 			{/* Calendar Container */}
 			<div
-				className='w-full overflow-hidden rounded-lg shadow-inner bg-gray-700 p-2 sm:p-4'
+				className='w-full overflow-x-hidden rounded-lg shadow-inner bg-gray-700 p-1 sm:p-4'
 				style={calendarStyle}>
 				<style jsx global>{`
 					/* Mobile Calendar Styles */
 					@media (max-width: 768px) {
 						.rbc-calendar {
-							font-size: 12px;
+							font-size: 11px;
 						}
 						.rbc-header {
-							padding: 4px 2px;
-							font-size: 11px;
+							padding: 2px 1px;
+							font-size: 10px;
 							font-weight: 600;
 						}
 						.rbc-time-header-content {
-							font-size: 10px;
+							font-size: 9px;
 						}
 						.rbc-time-slot {
-							font-size: 10px;
-							min-height: 25px;
+							font-size: 9px;
+							min-height: 18px;
 						}
 						.rbc-timeslot-group {
-							min-height: 50px;
+							min-height: 30px;
 						}
 						.rbc-time-content {
-							min-height: 400px;
+							min-height: 250px;
 						}
 						.rbc-day-slot .rbc-event {
-							margin: 1px 2px;
+							margin: 1px 1px;
 						}
 						.rbc-week-view .rbc-event,
 						.rbc-day-view .rbc-event {
-							padding: 2px 4px;
-							font-size: 10px;
-							line-height: 1.2;
+							padding: 1px 2px;
+							font-size: 9px;
+							line-height: 1.1;
 						}
 						.rbc-month-view .rbc-event {
-							font-size: 9px;
-							padding: 1px 3px;
+							font-size: 8px;
+							padding: 1px 2px;
 						}
 						.rbc-time-header {
 							flex-direction: column;
 						}
 						.rbc-time-header-content {
 							border-left: none;
+						}
+						.rbc-event-content {
+							white-space: normal !important;
 						}
 					}
 					
