@@ -59,6 +59,7 @@ const CalendarViewPage = () => {
 			setAdminIndividualSessions(individualSessions)
 			setAdminGroupSessions(groupSessions)
 		} catch (err) {
+			console.error('Error fetching sessions:', err);
 			setError('Failed to fetch sessions')
 			toast.error('Failed to load sessions')
 		} finally {
@@ -172,13 +173,11 @@ const CalendarViewPage = () => {
 							<RingLoader color='#10B981' size={48} />
 						</div>
 					) : (
-						<div className='w-full overflow-x-auto'>
-							<div className='min-w-[400px] sm:min-w-0'>
-								<CalendarView
-									sessions={[...adminIndividualSessions, ...adminGroupSessions]}
-									onCancelSession={handleCancelSession}
-								/>
-							</div>
+						<div className='w-full'>
+							<CalendarView
+								sessions={[...adminIndividualSessions, ...adminGroupSessions]}
+								onCancelSession={handleCancelSession}
+							/>
 						</div>
 					)}
 				</motion.div>
