@@ -34,6 +34,14 @@ const createDateFromString = (dateString: string, timeString: string): Date => {
 	return date;
 }
 
+// Utility function to create consistent date keys without timezone issues
+const createDateKey = (date: Date): string => {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
 interface CalendarEvent {
 	id: number
 	title: string
@@ -157,13 +165,13 @@ const MobileWeekView = ({ events, onEventClick, selectedDay, onDaySelect }: any)
 	const eventsByDay: Record<string, any[]> = {}
 	events.forEach((event: any) => {
 		const d = new Date(event.start)
-		const key = d.toISOString().slice(0, 10)
+		const key = createDateKey(d)
 		if (!eventsByDay[key]) eventsByDay[key] = []
 		eventsByDay[key].push(event)
 	})
 
 	// Use the same selectedDay for consistency with single day view
-	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
+	const selectedDayKey = createDateKey(selectedDay)
 	const agendaEvents = eventsByDay[selectedDayKey] || []
 
 	const handleDaySelect = (day: Date) => {
@@ -176,7 +184,7 @@ const MobileWeekView = ({ events, onEventClick, selectedDay, onDaySelect }: any)
 			{/* Horizontal scrollable week strip */}
 			<div className="sticky top-0 z-20 bg-gray-900 py-2 px-2 border-b border-green-500 flex overflow-x-auto gap-2">
 				{days.map((day, idx) => {
-					const key = day.toISOString().slice(0, 10)
+					const key = createDateKey(day)
 					const isSelected = day.toDateString() === clickedDay.toDateString();
 					const hasEvents = (eventsByDay[key] || []).length > 0
 					return (
@@ -228,13 +236,13 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 	const eventsByDay: Record<string, any[]> = {}
 	events.forEach((event: any) => {
 		const d = new Date(event.start)
-		const key = d.toISOString().slice(0, 10)
+		const key = createDateKey(d)
 		if (!eventsByDay[key]) eventsByDay[key] = []
 		eventsByDay[key].push(event)
 	})
 
 	// Use the same selectedDay for consistency with single day view
-	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
+	const selectedDayKey = createDateKey(selectedDay)
 	const agendaEvents = eventsByDay[selectedDayKey] || []
 
 	const handleDaySelect = (day: Date) => {
@@ -287,7 +295,7 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 				</div>
 				<div className="grid grid-cols-7 gap-1">
 					{days.map((day, idx) => {
-						const key = day.toISOString().slice(0, 10)
+						const key = createDateKey(day)
 						const isCurrentMonth = day.getMonth() === selectedDay.getMonth()
 						const isSelected = day.toDateString() === clickedDay.toDateString();
 						const hasEvents = (eventsByDay[key] || []).length > 0
