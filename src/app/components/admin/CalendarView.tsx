@@ -17,6 +17,23 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const localizer = momentLocalizer(moment)
 
+// Utility function to create dates without timezone issues
+const createLocalDate = (year: number, month: number, day: number): Date => {
+	// month is 0-indexed (0-11)
+	return new Date(year, month, day, 0, 0, 0, 0);
+}
+
+// Utility function to create date from string without timezone issues
+const createDateFromString = (dateString: string, timeString: string): Date => {
+	const [year, month, day] = dateString.split('-').map(Number);
+	const [hour, minute] = timeString.split(':').map(Number);
+	// Use setFullYear to avoid timezone conversion issues
+	const date = new Date();
+	date.setFullYear(year, month - 1, day);
+	date.setHours(hour, minute, 0, 0);
+	return date;
+}
+
 interface CalendarEvent {
 	id: number
 	title: string
@@ -26,6 +43,7 @@ interface CalendarEvent {
 	activity: string
 	isGroup: boolean
 	clients: string
+	bgColor: string
 }
 
 interface CalendarViewProps {
@@ -108,7 +126,7 @@ const MobileAgendaView = ({ events, onEventClick }: any) => {
 	)
 }
 const MobileWeekView = ({ events, onEventClick }: any) => {
-	const [selectedDay, setSelectedDay] = useState(() => {
+	const [clickedDay, setClickedDay] = useState(() => {
 		// Default to today if there are events today, else first event day
 		const today = new Date()
 		const todayEvents = events.filter((e: any) => {
@@ -118,9 +136,20 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 		if (todayEvents.length > 0) return today
 		if (events.length > 0) return new Date(events[0].start)
 		return today
-	})
+	});
+	const [selectedDay, setSelectedDay] = useState(() => {
+		const d = new Date(clickedDay);
+		d.setDate(d.getDate() + 1);
+		return d;
+	});
 
-	// Get all days in this week that have events
+	useEffect(() => {
+		const d = new Date(clickedDay);
+		d.setDate(d.getDate() + 1);
+		setSelectedDay(d);
+	}, [clickedDay]);
+
+	// Use clickedDay for week strip calculation
 	const startOfWeek = (date: Date) => {
 		const d = new Date(date)
 		d.setDate(d.getDate() - d.getDay())
@@ -133,8 +162,8 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 		d.setHours(23,59,59,999)
 		return d
 	}
-	const weekStart = startOfWeek(selectedDay)
-	const weekEnd = endOfWeek(selectedDay)
+	const weekStart = startOfWeek(clickedDay)
+	const weekEnd = endOfWeek(clickedDay)
 	const days = []
 	for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
 		days.push(new Date(d))
@@ -152,18 +181,22 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
 	const agendaEvents = eventsByDay[selectedDayKey] || []
 
+	const handleDaySelect = (day: Date) => {
+		setClickedDay(day); // for UI highlight
+	}
+
 	return (
 		<div className="bg-gray-900 min-h-screen pb-24">
 			{/* Horizontal scrollable week strip */}
 			<div className="sticky top-0 z-20 bg-gray-900 py-2 px-2 border-b border-green-500 flex overflow-x-auto gap-2">
 				{days.map((day, idx) => {
 					const key = day.toISOString().slice(0, 10)
-					const isSelected = key === selectedDayKey
+					const isSelected = day.toDateString() === clickedDay.toDateString();
 					const hasEvents = (eventsByDay[key] || []).length > 0
 					return (
 						<button
 							key={key}
-							onClick={() => setSelectedDay(new Date(day))}
+							onClick={() => handleDaySelect(day)}
 							className={`flex flex-col items-center px-3 py-2 rounded-lg border transition-all duration-150 ${isSelected ? 'bg-green-500 text-white border-green-500' : 'bg-gray-800 text-green-400 border-gray-700'} ${hasEvents ? 'font-bold' : 'font-normal'}`}
 							style={{ minWidth: 56 }}
 						>
@@ -180,6 +213,20 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 	)
 }
 const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any) => {
+	const [clickedDay, setClickedDay] = useState(selectedDay);
+	const [agendaDay, setAgendaDay] = useState(() => {
+		const d = new Date(selectedDay);
+		d.setDate(d.getDate() + 1);
+		return d;
+	});
+
+	useEffect(() => {
+		const d = new Date(clickedDay);
+		d.setDate(d.getDate() + 1);
+		setAgendaDay(d);
+		onDaySelect(d);
+	}, [clickedDay]);
+
 	// Get the first day of the month
 	const monthStart = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), 1)
 	const monthEnd = new Date(selectedDay.getFullYear(), selectedDay.getMonth() + 1, 0)
@@ -207,8 +254,29 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 		eventsByDay[key].push(event)
 	})
 
-	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
+	const selectedDayKey = agendaDay.toISOString().slice(0, 10)
 	const agendaEvents = eventsByDay[selectedDayKey] || []
+
+	const handleDaySelect = (day: Date) => {
+		setClickedDay(day); // for UI highlight
+	}
+
+	const handleMonthChange = (direction: 'prev' | 'next') => {
+		let newYear = selectedDay.getFullYear();
+		let newMonth = direction === 'prev' ? selectedDay.getMonth() - 1 : selectedDay.getMonth() + 1;
+		
+		// Handle year transitions
+		if (newMonth < 0) {
+			newMonth = 11; // December
+			newYear--;
+		} else if (newMonth > 11) {
+			newMonth = 0; // January
+			newYear++;
+		}
+		
+		const newDate = createLocalDate(newYear, newMonth, 1);
+		onDaySelect(newDate)
+	}
 
 	return (
 		<div className="bg-gray-900 min-h-screen pb-24">
@@ -216,7 +284,7 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 			<div className="sticky top-0 z-20 bg-gray-900 py-2 px-2 border-b border-green-500">
 				<div className="flex items-center justify-between mb-2">
 					<button
-						onClick={() => onDaySelect(new Date(selectedDay.getFullYear(), selectedDay.getMonth() - 1, 1))}
+						onClick={() => handleMonthChange('prev')}
 						className="text-green-400 px-2 py-1 rounded hover:bg-gray-800"
 					>
 						&lt;
@@ -225,7 +293,7 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 						{selectedDay.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
 					</span>
 					<button
-						onClick={() => onDaySelect(new Date(selectedDay.getFullYear(), selectedDay.getMonth() + 1, 1))}
+						onClick={() => handleMonthChange('next')}
 						className="text-green-400 px-2 py-1 rounded hover:bg-gray-800"
 					>
 						&gt;
@@ -240,12 +308,12 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 					{days.map((day, idx) => {
 						const key = day.toISOString().slice(0, 10)
 						const isCurrentMonth = day.getMonth() === selectedDay.getMonth()
-						const isSelected = key === selectedDayKey
+						const isSelected = day.toDateString() === clickedDay.toDateString();
 						const hasEvents = (eventsByDay[key] || []).length > 0
 						return (
 							<button
 								key={key + idx}
-								onClick={() => onDaySelect(new Date(day))}
+								onClick={() => handleDaySelect(day)}
 								className={`flex flex-col items-center justify-center aspect-square rounded-lg border transition-all duration-150 ${isSelected ? 'bg-green-500 text-white border-green-500' : isCurrentMonth ? 'bg-gray-800 text-green-400 border-gray-700' : 'bg-gray-800 text-gray-500 border-gray-800'} ${hasEvents ? 'font-bold' : 'font-normal'}`}
 								style={{ minHeight: 44 }}
 							>
@@ -324,20 +392,27 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	}, [sessions])
 
 	useEffect(() => {
-		const calendarEvents = sessions.map(session => ({
-			id: session.id,
-			title: session.activities.name,
-			start: new Date(`${session.date}T${session.start_time}`),
-			end: new Date(`${session.date}T${session.end_time}`),
-			coach: session.coaches.name,
-			activity: session.activities.name,
-			isGroup: 'count' in session,
-			clients: Array.isArray(session.users)
-				? session.users.map(u => `${u.first_name} ${u.last_name}`).join(', ')
-				: `${session.users?.first_name} ${session.users?.last_name}`
-		}))
+		const calendarEvents = sessions.map(session => {
+			// Create dates with proper timezone handling to avoid date shifting
+			const startDate = createDateFromString(session.date, session.start_time);
+			const endDate = createDateFromString(session.date, session.end_time);
+			
+			return {
+				id: session.id,
+				title: session.activities.name,
+				start: startDate,
+				end: endDate,
+				coach: session.coaches.name,
+				activity: session.activities.name,
+				isGroup: 'count' in session,
+				clients: Array.isArray(session.users)
+					? session.users.map(u => `${u.first_name} ${u.last_name}`).join(', ')
+					: `${session.users?.first_name} ${session.users?.last_name}`,
+				bgColor: coachColors[session.coaches.name] // Add background color for mobile views
+			}
+		})
 		setEvents(calendarEvents)
-	}, [sessions])
+	}, [sessions, coachColors])
 
 	const filteredEvents = events.filter(event => {
 		if (selectedCoach && event.coach !== selectedCoach) return false;

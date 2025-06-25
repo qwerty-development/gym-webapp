@@ -59,6 +59,7 @@ const CalendarViewPage = () => {
 			setAdminIndividualSessions(individualSessions)
 			setAdminGroupSessions(groupSessions)
 		} catch (err) {
+			console.error('Error fetching sessions:', err);
 			setError('Failed to fetch sessions')
 			toast.error('Failed to load sessions')
 		} finally {
