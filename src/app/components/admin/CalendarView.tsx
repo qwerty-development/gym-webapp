@@ -23,6 +23,14 @@ const createLocalDate = (year: number, month: number, day: number): Date => {
 	return new Date(year, month, day, 0, 0, 0, 0);
 }
 
+// Utility function to get date string without timezone issues
+const getLocalDateString = (date: Date): string => {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
 // Utility function to create date from string without timezone issues
 const createDateFromString = (dateString: string, timeString: string): Date => {
 	const [year, month, day] = dateString.split('-').map(Number);
@@ -63,7 +71,7 @@ interface CalendarViewProps {
 }
 
 // Placeholder components for mobile views
-const MobileAgendaView = ({ events, onEventClick }: any) => {
+const MobileAgendaView = ({ events, onEventClick, selectedDay }: any) => {
 	if (!events || events.length === 0) {
 		return (
 			<div className="p-6 text-center text-gray-400">No sessions for this day.</div>
@@ -93,9 +101,13 @@ const MobileAgendaView = ({ events, onEventClick }: any) => {
 							{grouped[hour].map((event: any) => (
 								<div
 									key={event.id}
-									className="rounded-xl shadow-md p-4 flex flex-col gap-1 cursor-pointer w-full box-border"
+									className="rounded-xl shadow-md p-4 flex flex-col gap-1 cursor-pointer w-full box-border active:scale-95 transition-transform"
 									style={{ background: event.bgColor || '#10B981', color: '#fff' }}
-									onClick={() => onEventClick(event)}
+									onClick={(e) => {
+										e.preventDefault()
+										e.stopPropagation()
+										onEventClick(event)
+									}}
 								>
 									<div className="flex items-center justify-between w-full">
 										<span className="font-semibold text-base">
@@ -125,9 +137,10 @@ const MobileAgendaView = ({ events, onEventClick }: any) => {
 		</div>
 	)
 }
-const MobileWeekView = ({ events, onEventClick }: any) => {
+const MobileWeekView = ({ events, onEventClick, selectedDay: parentSelectedDay, onDaySelect }: any) => {
 	const [clickedDay, setClickedDay] = useState(() => {
-		// Default to today if there are events today, else first event day
+		// Use parent selected day if provided, otherwise default to today
+		if (parentSelectedDay) return new Date(parentSelectedDay)
 		const today = new Date()
 		const todayEvents = events.filter((e: any) => {
 			const d = new Date(e.start)
@@ -137,17 +150,13 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 		if (events.length > 0) return new Date(events[0].start)
 		return today
 	});
-	const [selectedDay, setSelectedDay] = useState(() => {
-		const d = new Date(clickedDay);
-		d.setDate(d.getDate() + 1);
-		return d;
-	});
 
+	// Update clicked day when parent selected day changes
 	useEffect(() => {
-		const d = new Date(clickedDay);
-		d.setDate(d.getDate() + 1);
-		setSelectedDay(d);
-	}, [clickedDay]);
+		if (parentSelectedDay) {
+			setClickedDay(new Date(parentSelectedDay))
+		}
+	}, [parentSelectedDay]);
 
 	// Use clickedDay for week strip calculation
 	const startOfWeek = (date: Date) => {
@@ -173,16 +182,17 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 	const eventsByDay: Record<string, any[]> = {}
 	events.forEach((event: any) => {
 		const d = new Date(event.start)
-		const key = d.toISOString().slice(0, 10)
+		const key = getLocalDateString(d)
 		if (!eventsByDay[key]) eventsByDay[key] = []
 		eventsByDay[key].push(event)
 	})
 
-	const selectedDayKey = selectedDay.toISOString().slice(0, 10)
+	const selectedDayKey = getLocalDateString(clickedDay)
 	const agendaEvents = eventsByDay[selectedDayKey] || []
 
 	const handleDaySelect = (day: Date) => {
 		setClickedDay(day); // for UI highlight
+		onDaySelect(day); // update parent state directly
 	}
 
 	return (
@@ -190,7 +200,7 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 			{/* Horizontal scrollable week strip */}
 			<div className="sticky top-0 z-20 bg-gray-900 py-2 px-2 border-b border-green-500 flex overflow-x-auto gap-2">
 				{days.map((day, idx) => {
-					const key = day.toISOString().slice(0, 10)
+					const key = getLocalDateString(day)
 					const isSelected = day.toDateString() === clickedDay.toDateString();
 					const hasEvents = (eventsByDay[key] || []).length > 0
 					return (
@@ -208,24 +218,16 @@ const MobileWeekView = ({ events, onEventClick }: any) => {
 				})}
 			</div>
 			{/* Agenda for selected day */}
-			<MobileAgendaView events={agendaEvents} onEventClick={onEventClick} />
+			<MobileAgendaView events={agendaEvents} onEventClick={onEventClick} selectedDay={clickedDay} />
 		</div>
 	)
 }
 const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any) => {
 	const [clickedDay, setClickedDay] = useState(selectedDay);
-	const [agendaDay, setAgendaDay] = useState(() => {
-		const d = new Date(selectedDay);
-		d.setDate(d.getDate() + 1);
-		return d;
-	});
 
 	useEffect(() => {
-		const d = new Date(clickedDay);
-		d.setDate(d.getDate() + 1);
-		setAgendaDay(d);
-		onDaySelect(d);
-	}, [clickedDay]);
+		setClickedDay(selectedDay);
+	}, [selectedDay]);
 
 	// Get the first day of the month
 	const monthStart = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), 1)
@@ -249,16 +251,17 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 	const eventsByDay: Record<string, any[]> = {}
 	events.forEach((event: any) => {
 		const d = new Date(event.start)
-		const key = d.toISOString().slice(0, 10)
+		const key = getLocalDateString(d)
 		if (!eventsByDay[key]) eventsByDay[key] = []
 		eventsByDay[key].push(event)
 	})
 
-	const selectedDayKey = agendaDay.toISOString().slice(0, 10)
+	const selectedDayKey = getLocalDateString(clickedDay)
 	const agendaEvents = eventsByDay[selectedDayKey] || []
 
 	const handleDaySelect = (day: Date) => {
 		setClickedDay(day); // for UI highlight
+		onDaySelect(day); // update parent state directly
 	}
 
 	const handleMonthChange = (direction: 'prev' | 'next') => {
@@ -306,7 +309,7 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 				</div>
 				<div className="grid grid-cols-7 gap-1">
 					{days.map((day, idx) => {
-						const key = day.toISOString().slice(0, 10)
+						const key = getLocalDateString(day)
 						const isCurrentMonth = day.getMonth() === selectedDay.getMonth()
 						const isSelected = day.toDateString() === clickedDay.toDateString();
 						const hasEvents = (eventsByDay[key] || []).length > 0
@@ -336,7 +339,7 @@ const MobileMonthView = ({ events, onEventClick, onDaySelect, selectedDay }: any
 				</div>
 			</div>
 			{/* Agenda for selected day */}
-			<MobileAgendaView events={agendaEvents} onEventClick={onEventClick} />
+			<MobileAgendaView events={agendaEvents} onEventClick={onEventClick} selectedDay={clickedDay} />
 		</div>
 	)
 }
@@ -463,7 +466,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 		return (
 			<div
 				className="h-full flex flex-col justify-start text-left"
-				onClick={() => setSelectedEvent(event)}
 				title={`${event.title} - ${event.coach} - ${event.clients}`}>
 				<div className="font-semibold leading-tight truncate mb-0.5">
 					{displayText}
@@ -615,31 +617,126 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	// Decide which view to render on mobile
 	if (isMobile) {
 		return (
-			<div className="bg-gray-900 min-h-screen">
-				{mobileViewSelector}
-				{view === Views.DAY && (
+			<>
+				<div className="bg-gray-900 min-h-screen">
+					{mobileViewSelector}
+									{view === Views.DAY && (
 					<MobileAgendaView
 						events={filteredEvents.filter(e =>
 							moment(e.start).isSame(mobileSelectedDay, 'day')
 						)}
 						onEventClick={handleMobileEventClick}
+						selectedDay={mobileSelectedDay}
 					/>
 				)}
 				{view === Views.WEEK && (
 					<MobileWeekView
 						events={filteredEvents}
 						onEventClick={handleMobileEventClick}
-					/>
-				)}
-				{view === Views.MONTH && (
-					<MobileMonthView
-						events={filteredEvents}
-						onEventClick={handleMobileEventClick}
-						onDaySelect={setMobileSelectedDay}
 						selectedDay={mobileSelectedDay}
+						onDaySelect={setMobileSelectedDay}
 					/>
 				)}
-			</div>
+					{view === Views.MONTH && (
+						<MobileMonthView
+							events={filteredEvents}
+							onEventClick={handleMobileEventClick}
+							onDaySelect={setMobileSelectedDay}
+							selectedDay={mobileSelectedDay}
+						/>
+					)}
+				</div>
+
+				{/* Event Details Modal for Mobile */}
+				<AnimatePresence>
+					{selectedEvent && (
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2 }}
+							className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]'
+							onClick={() => setSelectedEvent(null)}>
+							<motion.div
+								initial={{ scale: 0.9 }}
+								animate={{ scale: 1 }}
+								exit={{ scale: 0.9 }}
+								transition={{ duration: 0.2 }}
+								className='bg-gray-800 rounded-xl p-4 w-full max-w-sm shadow-lg border-2 border-green-500 max-h-[90vh] overflow-y-auto'
+								onClick={e => e.stopPropagation()}>
+								<div className='flex justify-between items-center mb-4'>
+									<h3 className='text-xl font-bold text-green-400'>
+										{selectedEvent.title}
+									</h3>
+									<button
+										onClick={() => setSelectedEvent(null)}
+										className='text-gray-400 hover:text-white transition-colors duration-200'>
+										<FaTimes size={20} />
+									</button>
+								</div>
+								<div className='space-y-4 text-white text-sm'>
+									<p className='flex items-center'>
+										<FaUser className='mr-3 text-green-400' size={16} />{' '}
+										<strong>Coach:</strong> <span className="ml-2">{selectedEvent.coach}</span>
+									</p>
+									<p className='flex items-center'>
+										<FaCalendarAlt className='mr-3 text-green-400' size={16} />{' '}
+										<strong>Date:</strong>{' '}
+										<span className="ml-2">{moment(selectedEvent.start).format('MMMM D, YYYY')}</span>
+									</p>
+									<p className='flex items-center'>
+										<FaClock className='mr-3 text-green-400' size={16} />{' '}
+										<strong>Time:</strong>{' '}
+										<span className="ml-2">
+											{moment(selectedEvent.start).format('HH:mm')} -{' '}
+											{moment(selectedEvent.end).format('HH:mm')}
+										</span>
+									</p>
+									<p className='flex items-center'>
+										{selectedEvent.isGroup ? (
+											<FaUsers className='mr-3 text-green-400' size={16} />
+										) : (
+											<FaUser className='mr-3 text-green-400' size={16} />
+										)}
+										<strong>Type:</strong>{' '}
+										<span className="ml-2">{selectedEvent.isGroup ? 'Group' : 'Individual'}</span>
+									</p>
+									<p className='flex items-center'>
+										<FaDumbbell className='mr-3 text-green-400' size={16} />{' '}
+										<strong>Activity:</strong> <span className="ml-2">{selectedEvent.activity}</span>
+									</p>
+									<p className='flex items-start'>
+										<FaUsers className='mr-3 text-green-400 mt-1' size={16} />{' '}
+										<div>
+											<strong>Clients:</strong>
+											<div className='ml-2 mt-1 break-words'>{selectedEvent.clients}</div>
+										</div>
+									</p>
+								</div>
+								<div className='flex flex-col space-y-3 mt-4'>
+									<motion.button
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+										onClick={() => {
+											onCancelSession(selectedEvent.id, selectedEvent.isGroup)
+											setSelectedEvent(null)
+										}}
+										className='w-full px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200 text-sm'>
+										Cancel Session
+									</motion.button>
+									<motion.button
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+										onClick={() => setSelectedEvent(null)}
+										className='w-full px-4 py-2 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors duration-200 text-sm'>
+										Close
+									</motion.button>
+								</div>
+							</motion.div>
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</>
 		)
 	}
 
@@ -856,6 +953,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					date={date}
 					onView={newView => setView(newView)}
 					onNavigate={newDate => setDate(newDate)}
+					onSelectEvent={(event: CalendarEvent) => setSelectedEvent(event)}
 					eventPropGetter={eventStyleGetter}
 					components={{
 						event: props => <CustomEvent {...props} view={view} />,
