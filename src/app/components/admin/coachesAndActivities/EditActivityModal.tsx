@@ -48,13 +48,8 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 			semiPrivateGroup: false
 		}
 
-		// Check if trying to make a group activity semi-private
-		if (formData.group && formData.semi_private) {
-			errors.semiPrivateGroup = true
-		}
-
-		// Also check if capacity > 1 and semi_private is true
-		if (formData.capacity > 1 && formData.semi_private) {
+		// Check if trying to make an activity with > 4 capacity semi-private
+		if (formData.capacity > 4 && formData.semi_private) {
 			errors.semiPrivateGroup = true
 		}
 
@@ -65,11 +60,35 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 	const handleInputChange = (field: string, value: any) => {
 		const newFormData = { ...formData, [field]: value }
 
-		// Auto-update group status based on capacity
+		// Handle semi-private logic
+		if (field === 'semi_private' && value === true) {
+			// When enabling semi-private, cap capacity at 4 and disable group
+			newFormData.capacity = Math.min(newFormData.capacity, 4)
+			newFormData.group = false
+		}
+
+		// Handle capacity changes
 		if (field === 'capacity') {
-			newFormData.group = value > 1
-			// If changing to group activity, disable semi-private
-			if (value > 1) {
+			// Prevent changing capacity for private training activities
+			if (activity?.capacity === 1) {
+				toast.error('Private training activities must have capacity of 1')
+				return
+			}
+
+			// If semi-private is enabled, cap at 4
+			if (newFormData.semi_private && value > 4) {
+				newFormData.capacity = 4
+				toast.error('Semi-private activities are limited to 4 participants')
+				return
+			}
+			
+			// Auto-update group status based on capacity
+			if (!newFormData.semi_private) {
+				newFormData.group = value > 1
+			}
+			
+			// If capacity > 4 and not semi-private, disable semi-private
+			if (value > 4) {
 				newFormData.semi_private = false
 			}
 		}
@@ -77,12 +96,6 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 		// If enabling group, disable semi-private
 		if (field === 'group' && value === true) {
 			newFormData.semi_private = false
-		}
-
-		// If trying to enable semi-private on group activity, prevent it
-		if (field === 'semi_private' && value === true && (newFormData.group || newFormData.capacity > 1)) {
-			toast.error('Group activities cannot be semi-private')
-			return
 		}
 
 		setFormData(newFormData)
@@ -177,12 +190,21 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 								type="number"
 								value={formData.capacity}
 								onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 0)}
-								min="0"
-								className="w-full p-3 bg-gray-700 border-2 border-green-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300"
-								placeholder="Enter capacity (0 for unlimited)"
+								min="1"
+								max={formData.semi_private ? 4 : undefined}
+								disabled={activity?.capacity === 1}
+								className={`w-full p-3 bg-gray-700 border-2 border-green-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 ${
+									activity?.capacity === 1 ? 'opacity-50 cursor-not-allowed' : ''
+								}`}
+								placeholder={formData.semi_private ? "Enter capacity (Max 4)" : "Enter capacity"}
 							/>
 							<p className="text-xs text-gray-400 mt-1">
-								Capacity &gt; 1 makes this a group activity
+								{activity?.capacity === 1 
+									? "Private training activities have fixed capacity of 1"
+									: formData.semi_private 
+										? "Semi-private activities are limited to 4 participants"
+										: "Capacity > 4 makes this a group activity"
+								}
 							</p>
 						</div>
 
@@ -197,38 +219,55 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 							</div>
 						</div>
 
-						{/* Semi-Private Toggle */}
-						<div>
-							<label className="flex items-center space-x-3">
-								<input
-									type="checkbox"
-									checked={formData.semi_private}
-									onChange={(e) => handleInputChange('semi_private', e.target.checked)}
-									disabled={formData.group || formData.capacity > 1}
-									className="w-5 h-5 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
-								/>
-								<span className={`text-sm ${
-									formData.group || formData.capacity > 1 
-										? 'text-gray-500' 
-										: 'text-gray-300'
-								}`}>
-									Semi-Private Activity
-								</span>
-							</label>
-							{(formData.group || formData.capacity > 1) && (
-								<div className="flex items-center mt-2 text-amber-400 text-xs">
-									<FaExclamationTriangle className="mr-1" />
-									Group activities cannot be semi-private
+						{/* Semi-Private Toggle - Only show for non-private activities */}
+						{formData.capacity !== 1 && (
+							<div>
+								<label className="flex items-center space-x-3">
+									<input
+										type="checkbox"
+										checked={formData.semi_private}
+										onChange={(e) => handleInputChange('semi_private', e.target.checked)}
+										disabled={formData.capacity > 4}
+										className="w-5 h-5 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+									/>
+									<span className={`text-sm ${
+										formData.capacity > 4
+											? 'text-gray-500' 
+											: 'text-gray-300'
+									}`}>
+										Semi-Private Activity (Max 4 participants)
+									</span>
+								</label>
+								{formData.capacity > 4 && (
+									<div className="flex items-center mt-2 text-amber-400 text-xs">
+										<FaExclamationTriangle className="mr-1" />
+										Activities with more than 4 participants cannot be semi-private
+									</div>
+								)}
+								{formData.semi_private && (
+									<div className="flex items-center mt-2 text-green-400 text-xs">
+										✓ Semi-private activities are limited to 4 participants maximum
+									</div>
+								)}
+							</div>
+						)}
+
+						{/* Private Training Indicator */}
+						{formData.capacity === 1 && (
+							<div className="bg-blue-900 border border-blue-600 rounded-lg p-3 text-blue-200 text-sm">
+								<div className="flex items-center">
+									<span className="mr-2">🔒</span>
+									This is a Private Training activity (capacity fixed at 1)
 								</div>
-							)}
-						</div>
+							</div>
+						)}
 
 						{/* Validation Error */}
 						{validationErrors.semiPrivateGroup && (
 							<div className="bg-red-900 border border-red-600 rounded-lg p-3 text-red-200 text-sm">
 								<div className="flex items-center">
 									<FaExclamationTriangle className="mr-2" />
-									Group activities cannot be semi-private
+									Activities with more than 4 participants cannot be semi-private
 								</div>
 							</div>
 						)}

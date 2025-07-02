@@ -93,36 +93,53 @@ const ActivitiesSection: React.FC<ActivitiesSectionProps> = ({
 					/>
 					{!isPrivateTraining && (
 						<>
-							<input
-								type='number'
-								value={newActvityCapacity}
-								onChange={e => setNewActivityCapacity(e.target.value)}
-								placeholder='Capacity'
-								className='w-full sm:w-1/4 p-3 bg-gray-700 border-2 border-green-500 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
-							/>
 							<div className='flex flex-col items-start'>
 								<div className='flex items-center'>
 									<input
 										type='checkbox'
 										id='semi-private'
 										checked={newActivitySemiPrivate}
-										onChange={e => setNewActivitySemiPrivate(e.target.checked)}
-										disabled={parseInt(newActvityCapacity) > 1}
-										className='mr-2 disabled:opacity-50 disabled:cursor-not-allowed'
+										onChange={e => {
+											setNewActivitySemiPrivate(e.target.checked)
+											// If enabling semi-private, cap capacity at 4
+											if (e.target.checked && parseInt(newActvityCapacity) > 4) {
+												setNewActivityCapacity('4')
+											}
+										}}
+										className='mr-2'
 									/>
-									<label htmlFor='semi-private' className={`text-nowrap ${
-										parseInt(newActvityCapacity) > 1 ? 'text-gray-500' : 'text-white'
-									}`}>
-										Semi-Private
+									<label htmlFor='semi-private' className='text-nowrap text-white'>
+										Semi-Private (Max 4)
 									</label>
 								</div>
-								{parseInt(newActvityCapacity) > 1 && (
-									<span className='text-xs text-amber-400 mt-1'>
-										Group activities cannot be semi-private
+								{newActivitySemiPrivate && (
+									<span className='text-xs text-green-400 mt-1'>
+										Semi-private activities are limited to 4 participants
 									</span>
 								)}
 							</div>
+							<input
+								type='number'
+								value={newActvityCapacity}
+								onChange={e => {
+									const value = e.target.value
+									// If semi-private is selected, cap at 4
+									if (newActivitySemiPrivate && parseInt(value) > 4) {
+										setNewActivityCapacity('4')
+									} else {
+										setNewActivityCapacity(value)
+									}
+								}}
+								placeholder={newActivitySemiPrivate ? 'Capacity (Max 4)' : 'Capacity'}
+								max={newActivitySemiPrivate ? 4 : undefined}
+								className='w-full sm:w-1/4 p-3 bg-gray-700 border-2 border-green-500 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
+							/>
 						</>
+					)}
+					{isPrivateTraining && (
+						<div className='px-4 py-2 bg-blue-600 text-white rounded-full text-sm'>
+							Private Training (Capacity: 1)
+						</div>
 					)}
 
 					<motion.button

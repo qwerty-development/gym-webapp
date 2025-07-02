@@ -3,13 +3,25 @@ import { supabaseClient } from '../supabaseClient'
 export const addActivity = async activity => {
 	const supabase = await supabaseClient()
 
-	// Set group to true if capacity is not null
-	if (activity.capacity !== null && activity.capacity !== undefined) {
-		activity.group = true
-	}
-
-	// Set semi_private based on the new field
+	// Ensure semi_private is boolean
 	activity.semi_private = activity.semi_private || false
+
+	// Determine group status based on activity type
+	if (activity.capacity === 1) {
+		// Private training activities (capacity = 1)
+		activity.group = false
+		activity.semi_private = false
+	} else if (activity.semi_private && activity.capacity <= 4) {
+		// Semi-private activities (capacity 2-4, semi_private = true)
+		activity.group = false
+	} else if (activity.capacity > 1) {
+		// Group activities (capacity > 1, not semi_private)
+		activity.group = true
+		activity.semi_private = false
+	} else {
+		// Default fallback
+		activity.group = false
+	}
 
 	const { data, error } = await supabase.from('activities').insert([activity])
 
@@ -60,6 +72,7 @@ export const fetchActivities = async () => {
 		.from('activities')
 		.select('*')
 		.eq('group', false)
+		.eq('semi_private', false)
 
 	if (error) {
 		console.error('Error fetching private activities:', error.message)
@@ -74,7 +87,7 @@ export const fetchGroupActivities = async () => {
 	const { data, error } = await supabase
 		.from('activities')
 		.select('*')
-		.eq('group', true)
+		.or('group.eq.true,semi_private.eq.true')
 
 	if (error) {
 		console.error('Error fetching group activities:', error.message)

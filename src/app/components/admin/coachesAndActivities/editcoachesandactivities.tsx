@@ -65,7 +65,8 @@ const CoachesandActivitiesAdminPage = () => {
 	// Effect to handle semi-private validation when capacity changes
 	useEffect(() => {
 		const capacity = parseInt(newActvityCapacity, 10) || 0
-		if (capacity > 1 && newActivitySemiPrivate) {
+		// If capacity > 4 and semi-private is selected, disable semi-private
+		if (capacity > 4 && newActivitySemiPrivate) {
 			setNewActivitySemiPrivate(false)
 		}
 	}, [newActvityCapacity, newActivitySemiPrivate])
@@ -161,23 +162,46 @@ const CoachesandActivitiesAdminPage = () => {
 	const handleAddActivity = async () => {
 		setButtonLoading(true)
 		
-		// Validation: prevent group activities from being semi-private
-		const capacity = parseInt(newActvityCapacity, 10) || 0
-		const isGroup = capacity > 1
+		let finalCapacity, finalSemiPrivate, finalGroup
 		
-		if (isGroup && newActivitySemiPrivate) {
-			toast.error('Group activities cannot be semi-private')
-			setButtonLoading(false)
-			return
+		if (isPrivateTraining) {
+			// Private training activities are always individual with capacity 1
+			finalCapacity = 1
+			finalSemiPrivate = false
+			finalGroup = false
+		} else {
+			// Classes section - can be group or semi-private
+			const capacity = parseInt(newActvityCapacity, 10) || 0
+			
+			if (newActivitySemiPrivate) {
+				// Semi-private activities are capped at 4
+				finalCapacity = Math.min(capacity, 4)
+				finalSemiPrivate = true
+				finalGroup = false
+			} else {
+				// Regular group activities
+				finalCapacity = capacity
+				finalSemiPrivate = false
+				finalGroup = capacity > 1
+			}
+			
+			// Validation: prevent group activities from being semi-private
+			if (finalGroup && finalSemiPrivate) {
+				toast.error('Group activities cannot be semi-private')
+				setButtonLoading(false)
+				return
+			}
 		}
 
-		const activity = await addActivity({
+		const activityData = {
 			name: newActivityName,
 			credits: parseInt(newActivityCredits, 10),
-			capacity: newActvityCapacity || null,
-			semi_private: newActivitySemiPrivate,
-			group: isGroup
-		})
+			capacity: finalCapacity,
+			semi_private: finalSemiPrivate,
+			group: finalGroup
+		}
+		
+		const activity = await addActivity(activityData)
 		if (activity) setActivities([...activities, activity])
 		setNewActivityName('')
 		setNewActivityCredits('')
@@ -279,10 +303,15 @@ const CoachesandActivitiesAdminPage = () => {
 				setNewActivityCredits={setNewActivityCredits}
 				newActvityCapacity={newActvityCapacity}
 				setNewActivityCapacity={(capacity) => {
-					setNewActivityCapacity(capacity)
-					// Auto-disable semi-private if capacity > 1
-					if (parseInt(capacity, 10) > 1) {
-						setNewActivitySemiPrivate(false)
+					// If semi-private is selected and capacity > 4, cap at 4
+					if (newActivitySemiPrivate && parseInt(capacity, 10) > 4) {
+						setNewActivityCapacity('4')
+					} else {
+						setNewActivityCapacity(capacity)
+						// Auto-disable semi-private if capacity > 4
+						if (parseInt(capacity, 10) > 4) {
+							setNewActivitySemiPrivate(false)
+						}
 					}
 				}}
 				newActivitySemiPrivate={newActivitySemiPrivate}
