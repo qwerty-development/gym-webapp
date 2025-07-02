@@ -16,6 +16,7 @@ import {
 import toast from 'react-hot-toast'
 import CoachesSection from './CoachesSection'
 import ActivitiesSection from './ActivitiesSection'
+import EditActivityModal from './EditActivityModal'
 
 const CoachesandActivitiesAdminPage = () => {
 	const [coaches, setCoaches] = useState<any[]>([])
@@ -43,6 +44,10 @@ const CoachesandActivitiesAdminPage = () => {
 	const [newActivitySemiPrivate, setNewActivitySemiPrivate] = useState(false)
 	const [isPrivateTraining, setIsPrivateTraining] = useState<boolean>(true)
 
+	// Edit modal state
+	const [editModalOpen, setEditModalOpen] = useState(false)
+	const [selectedActivity, setSelectedActivity] = useState<any>(null)
+
 	useEffect(() => {
 		const loadInitialData = async () => {
 			setLoading(true)
@@ -56,6 +61,14 @@ const CoachesandActivitiesAdminPage = () => {
 		}
 		loadInitialData()
 	}, [])
+
+	// Effect to handle semi-private validation when capacity changes
+	useEffect(() => {
+		const capacity = parseInt(newActvityCapacity, 10) || 0
+		if (capacity > 1 && newActivitySemiPrivate) {
+			setNewActivitySemiPrivate(false)
+		}
+	}, [newActvityCapacity, newActivitySemiPrivate])
 
 	const refreshData = async () => {
 		const loadedCoaches = await fetchCoaches()
@@ -147,11 +160,23 @@ const CoachesandActivitiesAdminPage = () => {
 	// Activity handlers
 	const handleAddActivity = async () => {
 		setButtonLoading(true)
+		
+		// Validation: prevent group activities from being semi-private
+		const capacity = parseInt(newActvityCapacity, 10) || 0
+		const isGroup = capacity > 1
+		
+		if (isGroup && newActivitySemiPrivate) {
+			toast.error('Group activities cannot be semi-private')
+			setButtonLoading(false)
+			return
+		}
+
 		const activity = await addActivity({
 			name: newActivityName,
 			credits: parseInt(newActivityCredits, 10),
 			capacity: newActvityCapacity || null,
-			semi_private: newActivitySemiPrivate
+			semi_private: newActivitySemiPrivate,
+			group: isGroup
 		})
 		if (activity) setActivities([...activities, activity])
 		setNewActivityName('')
@@ -159,6 +184,7 @@ const CoachesandActivitiesAdminPage = () => {
 		setNewActivityCapacity('')
 		setNewActivitySemiPrivate(false)
 		refreshData()
+		toast.success('Activity added successfully')
 		setButtonLoading(false)
 	}
 
@@ -176,63 +202,35 @@ const CoachesandActivitiesAdminPage = () => {
 	}
 
 	const handleUpdateActivity = async (activityId: number) => {
+		const activity = [...activities, ...groupactivities].find(a => a.id === activityId)
+		if (activity) {
+			setSelectedActivity(activity)
+			setEditModalOpen(true)
+		}
+	}
+
+	const handleSaveActivity = async (updatedActivity: any) => {
 		setButtonLoading(true)
-		const newName = prompt('Enter new name for activity (leave empty to skip):')
-		const creditsInput = prompt(
-			'Enter new credits for activity (leave empty to skip):'
-		)
-		const capacityInput = prompt('Enter new capacity (leave empty to skip):')
-		const semiPrivateInput = prompt(
-			'Is this a semi-private activity? (yes/no, leave empty to skip):'
-		)
-
-		const updatedActivity = { id: activityId } as any
-
-		if (newName !== null && newName.trim() !== '') {
-			updatedActivity.name = newName
-		}
-
-		if (creditsInput !== null && creditsInput.trim() !== '') {
-			const newCredits = parseInt(creditsInput, 10)
-			if (!isNaN(newCredits)) {
-				updatedActivity.credits = newCredits
-			} else {
-				console.error('Invalid credits input.')
-				return
-			}
-		}
-		if (capacityInput !== null && capacityInput.trim() !== '') {
-			let newCapacity = parseInt(capacityInput, 10)
-			if (!isNaN(newCapacity)) {
-				if (newCapacity === 1 || newCapacity === 0) {
-					newCapacity = 0
-					updatedActivity.group = false
-				} else {
-					updatedActivity.group = true
-				}
-				updatedActivity.capacity = newCapacity
-			} else {
-				console.error('Invalid capacity input.')
-				return
-			}
-		}
-
-		if (semiPrivateInput !== null && semiPrivateInput.trim() !== '') {
-			updatedActivity.semi_private = semiPrivateInput.toLowerCase() === 'yes'
-		}
-
 		try {
 			const result = await updateActivity(updatedActivity)
-			refreshData()
 			if (result) {
-				console.log('Activity updated successfully:', result)
+				refreshData()
+				setEditModalOpen(false)
+				setSelectedActivity(null)
+				toast.success('Activity updated successfully')
 			} else {
-				console.error('Error updating activity.')
+				toast.error('Error updating activity')
 			}
 		} catch (error) {
 			console.error('Error updating activity:', error)
+			toast.error('Error updating activity')
 		}
 		setButtonLoading(false)
+	}
+
+	const handleCloseModal = () => {
+		setEditModalOpen(false)
+		setSelectedActivity(null)
 	}
 
 	const handleToggle = () => {
@@ -280,12 +278,26 @@ const CoachesandActivitiesAdminPage = () => {
 				newActivityCredits={newActivityCredits}
 				setNewActivityCredits={setNewActivityCredits}
 				newActvityCapacity={newActvityCapacity}
-				setNewActivityCapacity={setNewActivityCapacity}
+				setNewActivityCapacity={(capacity) => {
+					setNewActivityCapacity(capacity)
+					// Auto-disable semi-private if capacity > 1
+					if (parseInt(capacity, 10) > 1) {
+						setNewActivitySemiPrivate(false)
+					}
+				}}
 				newActivitySemiPrivate={newActivitySemiPrivate}
 				setNewActivitySemiPrivate={setNewActivitySemiPrivate}
 				handleAddActivity={handleAddActivity}
 				handleUpdateActivity={handleUpdateActivity}
 				handleDeleteActivity={handleDeleteActivity}
+			/>
+
+			<EditActivityModal
+				isOpen={editModalOpen}
+				activity={selectedActivity}
+				onClose={handleCloseModal}
+				onSave={handleSaveActivity}
+				buttonLoading={buttonLoading}
 			/>
 		</motion.div>
 	)

@@ -100,15 +100,27 @@ const ActivitiesSection: React.FC<ActivitiesSectionProps> = ({
 								placeholder='Capacity'
 								className='w-full sm:w-1/4 p-3 bg-gray-700 border-2 border-green-500 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300'
 							/>
-							<div className='flex items-center'>
-								<input
-									type='checkbox'
-									id='semi-private'
-									checked={newActivitySemiPrivate}
-									onChange={e => setNewActivitySemiPrivate(e.target.checked)}
-									className='mr-2'
-								/>
-								<label htmlFor='semi-private text-nowrap'>Semi-Private</label>
+							<div className='flex flex-col items-start'>
+								<div className='flex items-center'>
+									<input
+										type='checkbox'
+										id='semi-private'
+										checked={newActivitySemiPrivate}
+										onChange={e => setNewActivitySemiPrivate(e.target.checked)}
+										disabled={parseInt(newActvityCapacity) > 1}
+										className='mr-2 disabled:opacity-50 disabled:cursor-not-allowed'
+									/>
+									<label htmlFor='semi-private' className={`text-nowrap ${
+										parseInt(newActvityCapacity) > 1 ? 'text-gray-500' : 'text-white'
+									}`}>
+										Semi-Private
+									</label>
+								</div>
+								{parseInt(newActvityCapacity) > 1 && (
+									<span className='text-xs text-amber-400 mt-1'>
+										Group activities cannot be semi-private
+									</span>
+								)}
 							</div>
 						</>
 					)}
