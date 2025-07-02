@@ -33,10 +33,13 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 
 	useEffect(() => {
 		if (activity) {
+			// Handle NULL capacity - treat as 1 for private training
+			const capacityValue = activity.capacity === null || activity.capacity === undefined ? 1 : activity.capacity
+			
 			setFormData({
 				name: activity.name || '',
 				credits: activity.credits || 0,
-				capacity: activity.capacity || 0,
+				capacity: capacityValue,
 				semi_private: activity.semi_private || false,
 				group: activity.group || false
 			})
@@ -69,8 +72,8 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 
 		// Handle capacity changes
 		if (field === 'capacity') {
-			// Prevent changing capacity for private training activities
-			if (activity?.capacity === 1) {
+			// Prevent changing capacity for private training activities (including NULL capacity)
+			if (activity?.capacity === 1 || activity?.capacity === null || activity?.capacity === undefined) {
 				toast.error('Private training activities must have capacity of 1')
 				return
 			}
@@ -192,14 +195,14 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 								onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 0)}
 								min="1"
 								max={formData.semi_private ? 4 : undefined}
-								disabled={activity?.capacity === 1}
+								disabled={activity?.capacity === 1 || activity?.capacity === null || activity?.capacity === undefined}
 								className={`w-full p-3 bg-gray-700 border-2 border-green-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition duration-300 ${
-									activity?.capacity === 1 ? 'opacity-50 cursor-not-allowed' : ''
+									activity?.capacity === 1 || activity?.capacity === null || activity?.capacity === undefined ? 'opacity-50 cursor-not-allowed' : ''
 								}`}
 								placeholder={formData.semi_private ? "Enter capacity (Max 4)" : "Enter capacity"}
 							/>
 							<p className="text-xs text-gray-400 mt-1">
-								{activity?.capacity === 1 
+								{activity?.capacity === 1 || activity?.capacity === null || activity?.capacity === undefined
 									? "Private training activities have fixed capacity of 1"
 									: formData.semi_private 
 										? "Semi-private activities are limited to 4 participants"
@@ -220,7 +223,7 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 						</div>
 
 						{/* Semi-Private Toggle - Only show for non-private activities */}
-						{formData.capacity !== 1 && (
+						{formData.capacity !== 1 && !(activity?.capacity === null || activity?.capacity === undefined) && (
 							<div>
 								<label className="flex items-center space-x-3">
 									<input
@@ -253,7 +256,7 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 						)}
 
 						{/* Private Training Indicator */}
-						{formData.capacity === 1 && (
+						{(formData.capacity === 1 || activity?.capacity === null || activity?.capacity === undefined) && (
 							<div className="bg-blue-900 border border-blue-600 rounded-lg p-3 text-blue-200 text-sm">
 								<div className="flex items-center">
 									<span className="mr-2">🔒</span>

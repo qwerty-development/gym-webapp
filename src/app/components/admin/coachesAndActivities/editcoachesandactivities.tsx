@@ -247,7 +247,8 @@ const CoachesandActivitiesAdminPage = () => {
 			}
 		} catch (error) {
 			console.error('Error updating activity:', error)
-			toast.error('Error updating activity')
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+			toast.error(`Error updating activity: ${errorMessage}`)
 		}
 		setButtonLoading(false)
 	}
